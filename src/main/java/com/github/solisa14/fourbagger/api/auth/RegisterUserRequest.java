@@ -32,5 +32,9 @@ public record RegisterUserRequest(
             message =
                 "Password must be at least 8 characters long, contain at least one digit, one lowercase letter, one uppercase letter, and one special character")
         String password,
-    String firstName,
-    String lastName) {}
+    @NotBlank(message = "First name is required")
+        @Size(max = 255, message = "First name must be at most 255 characters")
+        String firstName,
+    @NotBlank(message = "Last name is required")
+        @Size(max = 255, message = "Last name must be at most 255 characters")
+        String lastName) {}

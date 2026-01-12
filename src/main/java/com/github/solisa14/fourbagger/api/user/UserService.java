@@ -1,8 +1,10 @@
 package com.github.solisa14.fourbagger.api.user;
 
 import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
+import java.util.UUID;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Manages user account creation and persistence operations.
@@ -50,5 +52,31 @@ public class UserService {
             .build();
 
     return userRepository.save(createdUser);
+  }
+
+  public User getUser(UUID id) {
+    return userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+  }
+
+  @Transactional
+  public User updateProfile(UUID id, UpdateProfileRequest request) {
+    User user = getUser(id);
+    if (request.firstName() != null) {
+      user.setFirstName(request.firstName());
+    }
+    if (request.lastName() != null) {
+      user.setLastName(request.lastName());
+    }
+    return userRepository.save(user);
+  }
+
+  @Transactional
+  public void updatePassword(UUID id, UpdatePasswordRequest request) {
+    User user = getUser(id);
+    if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+      throw new InvalidPasswordException();
+    }
+    user.setPassword(passwordEncoder.encode(request.newPassword()));
+    userRepository.save(user);
   }
 }
