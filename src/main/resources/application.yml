@@ -1,6 +1,10 @@
 spring:
   application:
     name: four-bagger-api
+    security:
+      jwt:
+        secret-key: ${JWT_SECRET}
+        expiration-ms: 3600000 # 1 hour
 
   datasource:
     url: jdbc:h2:mem:fourbagger;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
