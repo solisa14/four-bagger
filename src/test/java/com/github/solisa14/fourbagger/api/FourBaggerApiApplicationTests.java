@@ -9,7 +9,10 @@ import org.springframework.boot.test.context.SpringBootTest;
  * <p>Validates Spring Boot application startup and bean configuration using the full application
  * context.
  */
-@SpringBootTest
+@SpringBootTest(
+    properties = {
+      "spring.application.security.jwt.secret-key=YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE="
+    })
 class FourBaggerApiApplicationTests {
 
   /** Smoke test ensuring the Spring application context initializes without errors. */
