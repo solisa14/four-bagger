@@ -1,0 +1,39 @@
+# Test configuration - overrides main application.yml during tests
+spring:
+  application:
+    name: four-bagger-api
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  h2:
+    console:
+      enabled: false
+  web:
+    error:
+      include-message: always
+      include-binding-errors: always
+
+app:
+  jwt:
+    secret-key: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=
+    expiration-ms: 3600000
+    refresh-token:
+      expiration-ms: 604800000
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:8080
+  cookie:
+    secure: false
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: WARN
