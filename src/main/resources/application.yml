@@ -5,6 +5,8 @@ spring:
       jwt:
         secret-key: ${JWT_SECRET}
         expiration-ms: 3600000 # 1 hour
+        refresh-token:
+          expiration-ms: 604800000 # 7 days
 
   datasource:
     url: jdbc:h2:mem:fourbagger;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE

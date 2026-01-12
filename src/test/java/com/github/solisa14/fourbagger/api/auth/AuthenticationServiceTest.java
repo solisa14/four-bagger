@@ -26,6 +26,7 @@ class AuthenticationServiceTest {
   @Mock private UserRepository userRepository;
   @Mock private AuthenticationManager authenticationManager;
   @Mock private JwtService jwtService;
+  @Mock private RefreshTokenService refreshTokenService;
 
   @InjectMocks private AuthenticationService authenticationService;
 
@@ -51,16 +52,19 @@ class AuthenticationServiceTest {
   }
 
   @Test
-  void authenticate_shouldReturnToken_whenCredentialsValid() {
+  void authenticate_shouldReturnTokens_whenCredentialsValid() {
     LoginRequest request = new LoginRequest("testuser", "password");
-    User user = User.builder().username("testuser").build();
+    User user = User.builder().id(UUID.randomUUID()).username("testuser").build();
+    RefreshToken refreshToken = RefreshToken.builder().token("refresh-token").build();
 
     when(userRepository.findUserByUsername("testuser")).thenReturn(Optional.of(user));
     when(jwtService.generateToken(user)).thenReturn("jwt-token");
+    when(refreshTokenService.createRefreshToken(user.getId())).thenReturn(refreshToken);
 
-    String token = authenticationService.authenticate(request);
+    AuthenticationResponse response = authenticationService.authenticate(request);
 
-    assertThat(token).isEqualTo("jwt-token");
+    assertThat(response.accessToken()).isEqualTo("jwt-token");
+    assertThat(response.refreshToken()).isEqualTo("refresh-token");
     verify(authenticationManager)
         .authenticate(new UsernamePasswordAuthenticationToken("testuser", "password"));
   }

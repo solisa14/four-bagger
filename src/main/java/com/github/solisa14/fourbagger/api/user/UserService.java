@@ -22,7 +22,7 @@ public class UserService {
   }
 
   /**
-   * Creates and persists a new user account with encrypted password.
+   * Creates and persists a new user account with an encrypted password.
    *
    * <p>Validates username and email uniqueness, encrypts the password using BCrypt, assigns the
    * USER role, and saves to the database with auto-generated timestamps.

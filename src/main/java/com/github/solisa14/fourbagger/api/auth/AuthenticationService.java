@@ -1,5 +1,6 @@
 package com.github.solisa14.fourbagger.api.auth;
 
+import com.github.solisa14.fourbagger.api.common.exception.TokenRefreshException;
 import com.github.solisa14.fourbagger.api.security.JwtService;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
@@ -20,16 +21,19 @@ public class AuthenticationService {
   private final UserRepository userRepository;
   private final AuthenticationManager authenticationManager;
   private final JwtService jwtService;
+  private final RefreshTokenService refreshTokenService;
 
   public AuthenticationService(
       UserService userService,
       UserRepository userRepository,
       AuthenticationManager authenticationManager,
-      JwtService jwtService) {
+      JwtService jwtService,
+      RefreshTokenService refreshTokenService) {
     this.userService = userService;
     this.userRepository = userRepository;
     this.authenticationManager = authenticationManager;
     this.jwtService = jwtService;
+    this.refreshTokenService = refreshTokenService;
   }
 
   /**
@@ -49,18 +53,44 @@ public class AuthenticationService {
   }
 
   /**
-   * Authenticates a user with the provided credentials and generates a JWT.
+   * Authenticates a user with the provided credentials and generates a JWT and Refresh Token.
    *
    * @param request login request containing username and password
-   * @return the generated JWT token
+   * @return the generated tokens
    */
-  public String authenticate(LoginRequest request) {
+  public AuthenticationResponse authenticate(LoginRequest request) {
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 
     User user = userRepository.findUserByUsername(request.username())
         .orElseThrow(); // User existence is guaranteed after successful authentication
     
-    return jwtService.generateToken(user);
+    String jwtToken = jwtService.generateToken(user);
+    RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+    
+    return new AuthenticationResponse(jwtToken, refreshToken.getToken());
+  }
+
+  /**
+   * Generates a new access token using a valid refresh token.
+   *
+   * @param requestRefreshToken the refresh token string
+   * @return new JWT access token
+   */
+  public String refreshToken(String requestRefreshToken) {
+    return refreshTokenService.findByToken(requestRefreshToken)
+        .map(refreshTokenService::verifyExpiration)
+        .map(RefreshToken::getUser)
+        .map(jwtService::generateToken)
+        .orElseThrow(() -> new TokenRefreshException(requestRefreshToken, "Refresh token is not in database!"));
+  }
+
+  /**
+   * Logs out the user by deleting the refresh token.
+   *
+   * @param refreshToken the refresh token string
+   */
+  public void logout(String refreshToken) {
+    refreshTokenService.deleteByToken(refreshToken);
   }
 }
