@@ -19,11 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/auth")
 public class AuthenticationController {
 
-  private final AuthService authService;
+  private final AuthenticationService authenticationService;
   private final UserService userService;
 
-  public AuthenticationController(AuthService authService, UserService userService) {
-    this.authService = authService;
+  public AuthenticationController(
+      AuthenticationService authenticationService, UserService userService) {
+    this.authenticationService = authenticationService;
     this.userService = userService;
   }
 
@@ -39,7 +40,7 @@ public class AuthenticationController {
   @PostMapping
   public ResponseEntity<RegisterUserResponse> createUser(
       @Valid @RequestBody RegisterUserRequest request) {
-    RegisterUserResponse response = authService.registerUser(request);
+    RegisterUserResponse response = authenticationService.registerUser(request);
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
 }

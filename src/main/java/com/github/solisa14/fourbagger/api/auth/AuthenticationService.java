@@ -11,11 +11,11 @@ import org.springframework.stereotype.Service;
  * handles registration; authentication logic is planned for future implementation.
  */
 @Service
-public class AuthService {
+public class AuthenticationService {
 
   private final UserService userService;
 
-  public AuthService(UserService userService) {
+  public AuthenticationService(UserService userService) {
     this.userService = userService;
   }
 
