@@ -18,4 +18,10 @@ import java.util.UUID;
  * @param createdAt server timestamp when the account was created
  */
 public record RegisterUserResponse(
-    UUID id, String username, String firstName, String lastName, Role role, Instant createdAt) {}
+    UUID id,
+    String username,
+    String email,
+    String firstName,
+    String lastName,
+    Role role,
+    Instant createdAt) {}

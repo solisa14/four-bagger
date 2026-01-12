@@ -1,22 +1,11 @@
 package com.github.solisa14.fourbagger.api.user;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.jspecify.annotations.NonNull;
@@ -44,6 +33,9 @@ public class User implements UserDetails {
 
   @Column(unique = true, nullable = false)
   private String username;
+
+  @Column(unique = true, nullable = false)
+  private String email;
 
   @Column(nullable = false)
   private String password;
@@ -84,6 +76,7 @@ public class User implements UserDetails {
   }
 
   @Override
+  @NonNull
   public String getUsername() {
     return username;
   }

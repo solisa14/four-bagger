@@ -1,5 +1,6 @@
 package com.github.solisa14.fourbagger.api.auth;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -11,6 +12,7 @@ import jakarta.validation.constraints.Size;
  * at service layer), while password requirements are validated via annotations.
  *
  * @param username alphanumeric username (5-30 chars, allows underscores)
+ * @param email valid email address
  * @param password strong password meeting complexity requirements (min 8 chars, uppercase,
  *     lowercase, digit, special character)
  * @param firstName optional first name
@@ -23,6 +25,7 @@ public record RegisterUserRequest(
             regexp = "^[a-zA-Z0-9_]+$",
             message = "Username must contain only alphanumeric characters and underscores")
         String username,
+    @NotBlank(message = "Email is required") @Email(message = "Email must be valid") String email,
     @NotBlank(message = "Password is required")
         @Pattern(
             regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$",

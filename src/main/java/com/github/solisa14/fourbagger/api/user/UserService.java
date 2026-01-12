@@ -35,9 +35,13 @@ public class UserService {
     if (userRepository.findUserByUsername(request.username()).isPresent()) {
       throw new UserAlreadyExistsException(request.username());
     }
+    if (userRepository.findUserByEmail(request.email()).isPresent()) {
+      throw new EmailAlreadyExistsException(request.email());
+    }
     User createdUser =
         User.builder()
             .username(request.username())
+            .email(request.email())
             .password(passwordEncoder.encode(request.password()))
             .firstName(request.firstName())
             .lastName(request.lastName())

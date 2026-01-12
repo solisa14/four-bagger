@@ -35,6 +35,7 @@ public class AuthenticationService {
     return new RegisterUserResponse(
         createdUser.getId(),
         createdUser.getUsername(),
+        createdUser.getEmail(),
         createdUser.getFirstName(),
         createdUser.getLastName(),
         createdUser.getRole(),
