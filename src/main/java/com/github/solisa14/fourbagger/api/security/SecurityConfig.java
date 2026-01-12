@@ -1,6 +1,5 @@
-package com.github.solisa14.fourbagger.api.common.config;
+package com.github.solisa14.fourbagger.api.security;
 
-import com.github.solisa14.fourbagger.api.security.JwtAuthenticationFilter;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
