@@ -1,7 +1,9 @@
 package com.github.solisa14.fourbagger.api.common.exception;
 
 import java.time.Instant;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -49,5 +51,21 @@ public class GlobalExceptionHandler {
     String message = fieldError.getField() + ": " + fieldError.getDefaultMessage();
     return new ResponseEntity<>(
         new ErrorResponse(Instant.now(), e.getStatusCode().value(), message), e.getStatusCode());
+  }
+
+  /**
+   * Handles authentication failures.
+   *
+   * <p>Returns HTTP 401 Unauthorized when authentication fails (e.g., invalid credentials).
+   *
+   * @param ex the authentication exception
+   * @return response entity with HTTP 401 and a generic error message
+   */
+  @ExceptionHandler({AuthenticationException.class})
+  public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+    ErrorResponse errorResponse =
+        new ErrorResponse(
+            Instant.now(), HttpStatus.UNAUTHORIZED.value(), "Invalid username or password");
+    return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
   }
 }

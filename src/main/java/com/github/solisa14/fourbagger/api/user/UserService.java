@@ -24,12 +24,13 @@ public class UserService {
   /**
    * Creates and persists a new user account with encrypted password.
    *
-   * <p>Validates username uniqueness, encrypts the password using BCrypt, assigns the USER role,
-   * and saves to the database with auto-generated timestamps.
+   * <p>Validates username and email uniqueness, encrypts the password using BCrypt, assigns the
+   * USER role, and saves to the database with auto-generated timestamps.
    *
    * @param request registration data including username, plaintext password, and optional names
    * @return the persisted user entity with generated ID and timestamps
    * @throws UserAlreadyExistsException if a user with the given username already exists
+   * @throws EmailAlreadyExistsException if a user with the given email already exists
    */
   public User createUser(RegisterUserRequest request) {
     if (userRepository.findUserByUsername(request.username()).isPresent()) {
