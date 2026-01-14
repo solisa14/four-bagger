@@ -1,6 +1,6 @@
 package com.github.solisa14.fourbagger.api.auth;
 
-import com.github.solisa14.fourbagger.api.security.JwtService;
+import com.github.solisa14.fourbagger.api.common.security.JwtService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

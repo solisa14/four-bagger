@@ -1,4 +1,4 @@
-package com.github.solisa14.fourbagger.api.common.config;
+package com.github.solisa14.fourbagger.api.common.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -15,9 +15,9 @@ import org.springframework.stereotype.Service;
 /**
  * Service class for JWT (JSON Web Token) operations.
  *
- * <p>This service provides functionality to generate, validate, and extract information from JWT tokens
- * used for authentication in the application. It uses the HS256 algorithm for token signing and
- * verification with a configurable secret key and expiration time.
+ * <p>This service provides functionality to generate, validate, and extract information from JWT
+ * tokens used for authentication in the application. It uses the HS256 algorithm for token signing
+ * and verification with a configurable secret key and expiration time.
  */
 @Service
 public class JwtService {

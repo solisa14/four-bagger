@@ -1,4 +1,4 @@
-package com.github.solisa14.fourbagger.api.common.config;
+package com.github.solisa14.fourbagger.api.common.security;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -6,9 +6,9 @@ import org.springframework.stereotype.Component;
 /**
  * Configuration properties for JWT (JSON Web Token) authentication settings.
  *
- * <p>This class binds configuration properties prefixed with "app.security.jwt" from
- * application configuration files (application.yml, application.properties, etc.).
- * It provides access to JWT-related settings such as the secret key and token expiration time.
+ * <p>This class binds configuration properties prefixed with "app.security.jwt" from application
+ * configuration files (application.yml, application.properties, etc.). It provides access to
+ * JWT-related settings such as the secret key and token expiration time.
  */
 @Component
 @ConfigurationProperties(prefix = "app.security.jwt")

@@ -1,4 +1,4 @@
-package com.github.solisa14.fourbagger.api.security;
+package com.github.solisa14.fourbagger.api.common.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,10 +19,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Filter that validates JWT tokens on incoming HTTP requests.
+ * JWT authentication filter that validates tokens from HTTP cookies.
  *
- * <p>Intercepts requests, extracts the JWT from the "accessToken" cookie, validates it, and sets
- * the user authentication in the Spring Security context if the token is valid.
+ * <p>This filter intercepts incoming requests, extracts JWT tokens from the "accessToken" cookie,
+ * validates them, and sets the Spring Security authentication context if the token is valid. The
+ * filter runs once per request as part of the security filter chain.
  */
 @Component
 @Slf4j
@@ -42,7 +43,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       @NonNull HttpServletResponse response,
       @NonNull FilterChain filterChain)
       throws ServletException, IOException {
-
     final String jwt;
     final String username;
 
@@ -62,19 +62,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     jwt = jwtCookie.get().getValue();
     try {
       username = jwtService.extractUsername(jwt);
-
       if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
         UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
 
         if (jwtService.isTokenValid(jwt, userDetails)) {
           UsernamePasswordAuthenticationToken authToken =
               new UsernamePasswordAuthenticationToken(
-                  userDetails,
-                  null, // credentials are null because they are already verified
-                  userDetails.getAuthorities());
-
+                  userDetails, null, userDetails.getAuthorities());
           authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
           SecurityContextHolder.getContext().setAuthentication(authToken);
         }
       }

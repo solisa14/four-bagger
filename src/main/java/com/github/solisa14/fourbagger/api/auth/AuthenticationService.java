@@ -1,12 +1,13 @@
 package com.github.solisa14.fourbagger.api.auth;
 
-import com.github.solisa14.fourbagger.api.security.JwtService;
+import com.github.solisa14.fourbagger.api.common.security.JwtService;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import com.github.solisa14.fourbagger.api.user.UserService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Orchestrates user authentication workflows including registration and login.
@@ -38,9 +39,10 @@ public class AuthenticationService {
    * @param request registration details including credentials and optional profile fields
    * @return response containing the created user's public information
    */
+  @Transactional
   public RegisterUserResponse registerUser(RegisterUserRequest request) {
     User createdUser = userService.createUser(request);
-    
+
     return new RegisterUserResponse(
         createdUser.getId(),
         createdUser.getUsername(),
@@ -58,9 +60,11 @@ public class AuthenticationService {
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 
-    User user = userRepository.findUserByUsername(request.username())
-        .orElseThrow(); // User existence is guaranteed after successful authentication
-    
+    User user =
+        userRepository
+            .findUserByUsername(request.username())
+            .orElseThrow(); // User existence is guaranteed after successful authentication
+
     return jwtService.generateToken(user);
   }
 }
