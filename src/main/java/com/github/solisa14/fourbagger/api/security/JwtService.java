@@ -26,8 +26,8 @@ public class JwtService {
   private final long jwtExpiration;
 
   public JwtService(
-      @Value("${spring.application.security.jwt.secret-key}") String secretKey,
-      @Value("${spring.application.security.jwt.expiration-ms}") long jwtExpiration) {
+      @Value("${app.security.jwt.secret-key}") String secretKey,
+      @Value("${app.security.jwt.expiration-ms}") long jwtExpiration) {
     this.secretKey = secretKey;
     this.jwtExpiration = jwtExpiration;
   }

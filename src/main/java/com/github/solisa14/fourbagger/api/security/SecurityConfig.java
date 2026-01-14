@@ -2,6 +2,7 @@ package com.github.solisa14.fourbagger.api.security;
 
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,9 +33,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
   private final UserRepository userRepository;
+  private final List<String> allowedOrigins;
 
-  public SecurityConfig(UserRepository userRepository) {
+  public SecurityConfig(
+      UserRepository userRepository,
+      @Value("${app.cors.allowed-origins}") List<String> allowedOrigins) {
     this.userRepository = userRepository;
+    this.allowedOrigins = allowedOrigins;
   }
 
   /**
@@ -100,7 +105,7 @@ public class SecurityConfig {
   @Bean
   CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:8080"));
+    configuration.setAllowedOrigins(allowedOrigins);
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
     configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
     configuration.setAllowCredentials(true);

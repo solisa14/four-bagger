@@ -68,4 +68,19 @@ public class GlobalExceptionHandler {
             Instant.now(), HttpStatus.UNAUTHORIZED.value(), "Invalid username or password");
     return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
   }
+
+  /**
+   * Handles token refresh exceptions.
+   *
+   * <p>Returns HTTP 403 Forbidden when a token refresh fails (e.g., expired or invalid token).
+   *
+   * @param ex the token refresh exception
+   * @return response entity with HTTP 403 and the error message
+   */
+  @ExceptionHandler(TokenRefreshException.class)
+  public ResponseEntity<ErrorResponse> handleTokenRefreshException(TokenRefreshException ex) {
+    ErrorResponse errorResponse =
+        new ErrorResponse(Instant.now(), HttpStatus.FORBIDDEN.value(), ex.getMessage());
+    return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+  }
 }

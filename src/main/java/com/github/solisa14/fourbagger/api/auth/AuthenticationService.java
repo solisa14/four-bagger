@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.auth;
 
-import com.github.solisa14.fourbagger.api.common.exception.TokenRefreshException;
 import com.github.solisa14.fourbagger.api.security.JwtService;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
@@ -44,7 +43,7 @@ public class AuthenticationService {
    */
   public RegisterUserResponse registerUser(RegisterUserRequest request) {
     User createdUser = userService.createUser(request);
-    
+
     return new RegisterUserResponse(
         createdUser.getId(),
         createdUser.getUsername(),
@@ -62,27 +61,29 @@ public class AuthenticationService {
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(request.username(), request.password()));
 
-    User user = userRepository.findUserByUsername(request.username())
-        .orElseThrow(); // User existence is guaranteed after successful authentication
-    
+    User user =
+        userRepository
+            .findUserByUsername(request.username())
+            .orElseThrow(); // User existence is guaranteed after successful authentication
+
     String jwtToken = jwtService.generateToken(user);
     RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
-    
+
     return new AuthenticationResponse(jwtToken, refreshToken.getToken());
   }
 
   /**
-   * Generates a new access token using a valid refresh token.
+   * Rotates the refresh token and generates a new access token.
    *
    * @param requestRefreshToken the refresh token string
-   * @return new JWT access token
+   * @return new JWT access token and new refresh token
    */
-  public String refreshToken(String requestRefreshToken) {
-    return refreshTokenService.findByToken(requestRefreshToken)
-        .map(refreshTokenService::verifyExpiration)
-        .map(RefreshToken::getUser)
-        .map(jwtService::generateToken)
-        .orElseThrow(() -> new TokenRefreshException(requestRefreshToken, "Refresh token is not in database!"));
+  public AuthenticationResponse refreshToken(String requestRefreshToken) {
+    RefreshToken newRefreshToken = refreshTokenService.rotateRefreshToken(requestRefreshToken);
+    User user = newRefreshToken.getUser();
+    String jwtToken = jwtService.generateToken(user);
+
+    return new AuthenticationResponse(jwtToken, newRefreshToken.getToken());
   }
 
   /**
