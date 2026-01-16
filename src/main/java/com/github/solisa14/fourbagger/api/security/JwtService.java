@@ -1,15 +1,15 @@
 package com.github.solisa14.fourbagger.api.security;
 
+import com.github.solisa14.fourbagger.api.user.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +39,19 @@ public class JwtService {
    * @return signed JWT string
    */
   public String generateToken(UserDetails userDetails) {
-    return buildToken(new HashMap<>(), userDetails, jwtExpiration);
+    Map<String, Object> claims = new HashMap<>();
+
+    if (userDetails instanceof User) {
+      claims.put("role", ((User) userDetails).getRole().name());
+    } else {
+      var authority = userDetails.getAuthorities().stream().findFirst();
+      authority.ifPresent(
+          grantedAuthority ->
+              claims.put(
+                  "role",
+                  Objects.requireNonNull(grantedAuthority.getAuthority()).replace("ROLE_", "")));
+    }
+    return buildToken(claims, userDetails, jwtExpiration);
   }
 
   /**
@@ -56,12 +68,25 @@ public class JwtService {
    * Validates if the token belongs to the user and is not expired.
    *
    * @param token the JWT string
-   * @param userDetails the user to validate against
    * @return true if valid, false otherwise
    */
-  public boolean isTokenValid(String token, UserDetails userDetails) {
-    final String username = extractUsername(token);
-    return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+  public boolean isTokenValid(String token) {
+    try {
+      return !isTokenExpired(token);
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  /**
+   * Extracts the user's authorities (roles) from the JWT.
+   *
+   * @param token the JWT string
+   * @return a list of {@link SimpleGrantedAuthority} representing the user's roles
+   */
+  public List<SimpleGrantedAuthority> extractAuthorities(String token) {
+    String role = extractClaim(token, claims -> claims.get("role", String.class));
+    return List.of(new SimpleGrantedAuthority("ROLE_" + role));
   }
 
   private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
