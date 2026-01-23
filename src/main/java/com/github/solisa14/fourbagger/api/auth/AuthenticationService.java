@@ -64,7 +64,7 @@ public class AuthenticationService {
     User user =
         userRepository
             .findUserByUsername(request.username())
-            .orElseThrow(); // User existence is guaranteed after successful authentication
+            .orElseThrow(AuthenticationFailedException::new);
 
     String jwtToken = jwtService.generateToken(user);
     RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
