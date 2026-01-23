@@ -38,7 +38,7 @@ public class AuthenticationService {
   /**
    * Processes new user registration and prepares response with account details.
    *
-   * @param request registration details including credentials and optional profile fields
+   * @param request registration details including credentials and required profile fields
    * @return response containing the created user's public information
    */
   public RegisterUserResponse registerUser(RegisterUserRequest request) {

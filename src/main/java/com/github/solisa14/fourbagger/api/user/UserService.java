@@ -29,7 +29,7 @@ public class UserService {
    * <p>Validates username and email uniqueness, encrypts the password using BCrypt, assigns the
    * USER role, and saves to the database with auto-generated timestamps.
    *
-   * @param request registration data including username, plaintext password, and optional names
+   * @param request registration data including username, plaintext password, and required names
    * @return the persisted user entity with generated ID and timestamps
    * @throws UserAlreadyExistsException if a user with the given username already exists
    * @throws EmailAlreadyExistsException if a user with the given email already exists

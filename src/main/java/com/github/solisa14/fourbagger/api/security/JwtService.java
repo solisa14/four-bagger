@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 /**
  * Service for generating, validating, and extracting information from JSON Web Tokens (JWT).
  *
- * <p>Uses HMAC-SHA256 encryption to sign tokens. The secret key and expiration time are managed via
+ * <p>Uses HMAC-SHA256 signing to issue tokens. The secret key and expiration time are managed via
  * application configuration.
  */
 @Service
@@ -65,7 +65,7 @@ public class JwtService {
   }
 
   /**
-   * Validates if the token belongs to the user and is not expired.
+   * Validates whether the token is well-formed and not expired.
    *
    * @param token the JWT string
    * @return true if valid, false otherwise

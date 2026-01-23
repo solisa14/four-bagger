@@ -45,7 +45,7 @@ public class AuthenticationController {
    * <p>Validates the request payload, creates the user, logs them in, and returns HTTP 201
    * (Created) with the user details and HttpOnly authentication cookies.
    *
-   * @param request validated user registration data including username, password, and optional
+   * @param request validated user registration data including username, password, and required
    *     names
    * @return response entity with HTTP 201 status, the newly created user's public details, and auth
    *     cookies
