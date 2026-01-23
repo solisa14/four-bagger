@@ -21,15 +21,16 @@ spring:
       include-binding-errors: always
 
 app:
-  jwt:
-    secret-key: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=
-    expiration-ms: 3600000
-    refresh-token:
-      expiration-ms: 604800000
   cors:
     allowed-origins: http://localhost:3000,http://localhost:8080
-  cookie:
-    secure: false
+  security:
+    jwt:
+      secret-key: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=
+      expiration-ms: 3600000
+      refresh-token:
+        expiration-ms: 604800000
+    cookie:
+      secure: false
 
 server:
   port: 8080
