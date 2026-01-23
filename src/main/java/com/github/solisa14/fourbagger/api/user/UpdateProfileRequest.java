@@ -3,6 +3,11 @@ package com.github.solisa14.fourbagger.api.user;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Request payload for updating a user's profile.
+ *
+ * <p>Both fields are required, even on partial update endpoints.
+ */
 public record UpdateProfileRequest(
     @NotBlank(message = "First name is required")
         @Size(max = 255, message = "First name must be at most 255 characters")

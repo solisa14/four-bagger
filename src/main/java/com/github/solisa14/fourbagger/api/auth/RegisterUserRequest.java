@@ -15,8 +15,8 @@ import jakarta.validation.constraints.Size;
  * @param email valid email address
  * @param password strong password meeting complexity requirements (min 8 chars, uppercase,
  *     lowercase, digit, special character)
- * @param firstName optional first name
- * @param lastName optional last name
+ * @param firstName required first name
+ * @param lastName required last name
  */
 public record RegisterUserRequest(
     @NotBlank(message = "Username is required")

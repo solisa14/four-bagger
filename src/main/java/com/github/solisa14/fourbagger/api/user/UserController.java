@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * REST controller for user account management endpoints.
  *
- * <p>Provides HTTP endpoints for user profile operations and account management.
+ * <p>Provides HTTP endpoints for user profile operations and account management. Profile updates
+ * require both first and last names.
  */
 @RestController
 @RequestMapping("/api/v1/user")
@@ -33,8 +34,7 @@ public class UserController {
 
   @PatchMapping("/me")
   public ResponseEntity<UserResponse> updateProfile(
-      @AuthenticationPrincipal User currentUser,
-      @Valid @RequestBody UpdateProfileRequest request) {
+      @AuthenticationPrincipal User currentUser, @Valid @RequestBody UpdateProfileRequest request) {
     User updatedUser = userService.updateProfile(currentUser.getId(), request);
     return ResponseEntity.ok(mapToResponse(updatedUser));
   }
