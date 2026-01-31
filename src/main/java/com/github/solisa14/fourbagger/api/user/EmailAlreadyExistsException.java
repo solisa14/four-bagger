@@ -16,6 +16,6 @@ public class EmailAlreadyExistsException extends BusinessException {
    * @param email the email that already exists in the system
    */
   public EmailAlreadyExistsException(String email) {
-    super("Invalid email.", HttpStatus.CONFLICT);
+    super("An account with this email may already exist.", HttpStatus.CONFLICT);
   }
 }

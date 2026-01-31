@@ -16,6 +16,6 @@ public class UserAlreadyExistsException extends BusinessException {
    * @param username the username that already exists in the system
    */
   public UserAlreadyExistsException(String username) {
-    super("User with username '" + username + "' already exists", HttpStatus.CONFLICT);
+    super("User with username '" + username + "' may already exist.", HttpStatus.CONFLICT);
   }
 }
