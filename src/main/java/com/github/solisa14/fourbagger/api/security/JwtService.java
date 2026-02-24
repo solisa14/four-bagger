@@ -73,7 +73,7 @@ public class JwtService {
   public boolean isTokenValid(String token) {
     try {
       return !isTokenExpired(token);
-    } catch (Exception e) {
+    } catch (io.jsonwebtoken.JwtException e) {
       return false;
     }
   }

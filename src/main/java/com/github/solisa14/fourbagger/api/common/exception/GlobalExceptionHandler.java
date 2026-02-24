@@ -47,8 +47,13 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
       MethodArgumentNotValidException e) {
-    FieldError fieldError = e.getFieldErrors().getFirst();
-    String message = fieldError.getField() + ": " + fieldError.getDefaultMessage();
+    String message;
+    if (!e.getFieldErrors().isEmpty()) {
+      FieldError fieldError = e.getFieldErrors().getFirst();
+      message = fieldError.getField() + ": " + fieldError.getDefaultMessage();
+    } else {
+      message = e.getAllErrors().getFirst().getDefaultMessage();
+    }
     return new ResponseEntity<>(
         new ErrorResponse(Instant.now(), e.getStatusCode().value(), message), e.getStatusCode());
   }

@@ -18,7 +18,7 @@ class UserRepositoryTest extends AbstractDataJpaTest {
   @Test
   void flywayMigrationsApplied() {
     assertThat(flyway.info().current()).isNotNull();
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
+    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
   }
 
   @Test

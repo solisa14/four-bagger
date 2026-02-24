@@ -33,16 +33,15 @@ class UserControllerWebMvcTest {
   void updateProfile_returnsValidationError() throws Exception {
     User principal =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
-    Map<String, String> payload = Map.of("lastName", "User");
 
     mockMvc
         .perform(
             patch("/api/v1/user/me")
                 .with(user(principal))
                 .contentType("application/json")
-                .content(objectMapper.writeValueAsString(payload)))
+                .content("{}"))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message").value("firstName: First name is required"));
+        .andExpect(jsonPath("$.message").value("At least one field must be provided"));
   }
 
   @Test
