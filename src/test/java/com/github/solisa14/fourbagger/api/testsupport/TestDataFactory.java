@@ -3,6 +3,8 @@ package com.github.solisa14.fourbagger.api.testsupport;
 import com.github.solisa14.fourbagger.api.auth.LoginRequest;
 import com.github.solisa14.fourbagger.api.auth.RefreshToken;
 import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
+import com.github.solisa14.fourbagger.api.game.Game;
+import com.github.solisa14.fourbagger.api.game.GameStatus;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.UpdatePasswordRequest;
 import com.github.solisa14.fourbagger.api.user.UpdateProfileRequest;
@@ -55,5 +57,16 @@ public final class TestDataFactory {
 
   public static RefreshToken refreshToken(User user, Instant expiryDate, String token) {
     return RefreshToken.builder().user(user).expiryDate(expiryDate).tokenHash(token).build();
+  }
+
+  public static Game game(User playerOne, User playerTwo, GameStatus status) {
+    return Game.builder()
+        .playerOne(playerOne)
+        .playerTwo(playerTwo)
+        .targetScore(21)
+        .winByTwo(false)
+        .status(status)
+        .createdBy(playerOne)
+        .build();
   }
 }
