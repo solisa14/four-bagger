@@ -43,7 +43,7 @@ class UserServiceTest {
   @Test
   void createUser_throwsWhenEmailExists() {
     RegisterUserRequest request = TestDataFactory.registerUserRequest();
-    when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.empty());
+    when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.<User>empty());
     when(userRepository.findUserByEmail(request.email())).thenReturn(Optional.of(new User()));
 
     assertThatThrownBy(() -> userService.createUser(request))
@@ -53,13 +53,13 @@ class UserServiceTest {
   @Test
   void createUser_savesUserWithEncodedPasswordAndRole() {
     RegisterUserRequest request = TestDataFactory.registerUserRequest();
-    when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.empty());
-    when(userRepository.findUserByEmail(request.email())).thenReturn(Optional.empty());
+    when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.<User>empty());
+    when(userRepository.findUserByEmail(request.email())).thenReturn(Optional.<User>empty());
     when(passwordEncoder.encode(request.password())).thenReturn("encoded");
     when(userRepository.save(any(User.class)))
         .thenAnswer(
             invocation -> {
-              User user = invocation.getArgument(0);
+              User user = invocation.getArgument(0, User.class);
               user.setId(UUID.randomUUID());
               return user;
             });
@@ -79,8 +79,12 @@ class UserServiceTest {
   @Test
   void createUser_throwsFriendlyConflictWhenDatabaseConstraintWinsRace() {
     RegisterUserRequest request = TestDataFactory.registerUserRequest();
-    when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.empty(), Optional.of(new User()));
-    when(userRepository.findUserByEmail(request.email())).thenReturn(Optional.empty(), Optional.empty());
+    when(userRepository.findUserByUsername(request.username()))
+        .thenReturn(Optional.<User>empty())
+        .thenReturn(Optional.of(new User()));
+    when(userRepository.findUserByEmail(request.email()))
+        .thenReturn(Optional.<User>empty())
+        .thenReturn(Optional.<User>empty());
     when(passwordEncoder.encode(request.password())).thenReturn("encoded");
     when(userRepository.save(any(User.class))).thenThrow(new DataIntegrityViolationException("uk_users_username"));
 
@@ -101,7 +105,8 @@ class UserServiceTest {
     UUID id = UUID.randomUUID();
     User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
-    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(userRepository.save(any(User.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0, User.class));
     UpdateProfileRequest request = new UpdateProfileRequest("New", "Name");
 
     User updated = userService.updateProfile(id, request);
@@ -129,7 +134,8 @@ class UserServiceTest {
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
     when(passwordEncoder.matches("current", "encoded")).thenReturn(true);
     when(passwordEncoder.encode("NewPassword1!")).thenReturn("new-encoded");
-    when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(userRepository.save(any(User.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0, User.class));
 
     userService.updatePassword(id, new UpdatePasswordRequest("current", "NewPassword1!"));
 

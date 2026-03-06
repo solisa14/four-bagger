@@ -34,16 +34,19 @@ public class SecurityConfig {
 
   private final UserRepository userRepository;
   private final List<String> allowedOrigins;
+  private final boolean h2ConsoleEnabled;
   private final ApiAuthenticationEntryPoint authenticationEntryPoint;
   private final ApiAccessDeniedHandler accessDeniedHandler;
 
   public SecurityConfig(
       UserRepository userRepository,
       @Value("${app.cors.allowed-origins}") List<String> allowedOrigins,
+      @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled,
       ApiAuthenticationEntryPoint authenticationEntryPoint,
       ApiAccessDeniedHandler accessDeniedHandler) {
     this.userRepository = userRepository;
     this.allowedOrigins = allowedOrigins;
+    this.h2ConsoleEnabled = h2ConsoleEnabled;
     this.authenticationEntryPoint = authenticationEntryPoint;
     this.accessDeniedHandler = accessDeniedHandler;
   }
@@ -65,11 +68,13 @@ public class SecurityConfig {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .authorizeHttpRequests(
-            auth ->
-                auth.requestMatchers("/api/v1/auth/**", "/h2-console/**")
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated())
+            auth -> {
+              auth.requestMatchers("/api/v1/auth/**").permitAll();
+              if (h2ConsoleEnabled) {
+                auth.requestMatchers("/h2-console/**").permitAll();
+              }
+              auth.anyRequest().authenticated();
+            })
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .exceptionHandling(
@@ -80,9 +85,11 @@ public class SecurityConfig {
         .authenticationProvider(authenticationProvider())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .headers(
-            headers ->
-                headers.frameOptions(
-                    HeadersConfigurer.FrameOptionsConfig::disable)); // Required for H2 Console
+            headers -> {
+              if (h2ConsoleEnabled) {
+                headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin);
+              }
+            });
 
     return http.build();
   }

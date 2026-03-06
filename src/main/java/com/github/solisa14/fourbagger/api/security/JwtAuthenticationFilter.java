@@ -14,6 +14,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -79,8 +80,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     } catch (io.jsonwebtoken.JwtException e) {
       log.warn("JWT validation failed: {}", e.getMessage());
       SecurityContextHolder.clearContext();
-    } catch (Exception e) {
-      log.error("Unexpected error during JWT authentication", e);
+    } catch (UsernameNotFoundException e) {
+      log.warn("JWT subject does not map to an active user: {}", e.getMessage());
       SecurityContextHolder.clearContext();
     }
     filterChain.doFilter(request, response);

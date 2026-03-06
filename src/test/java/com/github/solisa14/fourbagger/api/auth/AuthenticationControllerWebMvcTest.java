@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
+import com.github.solisa14.fourbagger.api.user.EmailAlreadyExistsException;
+import com.github.solisa14.fourbagger.api.user.UserAlreadyExistsException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,7 +76,41 @@ class AuthenticationControllerWebMvcTest {
                 .contentType("application/json")
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.message").value("User with this username already exists"));
+        .andExpect(jsonPath("$.message").value("Request conflicts with existing data"));
+  }
+
+  @Test
+  void register_returnsConflictWhenUsernameAlreadyExists() throws Exception {
+    RegisterUserRequest request =
+        new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
+    when(authenticationService.registerUser(request))
+        .thenThrow(new UserAlreadyExistsException(request.username()));
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/register")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isConflict())
+        .andExpect(
+            jsonPath("$.message")
+                .value("User with username '" + request.username() + "' may already exist."));
+  }
+
+  @Test
+  void register_returnsConflictWhenEmailAlreadyExists() throws Exception {
+    RegisterUserRequest request =
+        new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
+    when(authenticationService.registerUser(request))
+        .thenThrow(new EmailAlreadyExistsException(request.email()));
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/register")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.message").value("An account with this email may already exist."));
   }
 
   @Test

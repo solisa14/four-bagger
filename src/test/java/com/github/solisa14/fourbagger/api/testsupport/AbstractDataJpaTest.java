@@ -10,11 +10,4 @@ import org.springframework.test.context.ActiveProfiles;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @Import(FlywayConfig.class)
-public abstract class AbstractDataJpaTest {
-
-  static {
-    if (System.getProperty("api.version") == null) {
-      System.setProperty("api.version", "1.44");
-    }
-  }
-}
+public abstract class AbstractDataJpaTest {}

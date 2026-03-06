@@ -1,14 +1,16 @@
 spring:
   application:
     name: four-bagger-api
-  profiles:
-    active: dev
+  h2:
+    console:
+      enabled: false
   flyway:
     enabled: true
     locations: classpath:db/migration
   jpa:
     hibernate:
       ddl-auto: validate
+    open-in-view: false
     defer-datasource-initialization: true
 
 app:

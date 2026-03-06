@@ -1,4 +1,7 @@
 spring:
+  h2:
+    console:
+      enabled: true
   datasource:
     url: ${DEV_DB_URL:jdbc:postgresql://localhost:5432/fourbagger}
     username: ${DEV_DB_USERNAME:postgres}

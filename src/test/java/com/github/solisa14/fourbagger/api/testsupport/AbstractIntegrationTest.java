@@ -7,11 +7,4 @@ import org.springframework.test.context.ActiveProfiles;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-public abstract class AbstractIntegrationTest {
-
-  static {
-    if (System.getProperty("api.version") == null) {
-      System.setProperty("api.version", "1.44");
-    }
-  }
-}
+public abstract class AbstractIntegrationTest {}
