@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
+import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +17,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,6 +26,8 @@ class UserServiceTest {
   @Mock private UserRepository userRepository;
 
   @Mock private BCryptPasswordEncoder passwordEncoder;
+
+  @Mock private RefreshTokenService refreshTokenService;
 
   @InjectMocks private UserService userService;
 
@@ -73,6 +77,18 @@ class UserServiceTest {
   }
 
   @Test
+  void createUser_throwsFriendlyConflictWhenDatabaseConstraintWinsRace() {
+    RegisterUserRequest request = TestDataFactory.registerUserRequest();
+    when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.empty(), Optional.of(new User()));
+    when(userRepository.findUserByEmail(request.email())).thenReturn(Optional.empty(), Optional.empty());
+    when(passwordEncoder.encode(request.password())).thenReturn("encoded");
+    when(userRepository.save(any(User.class))).thenThrow(new DataIntegrityViolationException("uk_users_username"));
+
+    assertThatThrownBy(() -> userService.createUser(request))
+        .isInstanceOf(UserAlreadyExistsException.class);
+  }
+
+  @Test
   void getUser_throwsWhenNotFound() {
     UUID id = UUID.randomUUID();
     when(userRepository.findById(id)).thenReturn(Optional.empty());
@@ -119,5 +135,6 @@ class UserServiceTest {
 
     assertThat(user.getPassword()).isEqualTo("new-encoded");
     verify(userRepository).save(user);
+    verify(refreshTokenService).deleteByUserId(id);
   }
 }

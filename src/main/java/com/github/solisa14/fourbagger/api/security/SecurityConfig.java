@@ -34,12 +34,18 @@ public class SecurityConfig {
 
   private final UserRepository userRepository;
   private final List<String> allowedOrigins;
+  private final ApiAuthenticationEntryPoint authenticationEntryPoint;
+  private final ApiAccessDeniedHandler accessDeniedHandler;
 
   public SecurityConfig(
       UserRepository userRepository,
-      @Value("${app.cors.allowed-origins}") List<String> allowedOrigins) {
+      @Value("${app.cors.allowed-origins}") List<String> allowedOrigins,
+      ApiAuthenticationEntryPoint authenticationEntryPoint,
+      ApiAccessDeniedHandler accessDeniedHandler) {
     this.userRepository = userRepository;
     this.allowedOrigins = allowedOrigins;
+    this.authenticationEntryPoint = authenticationEntryPoint;
+    this.accessDeniedHandler = accessDeniedHandler;
   }
 
   /**
@@ -66,6 +72,11 @@ public class SecurityConfig {
                     .authenticated())
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .exceptionHandling(
+            exceptions ->
+                exceptions
+                    .authenticationEntryPoint(authenticationEntryPoint)
+                    .accessDeniedHandler(accessDeniedHandler))
         .authenticationProvider(authenticationProvider())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .headers(

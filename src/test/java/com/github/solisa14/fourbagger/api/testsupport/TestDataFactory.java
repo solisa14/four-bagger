@@ -54,6 +54,6 @@ public final class TestDataFactory {
   }
 
   public static RefreshToken refreshToken(User user, Instant expiryDate, String token) {
-    return RefreshToken.builder().user(user).expiryDate(expiryDate).token(token).build();
+    return RefreshToken.builder().user(user).expiryDate(expiryDate).tokenHash(token).build();
   }
 }

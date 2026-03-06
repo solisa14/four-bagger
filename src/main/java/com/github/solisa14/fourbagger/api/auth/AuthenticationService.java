@@ -67,9 +67,9 @@ public class AuthenticationService {
             .orElseThrow(AuthenticationFailedException::new);
 
     String jwtToken = jwtService.generateToken(user);
-    RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
+    RefreshTokenSession refreshTokenSession = refreshTokenService.issueRefreshToken(user.getId());
 
-    return new AuthenticationResponse(jwtToken, refreshToken.getToken());
+    return new AuthenticationResponse(jwtToken, refreshTokenSession.rawToken());
   }
 
   /**
@@ -79,11 +79,11 @@ public class AuthenticationService {
    * @return new JWT access token and new refresh token
    */
   public AuthenticationResponse refreshToken(String requestRefreshToken) {
-    RefreshToken newRefreshToken = refreshTokenService.rotateRefreshToken(requestRefreshToken);
-    User user = newRefreshToken.getUser();
+    RefreshTokenSession refreshTokenSession = refreshTokenService.rotateRefreshToken(requestRefreshToken);
+    User user = refreshTokenSession.user();
     String jwtToken = jwtService.generateToken(user);
 
-    return new AuthenticationResponse(jwtToken, newRefreshToken.getToken());
+    return new AuthenticationResponse(jwtToken, refreshTokenSession.rawToken());
   }
 
   /**

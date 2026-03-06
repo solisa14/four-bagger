@@ -3,9 +3,11 @@ package com.github.solisa14.fourbagger.api.common.exception;
 import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -30,9 +32,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(BusinessException.class)
   public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex) {
-    ErrorResponse errorResponse =
-        new ErrorResponse(Instant.now(), ex.getStatus().value(), ex.getMessage());
-    return new ResponseEntity<>(errorResponse, ex.getStatus());
+    return buildResponse(ex.getStatus(), ex.getMessage());
   }
 
   /**
@@ -54,8 +54,7 @@ public class GlobalExceptionHandler {
     } else {
       message = e.getAllErrors().getFirst().getDefaultMessage();
     }
-    return new ResponseEntity<>(
-        new ErrorResponse(Instant.now(), e.getStatusCode().value(), message), e.getStatusCode());
+    return buildResponse(HttpStatus.valueOf(e.getStatusCode().value()), message);
   }
 
   /**
@@ -68,10 +67,7 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler({AuthenticationException.class})
   public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
-    ErrorResponse errorResponse =
-        new ErrorResponse(
-            Instant.now(), HttpStatus.UNAUTHORIZED.value(), "Invalid username or password");
-    return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid username or password");
   }
 
   /**
@@ -84,8 +80,38 @@ public class GlobalExceptionHandler {
    */
   @ExceptionHandler(TokenRefreshException.class)
   public ResponseEntity<ErrorResponse> handleTokenRefreshException(TokenRefreshException ex) {
-    ErrorResponse errorResponse =
-        new ErrorResponse(Instant.now(), HttpStatus.FORBIDDEN.value(), ex.getMessage());
-    return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+  }
+
+  @ExceptionHandler(MissingRequestCookieException.class)
+  public ResponseEntity<ErrorResponse> handleMissingRequestCookieException(
+      MissingRequestCookieException ex) {
+    String message =
+        switch (ex.getCookieName()) {
+          case "refreshToken" -> "Refresh token is required";
+          case "accessToken" -> "Access token is required";
+          default -> ex.getCookieName() + " cookie is required";
+        };
+    return buildResponse(HttpStatus.UNAUTHORIZED, message);
+  }
+
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+      DataIntegrityViolationException ex) {
+    String message = "Request conflicts with existing data";
+    String exceptionMessage = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : "";
+
+    if (exceptionMessage.contains("uk_users_username")) {
+      message = "User with this username already exists";
+    } else if (exceptionMessage.contains("uk_users_email")) {
+      message = "An account with this email already exists";
+    }
+
+    return buildResponse(HttpStatus.CONFLICT, message);
+  }
+
+  private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message) {
+    ErrorResponse errorResponse = new ErrorResponse(Instant.now(), status.value(), message);
+    return new ResponseEntity<>(errorResponse, status);
   }
 }

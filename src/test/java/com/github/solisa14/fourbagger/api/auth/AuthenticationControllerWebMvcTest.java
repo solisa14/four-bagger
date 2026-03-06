@@ -1,11 +1,13 @@
 package com.github.solisa14.fourbagger.api.auth;
 
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -57,5 +59,29 @@ class AuthenticationControllerWebMvcTest {
                 .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message").value("password: Password is required"));
+  }
+
+  @Test
+  void register_returnsConflictWhenDatabaseConstraintBubblesUp() throws Exception {
+    RegisterUserRequest request =
+        new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
+    when(authenticationService.registerUser(request))
+        .thenThrow(new DataIntegrityViolationException("uk_users_username"));
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/register")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.message").value("User with this username already exists"));
+  }
+
+  @Test
+  void refreshToken_returnsUnauthorizedWhenCookieIsMissing() throws Exception {
+    mockMvc
+        .perform(post("/api/v1/auth/refresh-token"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.message").value("Refresh token is required"));
   }
 }

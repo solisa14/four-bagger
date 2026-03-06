@@ -31,6 +31,8 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired private RefreshTokenRepository refreshTokenRepository;
 
+  @Autowired private RefreshTokenService refreshTokenService;
+
   @Autowired private PasswordEncoder passwordEncoder;
 
   @Test
@@ -86,6 +88,12 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
     List<String> logoutCookies = logoutResult.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
     assertThat(TestCookieHelper.hasClearedCookie(logoutCookies, "accessToken")).isTrue();
     assertThat(TestCookieHelper.hasClearedCookie(logoutCookies, "refreshToken")).isTrue();
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/refresh-token")
+                .cookie(TestCookieHelper.cookie("refreshToken", newRefreshToken)))
+        .andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -134,7 +142,7 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
     RefreshToken token =
         RefreshToken.builder()
             .user(user)
-            .token("expired-token")
+            .tokenHash(refreshTokenService.hashToken("expired-token"))
             .expiryDate(Instant.now().minusSeconds(30))
             .build();
     refreshTokenRepository.saveAndFlush(token);
@@ -143,7 +151,66 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
         .perform(
             post("/api/v1/auth/refresh-token")
                 .cookie(TestCookieHelper.cookie("refreshToken", "expired-token")))
-        .andExpect(status().isForbidden())
+        .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.message", containsString("Refresh token was expired")));
+  }
+
+  @Test
+  void login_replacesPreviousRefreshSession() throws Exception {
+    String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
+    String username = "sessionuser" + suffix;
+    String email = "sessionuser" + suffix + "@example.com";
+    User user =
+        User.builder()
+            .username(username)
+            .email(email)
+            .password(passwordEncoder.encode("Password1!"))
+            .firstName("Test")
+            .lastName("User")
+            .role(Role.USER)
+            .build();
+    userRepository.saveAndFlush(user);
+
+    LoginRequest request = new LoginRequest(username, "Password1!");
+
+    MvcResult firstLogin =
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    String firstRefreshToken =
+        TestCookieHelper.extractCookieValue(
+            firstLogin.getResponse().getHeaders(HttpHeaders.SET_COOKIE), "refreshToken");
+
+    MvcResult secondLogin =
+        mockMvc
+            .perform(
+                post("/api/v1/auth/login")
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    String secondRefreshToken =
+        TestCookieHelper.extractCookieValue(
+            secondLogin.getResponse().getHeaders(HttpHeaders.SET_COOKIE), "refreshToken");
+
+    assertThat(secondRefreshToken).isNotEqualTo(firstRefreshToken);
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/refresh-token")
+                .cookie(TestCookieHelper.cookie("refreshToken", firstRefreshToken)))
+        .andExpect(status().isUnauthorized());
+
+    mockMvc
+        .perform(
+            post("/api/v1/auth/refresh-token")
+                .cookie(TestCookieHelper.cookie("refreshToken", secondRefreshToken)))
+        .andExpect(status().isOk());
   }
 }

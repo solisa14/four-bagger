@@ -9,8 +9,8 @@ import lombok.*;
 /**
  * Entity representing a refresh token used to obtain new access tokens.
  *
- * <p>Stores the token string, expiration time, and the associated user. This allows for token
- * revocation and rotation.
+ * <p>Stores a one-way hash of the token, expiration time, and the associated user. Only one active
+ * refresh session is allowed per user.
  */
 @Entity
 @Table(name = "refresh_tokens")
@@ -25,13 +25,13 @@ public class RefreshToken {
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
-  @Column(nullable = false, unique = true)
-  private String token;
+  @Column(name = "token_hash", nullable = false, unique = true, length = 64)
+  private String tokenHash;
 
   @Column(nullable = false)
   private Instant expiryDate;
 
-  @ManyToOne
-  @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+  @OneToOne
+  @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, unique = true)
   private User user;
 }

@@ -3,6 +3,7 @@ package com.github.solisa14.fourbagger.api.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,6 +61,27 @@ class AuthenticationControllerIntegrationTest extends AbstractIntegrationTest {
 
   @Test
   void userMe_requiresAuthentication() throws Exception {
-    mockMvc.perform(get("/api/v1/user/me")).andExpect(status().isForbidden());
+    mockMvc
+        .perform(get("/api/v1/user/me"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(
+            jsonPath("$.message").value("Authentication is required to access this resource"));
+  }
+
+  @Test
+  void refreshToken_requiresRefreshTokenCookie() throws Exception {
+    mockMvc
+        .perform(post("/api/v1/auth/refresh-token"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.message").value("Refresh token is required"));
+  }
+
+  @Test
+  void protectedEndpoint_withInvalidAccessTokenReturnsUnauthorizedJson() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/user/me").cookie(new jakarta.servlet.http.Cookie("accessToken", "bad-token")))
+        .andExpect(status().isUnauthorized())
+        .andExpect(
+            jsonPath("$.message").value("Authentication is required to access this resource"));
   }
 }

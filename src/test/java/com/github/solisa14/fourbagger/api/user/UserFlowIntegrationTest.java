@@ -45,7 +45,10 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         registerResult.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
     String accessToken =
         TestCookieHelper.extractCookieValue(registerCookies, "accessToken");
+    String refreshToken =
+        TestCookieHelper.extractCookieValue(registerCookies, "refreshToken");
     assertThat(accessToken).isNotBlank();
+    assertThat(refreshToken).isNotBlank();
 
     // 3. Update password (requires accessToken, not refreshToken)
     String newPassword = "NewPass123!";
@@ -69,7 +72,14 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
                 .content(objectMapper.writeValueAsString(oldPassLogin)))
         .andExpect(status().isUnauthorized());
 
-    // 5. Login with new password — should succeed with cookies
+    // 5. The previous refresh token should no longer work.
+    mockMvc
+        .perform(
+            post("/api/v1/auth/refresh-token")
+                .cookie(TestCookieHelper.cookie("refreshToken", refreshToken)))
+        .andExpect(status().isUnauthorized());
+
+    // 6. Login with new password — should succeed with cookies
     LoginRequest newPassLogin =
         TestDataFactory.loginRequest(registerRequest.username(), newPassword);
     MvcResult newLoginResult =

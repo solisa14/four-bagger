@@ -11,7 +11,6 @@ import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import com.github.solisa14.fourbagger.api.user.UserService;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -62,14 +61,8 @@ class AuthenticationServiceTest {
             new UsernamePasswordAuthenticationToken(request.username(), request.password()));
     when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.of(user));
     when(jwtService.generateToken(user)).thenReturn("jwt-token");
-    when(refreshTokenService.createRefreshToken(user.getId()))
-        .thenReturn(
-            RefreshToken.builder()
-                .id(UUID.randomUUID())
-                .token("refresh-token")
-                .expiryDate(Instant.now().plusSeconds(60))
-                .user(user)
-                .build());
+    when(refreshTokenService.issueRefreshToken(user.getId()))
+        .thenReturn(new RefreshTokenSession(user, "refresh-token"));
 
     AuthenticationResponse response = authenticationService.authenticate(request);
 
@@ -93,14 +86,8 @@ class AuthenticationServiceTest {
   void refreshToken_rotatesTokens() {
     User user =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
-    RefreshToken newToken =
-        RefreshToken.builder()
-            .id(UUID.randomUUID())
-            .token("new-refresh-token")
-            .expiryDate(Instant.now().plusSeconds(60))
-            .user(user)
-            .build();
-    when(refreshTokenService.rotateRefreshToken("old-refresh-token")).thenReturn(newToken);
+    when(refreshTokenService.rotateRefreshToken("old-refresh-token"))
+        .thenReturn(new RefreshTokenSession(user, "new-refresh-token"));
     when(jwtService.generateToken(user)).thenReturn("jwt-token");
 
     AuthenticationResponse response = authenticationService.refreshToken("old-refresh-token");

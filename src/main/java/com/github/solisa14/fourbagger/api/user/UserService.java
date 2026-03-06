@@ -1,7 +1,9 @@
 package com.github.solisa14.fourbagger.api.user;
 
 import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
+import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +19,15 @@ public class UserService {
 
   private final UserRepository userRepository;
   private final BCryptPasswordEncoder passwordEncoder;
+  private final RefreshTokenService refreshTokenService;
 
-  public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
+  public UserService(
+      UserRepository userRepository,
+      BCryptPasswordEncoder passwordEncoder,
+      RefreshTokenService refreshTokenService) {
     this.passwordEncoder = passwordEncoder;
     this.userRepository = userRepository;
+    this.refreshTokenService = refreshTokenService;
   }
 
   /**
@@ -52,7 +59,17 @@ public class UserService {
             .role(Role.USER)
             .build();
 
-    return userRepository.save(createdUser);
+    try {
+      return userRepository.save(createdUser);
+    } catch (DataIntegrityViolationException ex) {
+      if (userRepository.findUserByUsername(request.username()).isPresent()) {
+        throw new UserAlreadyExistsException(request.username());
+      }
+      if (userRepository.findUserByEmail(request.email()).isPresent()) {
+        throw new EmailAlreadyExistsException(request.email());
+      }
+      throw ex;
+    }
   }
 
   public User getUser(UUID id) {
@@ -79,5 +96,6 @@ public class UserService {
     }
     user.setPassword(passwordEncoder.encode(request.newPassword()));
     userRepository.save(user);
+    refreshTokenService.deleteByUserId(user.getId());
   }
 }
