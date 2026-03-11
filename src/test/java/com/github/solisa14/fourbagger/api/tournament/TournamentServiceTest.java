@@ -367,6 +367,22 @@ class TournamentServiceTest {
   }
 
   @Test
+  void
+      updateRoundSettings_whenRoundNumberExceedsBracketRounds_throwsTournamentRoundNotFoundException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    tournament.getRounds().add(round(tournament, 1));
+    tournament.getRounds().add(round(tournament, 2));
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), 3, 3, ScoringMode.STANDARD))
+        .isInstanceOf(TournamentRoundNotFoundException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
   void updateRoundSettings_whenRoundDoesNotExist_throwsTournamentRoundNotFoundException() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
     tournament.getRounds().add(round(tournament, 1));

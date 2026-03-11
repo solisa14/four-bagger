@@ -125,10 +125,8 @@ public class TournamentService {
           "Round settings can only be changed when tournament is BRACKET_READY");
     }
 
-    if (roundNumber <= 0
-        || roundNumber > calculateRoundCount(tournament.getParticipants().size())) {
-      throw new InvalidRoundConfigurationException(
-          "Round number must be greater than 0 and less than the number of rounds");
+    if (roundNumber <= 0) {
+      throw new InvalidRoundConfigurationException("Round number must be greater than 0");
     }
 
     if (bestOf == null && scoringMode == null) {
