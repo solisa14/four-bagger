@@ -282,6 +282,59 @@ class TournamentServiceTest {
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
+  // --- startTournament ---
+
+  @Test
+  void startTournament_whenTournamentIsBracketReady_setsInProgressAndSaves() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    tournamentService.startTournament(tournament.getId());
+
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void startTournament_whenTournamentIsRegistration_throwsException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.REGISTRATION, 4);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.startTournament(tournament.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void startTournament_whenTournamentIsInProgress_throwsException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.IN_PROGRESS, 4);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.startTournament(tournament.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void startTournament_whenTournamentIsCompleted_throwsException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.COMPLETED, 4);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.startTournament(tournament.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void startTournament_whenTournamentDoesNotExist_throwsNotFoundException() {
+    UUID tournamentId = UUID.randomUUID();
+    when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> tournamentService.startTournament(tournamentId))
+        .isInstanceOf(TournamentNotFoundException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
   // --- updateRoundSettings ---
 
   @Test

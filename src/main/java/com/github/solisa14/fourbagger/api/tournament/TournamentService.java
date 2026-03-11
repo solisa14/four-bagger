@@ -153,6 +153,19 @@ public class TournamentService {
     tournamentRepository.save(tournament);
   }
 
+  public void startTournament(UUID tournamentId) {
+    Tournament tournament =
+        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+
+    if (tournament.getStatus() != TournamentStatus.BRACKET_READY) {
+      throw new InvalidTournamentStateException(
+          "Tournament can only be started when bracket is ready");
+    }
+
+    tournament.setStatus(TournamentStatus.IN_PROGRESS);
+    tournamentRepository.save(tournament);
+  }
+
   private String generateJoinCode() {
     String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     StringBuilder sb = new StringBuilder(6);
