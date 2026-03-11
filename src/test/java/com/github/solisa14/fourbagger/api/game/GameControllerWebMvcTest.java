@@ -56,8 +56,7 @@ class GameControllerWebMvcTest {
   void createGame_whenTargetScoreTooLow_returnsBadRequest() throws Exception {
     User principal = authenticatedUser();
     String body =
-        objectMapper.writeValueAsString(
-            new CreateGameRequest(UUID.randomUUID(), 5, null));
+        objectMapper.writeValueAsString(new CreateGameRequest(UUID.randomUUID(), 5, null));
 
     mockMvc
         .perform(
@@ -101,7 +100,9 @@ class GameControllerWebMvcTest {
     User principal = authenticatedUser();
     UUID gameId = UUID.randomUUID();
     when(gameService.recordFrame(eq(gameId), any(RecordFrameRequest.class)))
-        .thenThrow(new InvalidGameStateException("Cannot record a frame for a game that is not IN_PROGRESS"));
+        .thenThrow(
+            new InvalidGameStateException(
+                "Cannot record a frame for a game that is not IN_PROGRESS"));
 
     String body = objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0));
 

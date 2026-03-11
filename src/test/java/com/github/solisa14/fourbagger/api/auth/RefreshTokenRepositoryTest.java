@@ -30,8 +30,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
   @Test
   void deleteByTokenHash_whenTokenExists_removesToken() {
     User user = userRepository.saveAndFlush(createUser("user2", "user2@example.com"));
-    refreshTokenRepository.saveAndFlush(
-        createToken(user, "hash-2", Instant.now().plusSeconds(60)));
+    refreshTokenRepository.saveAndFlush(createToken(user, "hash-2", Instant.now().plusSeconds(60)));
 
     refreshTokenRepository.deleteByTokenHash("hash-2");
 
@@ -41,8 +40,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
   @Test
   void deleteByUser_whenUserHasTokens_removesUserTokens() {
     User user = userRepository.saveAndFlush(createUser("user3", "user3@example.com"));
-    refreshTokenRepository.saveAndFlush(
-        createToken(user, "hash-3", Instant.now().plusSeconds(60)));
+    refreshTokenRepository.saveAndFlush(createToken(user, "hash-3", Instant.now().plusSeconds(60)));
 
     refreshTokenRepository.deleteByUser(user);
 

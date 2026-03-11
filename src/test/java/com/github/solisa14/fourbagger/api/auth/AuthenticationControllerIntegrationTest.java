@@ -60,7 +60,9 @@ class AuthenticationControllerIntegrationTest extends AbstractIntegrationTest {
   @Test
   void userMe_whenAccessTokenIsInvalid_returnsUnauthorizedJson() throws Exception {
     mockMvc
-        .perform(get("/api/v1/user/me").cookie(new jakarta.servlet.http.Cookie("accessToken", "bad-token")))
+        .perform(
+            get("/api/v1/user/me")
+                .cookie(new jakarta.servlet.http.Cookie("accessToken", "bad-token")))
         .andExpect(status().isUnauthorized())
         .andExpect(
             jsonPath("$.message").value("Authentication is required to access this resource"));

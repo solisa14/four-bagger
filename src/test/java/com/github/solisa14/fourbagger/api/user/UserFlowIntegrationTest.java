@@ -26,10 +26,8 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
     String usernamePrefix = "userflow" + suffix;
     String username = usernamePrefix + "user";
     List<String> registerCookies = registerUserAndGetTokens(usernamePrefix);
-    String accessToken =
-        TestCookieHelper.extractCookieValue(registerCookies, "accessToken");
-    String refreshToken =
-        TestCookieHelper.extractCookieValue(registerCookies, "refreshToken");
+    String accessToken = TestCookieHelper.extractCookieValue(registerCookies, "accessToken");
+    String refreshToken = TestCookieHelper.extractCookieValue(registerCookies, "refreshToken");
     assertThat(accessToken).isNotBlank();
     assertThat(refreshToken).isNotBlank();
 
@@ -63,8 +61,7 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isUnauthorized());
 
     // 6. Login with new password — should succeed with cookies
-    LoginRequest newPassLogin =
-        TestDataFactory.loginRequest(username, newPassword);
+    LoginRequest newPassLogin = TestDataFactory.loginRequest(username, newPassword);
     MvcResult newLoginResult =
         mockMvc
             .perform(
@@ -74,11 +71,8 @@ class UserFlowIntegrationTest extends AbstractIntegrationTest {
             .andExpect(status().isOk())
             .andReturn();
 
-    List<String> newLoginCookies =
-        newLoginResult.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
-    assertThat(TestCookieHelper.extractCookieValue(newLoginCookies, "accessToken"))
-        .isNotBlank();
-    assertThat(TestCookieHelper.extractCookieValue(newLoginCookies, "refreshToken"))
-        .isNotBlank();
+    List<String> newLoginCookies = newLoginResult.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
+    assertThat(TestCookieHelper.extractCookieValue(newLoginCookies, "accessToken")).isNotBlank();
+    assertThat(TestCookieHelper.extractCookieValue(newLoginCookies, "refreshToken")).isNotBlank();
   }
 }

@@ -1,7 +1,7 @@
 package com.github.solisa14.fourbagger.api.user;
 
-import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
 import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
+import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;

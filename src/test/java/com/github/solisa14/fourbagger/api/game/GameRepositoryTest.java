@@ -8,7 +8,6 @@ import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -20,11 +19,7 @@ class GameRepositoryTest extends AbstractDataJpaTest {
   private User savedUser(String suffix) {
     return userRepository.saveAndFlush(
         TestDataFactory.user(
-            null,
-            "user" + suffix,
-            "user" + suffix + "@example.com",
-            "encoded",
-            Role.USER));
+            null, "user" + suffix, "user" + suffix + "@example.com", "encoded", Role.USER));
   }
 
   @Test

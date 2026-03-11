@@ -2,9 +2,7 @@ package com.github.solisa14.fourbagger.api.common.exception;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * Exception thrown when a refresh token is missing, invalid, or expired.
- */
+/** Exception thrown when a refresh token is missing, invalid, or expired. */
 public class TokenRefreshException extends BusinessException {
 
   public TokenRefreshException(String token, String message) {

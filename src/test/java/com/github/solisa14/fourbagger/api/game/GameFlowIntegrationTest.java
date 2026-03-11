@@ -32,7 +32,8 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
         objectMapper.readTree(p2Profile.getResponse().getContentAsString()).get("id").asText();
 
     // Create game (player 1 creates)
-    CreateGameRequest createRequest = new CreateGameRequest(java.util.UUID.fromString(p2Id), 21, false);
+    CreateGameRequest createRequest =
+        new CreateGameRequest(java.util.UUID.fromString(p2Id), 21, false);
     MvcResult createResult =
         mockMvc
             .perform(
@@ -110,7 +111,8 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
     String p2Id =
         objectMapper.readTree(p2Profile.getResponse().getContentAsString()).get("id").asText();
 
-    CreateGameRequest createRequest = new CreateGameRequest(java.util.UUID.fromString(p2Id), null, null);
+    CreateGameRequest createRequest =
+        new CreateGameRequest(java.util.UUID.fromString(p2Id), null, null);
     MvcResult createResult =
         mockMvc
             .perform(
@@ -146,7 +148,8 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
     String p2Id =
         objectMapper.readTree(p2Profile.getResponse().getContentAsString()).get("id").asText();
 
-    CreateGameRequest createRequest = new CreateGameRequest(java.util.UUID.fromString(p2Id), null, null);
+    CreateGameRequest createRequest =
+        new CreateGameRequest(java.util.UUID.fromString(p2Id), null, null);
 
     // Create two games
     for (int i = 0; i < 2; i++) {

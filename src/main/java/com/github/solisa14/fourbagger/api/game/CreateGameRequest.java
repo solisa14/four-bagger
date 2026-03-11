@@ -6,9 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 
 public record CreateGameRequest(
-    @NotNull UUID playerTwoId,
-    @Min(11) @Max(21) Integer targetScore,
-    Boolean winByTwo) {
+    @NotNull UUID playerTwoId, @Min(11) @Max(21) Integer targetScore, Boolean winByTwo) {
 
   public int resolvedTargetScore() {
     return targetScore != null ? targetScore : 21;

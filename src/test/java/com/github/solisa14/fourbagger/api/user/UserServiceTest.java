@@ -6,8 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
 import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
+import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import java.util.Optional;
 import java.util.UUID;
@@ -86,7 +86,8 @@ class UserServiceTest {
         .thenReturn(Optional.<User>empty())
         .thenReturn(Optional.<User>empty());
     when(passwordEncoder.encode(request.password())).thenReturn("encoded");
-    when(userRepository.save(any(User.class))).thenThrow(new DataIntegrityViolationException("uk_users_username"));
+    when(userRepository.save(any(User.class)))
+        .thenThrow(new DataIntegrityViolationException("uk_users_username"));
 
     assertThatThrownBy(() -> userService.createUser(request))
         .isInstanceOf(UserAlreadyExistsException.class);

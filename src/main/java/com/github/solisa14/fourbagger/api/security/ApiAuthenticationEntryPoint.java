@@ -32,9 +32,7 @@ public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
       AuthenticationException authException)
       throws IOException, ServletException {
     writeErrorResponse(
-        response,
-        HttpStatus.UNAUTHORIZED,
-        "Authentication is required to access this resource");
+        response, HttpStatus.UNAUTHORIZED, "Authentication is required to access this resource");
   }
 
   private void writeErrorResponse(HttpServletResponse response, HttpStatus status, String message)

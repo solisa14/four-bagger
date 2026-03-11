@@ -79,7 +79,8 @@ public class AuthenticationService {
    * @return new JWT access token and new refresh token
    */
   public AuthenticationResponse refreshToken(String requestRefreshToken) {
-    RefreshTokenSession refreshTokenSession = refreshTokenService.rotateRefreshToken(requestRefreshToken);
+    RefreshTokenSession refreshTokenSession =
+        refreshTokenService.rotateRefreshToken(requestRefreshToken);
     User user = refreshTokenSession.user();
     String jwtToken = jwtService.generateToken(user);
 

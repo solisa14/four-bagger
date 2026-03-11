@@ -22,8 +22,7 @@ public class GameController {
 
   @PostMapping
   public ResponseEntity<GameResponse> createGame(
-      @AuthenticationPrincipal User currentUser,
-      @Valid @RequestBody CreateGameRequest request) {
+      @AuthenticationPrincipal User currentUser, @Valid @RequestBody CreateGameRequest request) {
     Game game = gameService.createGame(currentUser, request);
     URI location =
         ServletUriComponentsBuilder.fromCurrentRequest()
@@ -57,9 +56,7 @@ public class GameController {
   public ResponseEntity<List<GameSummaryResponse>> listMyGames(
       @AuthenticationPrincipal User currentUser) {
     List<GameSummaryResponse> games =
-        gameService.listUserGames(currentUser).stream()
-            .map(GameSummaryResponse::from)
-            .toList();
+        gameService.listUserGames(currentUser).stream().map(GameSummaryResponse::from).toList();
     return ResponseEntity.ok(games);
   }
 

@@ -27,7 +27,8 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
   @Autowired private RefreshTokenService refreshTokenService;
 
   @Test
-  void authFlow_whenRegisterLoginRefreshLogoutExecuted_returnsExpectedAuthLifecycle() throws Exception {
+  void authFlow_whenRegisterLoginRefreshLogoutExecuted_returnsExpectedAuthLifecycle()
+      throws Exception {
     RegisterUserRequest registerRequest = TestDataFactory.registerUserRequest();
 
     MvcResult registerResult =

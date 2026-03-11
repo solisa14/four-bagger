@@ -34,6 +34,8 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
     objectMapper.writeValue(
         response.getOutputStream(),
         new ErrorResponse(
-            Instant.now(), HttpStatus.FORBIDDEN.value(), "You are not allowed to access this resource"));
+            Instant.now(),
+            HttpStatus.FORBIDDEN.value(),
+            "You are not allowed to access this resource"));
   }
 }

@@ -55,7 +55,8 @@ class RefreshTokenServiceTest {
     verify(refreshTokenRepository).saveAndFlush(captor.capture());
     RefreshToken savedToken = captor.getValue();
     assertThat(savedToken.getUser()).isEqualTo(user);
-    assertThat(savedToken.getTokenHash()).isEqualTo(refreshTokenService.hashToken(session.rawToken()));
+    assertThat(savedToken.getTokenHash())
+        .isEqualTo(refreshTokenService.hashToken(session.rawToken()));
     assertThat(savedToken.getExpiryDate()).isAfter(now);
   }
 
@@ -78,7 +79,8 @@ class RefreshTokenServiceTest {
 
     assertThat(session.user()).isEqualTo(user);
     assertThat(session.rawToken()).isNotBlank();
-    assertThat(existing.getTokenHash()).isEqualTo(refreshTokenService.hashToken(session.rawToken()));
+    assertThat(existing.getTokenHash())
+        .isEqualTo(refreshTokenService.hashToken(session.rawToken()));
     assertThat(existing.getExpiryDate()).isAfter(now());
   }
 
@@ -102,7 +104,8 @@ class RefreshTokenServiceTest {
 
     assertThat(rotated.user()).isEqualTo(user);
     assertThat(rotated.rawToken()).isNotBlank();
-    assertThat(existing.getTokenHash()).isEqualTo(refreshTokenService.hashToken(rotated.rawToken()));
+    assertThat(existing.getTokenHash())
+        .isEqualTo(refreshTokenService.hashToken(rotated.rawToken()));
     verify(refreshTokenRepository).saveAndFlush(existing);
   }
 
