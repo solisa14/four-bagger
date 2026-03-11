@@ -53,4 +53,20 @@ public class TournamentService {
     }
     return sb.toString();
   }
+
+  public void removeParticipant(UUID tournamentId, UUID participantId) {
+    Tournament tournament =
+        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+
+    if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
+      throw new InvalidTournamentStateException("Cannot remove participants after registration");
+    }
+
+    boolean removed = tournament.getTeams().removeIf(team -> participantId.equals(team.getId()));
+    if (!removed) {
+      throw new TournamentTeamNotFoundException();
+    }
+
+    tournamentRepository.save(tournament);
+  }
 }

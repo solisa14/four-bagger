@@ -43,6 +43,54 @@ class TournamentServiceTest {
         .build();
   }
 
+  // --- removeParticipant ---
+  @Test
+  void removeParticipant_whenTournamentIsInRegistration_removesParticipant() {
+    Tournament tournament = registrationTournament();
+    TournamentTeam team =
+        TournamentTeam.builder()
+            .id(UUID.randomUUID())
+            .tournament(tournament)
+            .playerOne(player())
+            .build();
+    tournament.getTeams().add(team);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    tournamentService.removeParticipant(tournament.getId(), team.getId());
+    assertThat(tournament.getTeams()).isEmpty();
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void removeParticipant_whenTournamentIsNotInRegistration_throwsException() {
+    Tournament tournament = registrationTournament();
+    tournament.setStatus(TournamentStatus.IN_PROGRESS);
+    UUID participantId = UUID.randomUUID();
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    assertThatThrownBy(() -> tournamentService.removeParticipant(tournament.getId(), participantId))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void removeParticipant_whenTeamDoesNotExist_throwsNotFoundException() {
+    Tournament tournament = registrationTournament();
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    assertThatThrownBy(
+            () -> tournamentService.removeParticipant(tournament.getId(), UUID.randomUUID()))
+        .isInstanceOf(TournamentTeamNotFoundException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void removeParticipant_whenTournamentDoesNotExist_throwsNotFoundException() {
+    UUID tournamentId = UUID.randomUUID();
+    UUID participantId = UUID.randomUUID();
+    when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> tournamentService.removeParticipant(tournamentId, participantId))
+        .isInstanceOf(TournamentNotFoundException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
   // --- deleteTournament ---
   @Test
   void deleteTournament_whenTournamentExists_deletesTournament() {
