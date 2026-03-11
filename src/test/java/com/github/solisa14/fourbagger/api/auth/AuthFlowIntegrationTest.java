@@ -11,32 +11,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
-import com.github.solisa14.fourbagger.api.user.Role;
-import com.github.solisa14.fourbagger.api.user.User;
-import com.github.solisa14.fourbagger.api.user.UserRepository;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 class AuthFlowIntegrationTest extends AbstractIntegrationTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
-  @Autowired private MockMvc mockMvc;
-  @Autowired private UserRepository userRepository;
 
   @Autowired private RefreshTokenRepository refreshTokenRepository;
 
   @Autowired private RefreshTokenService refreshTokenService;
 
-  @Autowired private PasswordEncoder passwordEncoder;
-
   @Test
-  void happyPath_registerLoginRefreshLogout() throws Exception {
+  void authFlow_whenRegisterLoginRefreshLogoutExecuted_returnsExpectedAuthLifecycle() throws Exception {
     RegisterUserRequest registerRequest = TestDataFactory.registerUserRequest();
 
     MvcResult registerResult =
@@ -97,20 +88,11 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void login_failsWithInvalidPassword() throws Exception {
+  void login_whenPasswordIsInvalid_returnsUnauthorized() throws Exception {
     String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
-    String username = "loginuser" + suffix;
-    String email = "loginuser" + suffix + "@example.com";
-    User user =
-        User.builder()
-            .username(username)
-            .email(email)
-            .password(passwordEncoder.encode("Password1!"))
-            .firstName("Test")
-            .lastName("User")
-            .role(Role.USER)
-            .build();
-    userRepository.saveAndFlush(user);
+    String usernamePrefix = "loginuser" + suffix;
+    registerUserAndGetTokens(usernamePrefix);
+    String username = usernamePrefix + "user";
 
     LoginRequest request = new LoginRequest(username, "WrongPassword1!");
 
@@ -124,52 +106,32 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void refreshToken_failsWhenExpired() throws Exception {
+  void refreshToken_whenTokenIsExpired_returnsUnauthorized() throws Exception {
     String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
-    String username = "expireduser" + suffix;
-    String email = "expireduser" + suffix + "@example.com";
-    User user =
-        User.builder()
-            .username(username)
-            .email(email)
-            .password(passwordEncoder.encode("Password1!"))
-            .firstName("Test")
-            .lastName("User")
-            .role(Role.USER)
-            .build();
-    userRepository.saveAndFlush(user);
-
+    String usernamePrefix = "expireduser" + suffix;
+    List<String> cookies = registerUserAndGetTokens(usernamePrefix);
+    String refreshToken = TestCookieHelper.extractCookieValue(cookies, "refreshToken");
     RefreshToken token =
-        RefreshToken.builder()
-            .user(user)
-            .tokenHash(refreshTokenService.hashToken("expired-token"))
-            .expiryDate(Instant.now().minusSeconds(30))
-            .build();
+        refreshTokenRepository
+            .findByTokenHash(refreshTokenService.hashToken(refreshToken))
+            .orElseThrow();
+    token.setExpiryDate(Instant.now().minusSeconds(30));
     refreshTokenRepository.saveAndFlush(token);
 
     mockMvc
         .perform(
             post("/api/v1/auth/refresh-token")
-                .cookie(TestCookieHelper.cookie("refreshToken", "expired-token")))
+                .cookie(TestCookieHelper.cookie("refreshToken", refreshToken)))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.message", containsString("Refresh token was expired")));
   }
 
   @Test
-  void login_replacesPreviousRefreshSession() throws Exception {
+  void login_whenCalledTwice_invalidatesFirstRefreshSession() throws Exception {
     String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
-    String username = "sessionuser" + suffix;
-    String email = "sessionuser" + suffix + "@example.com";
-    User user =
-        User.builder()
-            .username(username)
-            .email(email)
-            .password(passwordEncoder.encode("Password1!"))
-            .firstName("Test")
-            .lastName("User")
-            .role(Role.USER)
-            .build();
-    userRepository.saveAndFlush(user);
+    String usernamePrefix = "sessionuser" + suffix;
+    registerUserAndGetTokens(usernamePrefix);
+    String username = usernamePrefix + "user";
 
     LoginRequest request = new LoginRequest(username, "Password1!");
 

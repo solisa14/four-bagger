@@ -18,7 +18,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
   @Autowired private UserRepository userRepository;
 
   @Test
-  void findByTokenHash_returnsToken() {
+  void findByTokenHash_whenTokenExists_returnsToken() {
     User user = userRepository.saveAndFlush(createUser("user1", "user1@example.com"));
     RefreshToken token =
         refreshTokenRepository.saveAndFlush(
@@ -28,7 +28,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void deleteByTokenHash_removesToken() {
+  void deleteByTokenHash_whenTokenExists_removesToken() {
     User user = userRepository.saveAndFlush(createUser("user2", "user2@example.com"));
     refreshTokenRepository.saveAndFlush(
         createToken(user, "hash-2", Instant.now().plusSeconds(60)));
@@ -39,7 +39,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void deleteByUser_removesUserTokens() {
+  void deleteByUser_whenUserHasTokens_removesUserTokens() {
     User user = userRepository.saveAndFlush(createUser("user3", "user3@example.com"));
     refreshTokenRepository.saveAndFlush(
         createToken(user, "hash-3", Instant.now().plusSeconds(60)));
@@ -50,7 +50,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void deleteByExpiryDateLessThan_removesExpiredTokens() {
+  void deleteByExpiryDateLessThan_whenTokensAreExpired_removesExpiredTokens() {
     User user = userRepository.saveAndFlush(createUser("user4", "user4@example.com"));
     refreshTokenRepository.saveAndFlush(
         createToken(user, "hash-4", Instant.now().minusSeconds(60)));
@@ -61,7 +61,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void save_enforcesSingleActiveSessionPerUser() {
+  void save_whenUserAlreadyHasActiveSession_throwsDataIntegrityViolationException() {
     User user = userRepository.saveAndFlush(createUser("user5", "user5@example.com"));
     refreshTokenRepository.saveAndFlush(createToken(user, "hash-5", Instant.now().plusSeconds(60)));
 

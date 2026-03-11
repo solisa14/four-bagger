@@ -8,40 +8,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
-import com.github.solisa14.fourbagger.api.user.Role;
-import com.github.solisa14.fourbagger.api.user.User;
-import com.github.solisa14.fourbagger.api.user.UserRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 class AuthenticationControllerIntegrationTest extends AbstractIntegrationTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
-  @Autowired private MockMvc mockMvc;
-  @Autowired private UserRepository userRepository;
-
-  @Autowired private PasswordEncoder passwordEncoder;
 
   @Test
-  void login_setsAuthCookies() throws Exception {
+  void login_whenCredentialsAreValid_setsAuthCookies() throws Exception {
     String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
-    String username = "loginuser" + suffix;
-    String email = "loginuser" + suffix + "@example.com";
-    User user =
-        User.builder()
-            .username(username)
-            .email(email)
-            .password(passwordEncoder.encode("Password1!"))
-            .firstName("Test")
-            .lastName("User")
-            .role(Role.USER)
-            .build();
-    userRepository.saveAndFlush(user);
+    String usernamePrefix = "loginuser" + suffix;
+    registerUserAndGetTokens(usernamePrefix);
+    String username = usernamePrefix + "user";
 
     LoginRequest request = new LoginRequest(username, "Password1!");
 
@@ -60,7 +41,7 @@ class AuthenticationControllerIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void userMe_requiresAuthentication() throws Exception {
+  void userMe_whenRequestIsUnauthenticated_returnsUnauthorized() throws Exception {
     mockMvc
         .perform(get("/api/v1/user/me"))
         .andExpect(status().isUnauthorized())
@@ -69,7 +50,7 @@ class AuthenticationControllerIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void refreshToken_requiresRefreshTokenCookie() throws Exception {
+  void refreshToken_whenCookieIsMissing_returnsUnauthorized() throws Exception {
     mockMvc
         .perform(post("/api/v1/auth/refresh-token"))
         .andExpect(status().isUnauthorized())
@@ -77,7 +58,7 @@ class AuthenticationControllerIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void protectedEndpoint_withInvalidAccessTokenReturnsUnauthorizedJson() throws Exception {
+  void userMe_whenAccessTokenIsInvalid_returnsUnauthorizedJson() throws Exception {
     mockMvc
         .perform(get("/api/v1/user/me").cookie(new jakarta.servlet.http.Cookie("accessToken", "bad-token")))
         .andExpect(status().isUnauthorized())

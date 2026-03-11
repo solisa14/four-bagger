@@ -37,7 +37,7 @@ class AuthenticationServiceTest {
   @InjectMocks private AuthenticationService authenticationService;
 
   @Test
-  void registerUser_returnsUserDetails() {
+  void registerUser_whenRequestIsValid_returnsUserDetails() {
     UUID id = UUID.randomUUID();
     User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
     RegisterUserRequest request = TestDataFactory.registerUserRequest();
@@ -52,7 +52,7 @@ class AuthenticationServiceTest {
   }
 
   @Test
-  void authenticate_returnsTokens() {
+  void authenticate_whenCredentialsAreValid_returnsTokens() {
     User user =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
     LoginRequest request = TestDataFactory.loginRequest("user1", "Password1!");
@@ -71,7 +71,7 @@ class AuthenticationServiceTest {
   }
 
   @Test
-  void authenticate_throwsWhenUserNotFound() {
+  void authenticate_whenUserMissingAfterAuthentication_throwsAuthenticationFailedException() {
     LoginRequest request = TestDataFactory.loginRequest("user1", "Password1!");
     when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
         .thenReturn(
@@ -83,7 +83,7 @@ class AuthenticationServiceTest {
   }
 
   @Test
-  void refreshToken_rotatesTokens() {
+  void refreshToken_whenTokenIsValid_rotatesTokens() {
     User user =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
     when(refreshTokenService.rotateRefreshToken("old-refresh-token"))
@@ -97,7 +97,7 @@ class AuthenticationServiceTest {
   }
 
   @Test
-  void logout_deletesRefreshToken() {
+  void logout_whenRefreshTokenProvided_deletesRefreshToken() {
     authenticationService.logout("refresh-token");
 
     verify(refreshTokenService).deleteByToken("refresh-token");

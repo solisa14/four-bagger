@@ -37,7 +37,7 @@ class RefreshTokenServiceTest {
   }
 
   @Test
-  void issueRefreshToken_createsSessionWhenUserHasNoExistingToken() {
+  void issueRefreshToken_whenUserHasNoExistingToken_createsSession() {
     UUID userId = UUID.randomUUID();
     User user = TestDataFactory.user(userId, "user1", "user1@example.com", "encoded", Role.USER);
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -60,7 +60,7 @@ class RefreshTokenServiceTest {
   }
 
   @Test
-  void issueRefreshToken_replacesExistingUserSession() {
+  void issueRefreshToken_whenUserHasExistingToken_replacesSession() {
     UUID userId = UUID.randomUUID();
     User user = TestDataFactory.user(userId, "user1", "user1@example.com", "encoded", Role.USER);
     RefreshToken existing =
@@ -83,7 +83,7 @@ class RefreshTokenServiceTest {
   }
 
   @Test
-  void rotateRefreshToken_rotatesWhenValid() {
+  void rotateRefreshToken_whenTokenIsValid_rotatesSession() {
     User user =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "e", Role.USER);
     String oldToken = "old-token";
@@ -107,7 +107,7 @@ class RefreshTokenServiceTest {
   }
 
   @Test
-  void rotateRefreshToken_throwsWhenExpired() {
+  void rotateRefreshToken_whenTokenIsExpired_throwsTokenRefreshException() {
     User user =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "e", Role.USER);
     String oldToken = "old-token";
@@ -126,7 +126,7 @@ class RefreshTokenServiceTest {
   }
 
   @Test
-  void deleteByUserId_deletesWhenUserFound() {
+  void deleteByUserId_whenCalled_deletesUserTokens() {
     UUID userId = UUID.randomUUID();
 
     refreshTokenService.deleteByUserId(userId);
@@ -135,14 +135,14 @@ class RefreshTokenServiceTest {
   }
 
   @Test
-  void deleteByToken_hashesBeforeDeleting() {
+  void deleteByToken_whenCalled_hashesTokenBeforeDeleting() {
     refreshTokenService.deleteByToken("token");
 
     verify(refreshTokenRepository).deleteByTokenHash(refreshTokenService.hashToken("token"));
   }
 
   @Test
-  void purgeExpiredTokens_deletesExpired() {
+  void purgeExpiredTokens_whenCalled_deletesExpiredTokens() {
     refreshTokenService.purgeExpiredTokens();
 
     verify(refreshTokenRepository).deleteByExpiryDateLessThan(any(Instant.class));

@@ -16,7 +16,7 @@ class JwtServiceTest {
   private static final String SECRET_KEY = "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=";
 
   @Test
-  void generateToken_forUserIncludesRoleAndValidates() {
+  void generateToken_whenPrincipalIsUser_includesRoleAndValidates() {
     JwtService jwtService = new JwtService(SECRET_KEY, 3600000L);
     User user =
         TestDataFactory.user(
@@ -31,7 +31,7 @@ class JwtServiceTest {
   }
 
   @Test
-  void generateToken_forUserDetailsUsesAuthorities() {
+  void generateToken_whenPrincipalIsUserDetails_usesGrantedAuthorities() {
     JwtService jwtService = new JwtService(SECRET_KEY, 3600000L);
     UserDetails userDetails =
         new org.springframework.security.core.userdetails.User(
@@ -45,7 +45,7 @@ class JwtServiceTest {
   }
 
   @Test
-  void isTokenValid_returnsFalseForExpiredToken() {
+  void isTokenValid_whenTokenIsExpired_returnsFalse() {
     JwtService jwtService = new JwtService(SECRET_KEY, -1000L);
     User user =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);

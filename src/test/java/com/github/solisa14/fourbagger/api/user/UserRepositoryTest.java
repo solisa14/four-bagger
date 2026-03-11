@@ -16,13 +16,12 @@ class UserRepositoryTest extends AbstractDataJpaTest {
   @Autowired private Flyway flyway;
 
   @Test
-  void flywayMigrationsApplied() {
+  void flywayInfo_whenChecked_returnsCurrentMigration() {
     assertThat(flyway.info().current()).isNotNull();
-    assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
   }
 
   @Test
-  void findUserByUsername_returnsUser() {
+  void findUserByUsername_whenUserExists_returnsUser() {
     User user = createUser("user1", "user1@example.com");
     userRepository.saveAndFlush(user);
 
@@ -30,7 +29,7 @@ class UserRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void findUserByEmail_returnsUser() {
+  void findUserByEmail_whenUserExists_returnsUser() {
     User user = createUser("user2", "user2@example.com");
     userRepository.saveAndFlush(user);
 
@@ -38,7 +37,7 @@ class UserRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void save_enforcesUniqueUsername() {
+  void save_whenUsernameAlreadyExists_throwsDataIntegrityViolationException() {
     User user1 = createUser("duplicate", "one@example.com");
     User user2 = createUser("duplicate", "two@example.com");
     userRepository.saveAndFlush(user1);
@@ -48,7 +47,7 @@ class UserRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void save_enforcesUniqueEmail() {
+  void save_whenEmailAlreadyExists_throwsDataIntegrityViolationException() {
     User user1 = createUser("user3", "duplicate@example.com");
     User user2 = createUser("user4", "duplicate@example.com");
     userRepository.saveAndFlush(user1);

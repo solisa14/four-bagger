@@ -7,42 +7,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
-import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
-import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 class GameFlowIntegrationTest extends AbstractIntegrationTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
-  @Autowired private MockMvc mockMvc;
-
-  private String registerAndGetToken(String usernamePrefix) throws Exception {
-    var request = TestDataFactory.registerUserRequest(
-        usernamePrefix + "user",
-        usernamePrefix + "user@example.com",
-        TestDataFactory.DEFAULT_PASSWORD);
-
-    MvcResult result =
-        mockMvc
-            .perform(
-                post("/api/v1/auth/register")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
-            .andExpect(status().isCreated())
-            .andReturn();
-
-    List<String> cookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
-    return TestCookieHelper.extractCookieValue(cookies, "accessToken");
-  }
-
   @Test
-  void fullGameFlow_createStartRecordFramesUntilWin() throws Exception {
+  void gameFlow_whenPlayedToTargetScore_completesWithWinner() throws Exception {
     String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
     String p1Token = registerAndGetToken("p1" + suffix);
     String p2Token = registerAndGetToken("p2" + suffix);
@@ -123,7 +97,7 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void cancelGame_setsStatusToCancelled() throws Exception {
+  void cancelGame_whenRequested_setsStatusToCancelled() throws Exception {
     String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
     String p1Token = registerAndGetToken("cancel1" + suffix);
     String p2Token = registerAndGetToken("cancel2" + suffix);
@@ -159,7 +133,7 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void listMyGames_returnsGamesForCurrentUser() throws Exception {
+  void listMyGames_whenUserHasGames_returnsCurrentUsersGames() throws Exception {
     String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
     String p1Token = registerAndGetToken("list1" + suffix);
     String p2Token = registerAndGetToken("list2" + suffix);

@@ -3,6 +3,7 @@ package com.github.solisa14.fourbagger.api.game;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -18,8 +19,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -35,39 +34,43 @@ class GameControllerWebMvcTest {
   @MockitoBean private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
 
   private User authenticatedUser() {
-    User user =
-        TestDataFactory.user(UUID.randomUUID(), "testuser", "test@example.com", "encoded", Role.USER);
-    SecurityContextHolder.getContext()
-        .setAuthentication(
-            new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
-    return user;
+    return TestDataFactory.user(
+        UUID.randomUUID(), "testuser", "test@example.com", "encoded", Role.USER);
   }
 
   @Test
-  void createGame_returnsBadRequestWhenPlayerTwoIdMissing() throws Exception {
-    authenticatedUser();
+  void createGame_whenPlayerTwoIdMissing_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
     String body = "{}";
 
     mockMvc
-        .perform(post("/api/v1/games").contentType(MediaType.APPLICATION_JSON).content(body))
+        .perform(
+            post("/api/v1/games")
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
         .andExpect(status().isBadRequest());
   }
 
   @Test
-  void createGame_returnsBadRequestWhenTargetScoreTooLow() throws Exception {
-    authenticatedUser();
+  void createGame_whenTargetScoreTooLow_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
     String body =
         objectMapper.writeValueAsString(
             new CreateGameRequest(UUID.randomUUID(), 5, null));
 
     mockMvc
-        .perform(post("/api/v1/games").contentType(MediaType.APPLICATION_JSON).content(body))
+        .perform(
+            post("/api/v1/games")
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
         .andExpect(status().isBadRequest());
   }
 
   @Test
-  void recordFrame_returnsBadRequestWhenBagsOutOfRange() throws Exception {
-    authenticatedUser();
+  void recordFrame_whenBagsOutOfRange_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
     UUID gameId = UUID.randomUUID();
     // p1BagsIn = 5, which violates @Max(4)
     String body = objectMapper.writeValueAsString(new RecordFrameRequest(5, 0, 0, 0));
@@ -75,26 +78,27 @@ class GameControllerWebMvcTest {
     mockMvc
         .perform(
             post("/api/v1/games/{gameId}/frames", gameId)
+                .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
         .andExpect(status().isBadRequest());
   }
 
   @Test
-  void getGame_returns404WhenGameNotFound() throws Exception {
-    authenticatedUser();
+  void getGame_whenGameNotFound_returnsNotFound() throws Exception {
+    User principal = authenticatedUser();
     UUID gameId = UUID.randomUUID();
     when(gameService.getGame(gameId)).thenThrow(new GameNotFoundException(gameId));
 
     mockMvc
-        .perform(get("/api/v1/games/{gameId}", gameId))
+        .perform(get("/api/v1/games/{gameId}", gameId).with(user(principal)))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").value("Game not found: " + gameId));
   }
 
   @Test
-  void recordFrame_returns400WhenGameNotInProgress() throws Exception {
-    authenticatedUser();
+  void recordFrame_whenGameNotInProgress_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
     UUID gameId = UUID.randomUUID();
     when(gameService.recordFrame(eq(gameId), any(RecordFrameRequest.class)))
         .thenThrow(new InvalidGameStateException("Cannot record a frame for a game that is not IN_PROGRESS"));
@@ -104,6 +108,7 @@ class GameControllerWebMvcTest {
     mockMvc
         .perform(
             post("/api/v1/games/{gameId}/frames", gameId)
+                .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
         .andExpect(status().isBadRequest());

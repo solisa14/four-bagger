@@ -30,7 +30,7 @@ class UserControllerWebMvcTest {
   @MockitoBean private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
 
   @Test
-  void updateProfile_returnsValidationError() throws Exception {
+  void updateProfile_whenPayloadIsEmpty_returnsBadRequest() throws Exception {
     User principal =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
 
@@ -45,7 +45,7 @@ class UserControllerWebMvcTest {
   }
 
   @Test
-  void updatePassword_returnsValidationError() throws Exception {
+  void updatePassword_whenNewPasswordMissing_returnsBadRequest() throws Exception {
     User principal =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
     Map<String, String> payload = Map.of("currentPassword", "current");

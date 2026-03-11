@@ -28,7 +28,7 @@ class GameRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void findByPlayer_returnsGamesWhereUserIsPlayerOneOrTwo() {
+  void findByPlayer_whenUserIsPlayerOneOrPlayerTwo_returnsMatchingGames() {
     User p1 = savedUser("a");
     User p2 = savedUser("b");
     User other = savedUser("c");
@@ -49,13 +49,13 @@ class GameRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void findByPlayer_returnsEmptyWhenUserHasNoGames() {
+  void findByPlayer_whenUserHasNoGames_returnsEmptyList() {
     User p1 = savedUser("x");
     assertThat(gameRepository.findByPlayer(p1)).isEmpty();
   }
 
   @Test
-  void saveGame_cascadesPersistsFrames() {
+  void saveAndFlush_whenGameContainsFrames_persistsFramesViaCascade() {
     User p1 = savedUser("d");
     User p2 = savedUser("e");
 

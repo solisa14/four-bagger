@@ -48,7 +48,7 @@ class GameServiceTest {
   // --- createGame ---
 
   @Test
-  void createGame_savesGameWithPendingStatus() {
+  void createGame_whenOptionalSettingsMissing_usesDefaultsAndPendingStatus() {
     User p1 = playerOne();
     User p2 = playerTwo();
     when(userService.getUser(p2.getId())).thenReturn(p2);
@@ -65,7 +65,7 @@ class GameServiceTest {
   }
 
   @Test
-  void createGame_usesCustomTargetScoreAndWinByTwo() {
+  void createGame_whenCustomSettingsProvided_appliesTargetScoreAndWinByTwo() {
     User p1 = playerOne();
     User p2 = playerTwo();
     when(userService.getUser(p2.getId())).thenReturn(p2);
@@ -81,7 +81,7 @@ class GameServiceTest {
   // --- startGame ---
 
   @Test
-  void startGame_transitionsToPendingToInProgress() {
+  void startGame_whenGameIsPending_setsStatusToInProgress() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game =
@@ -101,7 +101,7 @@ class GameServiceTest {
   }
 
   @Test
-  void startGame_throwsWhenNotPending() {
+  void startGame_whenGameIsNotPending_throwsInvalidGameStateException() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -114,7 +114,7 @@ class GameServiceTest {
   // --- recordFrame: cancellation scoring ---
 
   @Test
-  void recordFrame_p1ScoresWhenP1RawHigher() {
+  void recordFrame_whenPlayerOneRawScoreIsHigher_awardsNetPointsToPlayerOne() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -132,7 +132,7 @@ class GameServiceTest {
   }
 
   @Test
-  void recordFrame_p2ScoresWhenP2RawHigher() {
+  void recordFrame_whenPlayerTwoRawScoreIsHigher_awardsNetPointsToPlayerTwo() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -150,7 +150,7 @@ class GameServiceTest {
   }
 
   @Test
-  void recordFrame_neitherScoresWhenRawEqual() {
+  void recordFrame_whenRawScoresAreEqual_awardsNoPoints() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -168,7 +168,7 @@ class GameServiceTest {
   }
 
   @Test
-  void recordFrame_fourBaggerGives12PointsMinusOpponent() {
+  void recordFrame_whenPlayerOneHitsFourBagger_awardsTwelveNetPointsMinusOpponent() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -184,7 +184,7 @@ class GameServiceTest {
   }
 
   @Test
-  void recordFrame_scoresAccumulateAcrossFrames() {
+  void recordFrame_whenMultipleFramesRecorded_accumulatesScoresAcrossFrames() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -202,7 +202,7 @@ class GameServiceTest {
   // --- win detection ---
 
   @Test
-  void recordFrame_setsWinnerWhenTargetReached() {
+  void recordFrame_whenTargetReached_setsWinnerAndCompletesGame() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -218,7 +218,7 @@ class GameServiceTest {
   }
 
   @Test
-  void recordFrame_winByTwoRequiresLeadOfTwo() {
+  void recordFrame_whenWinByTwoEnabledAndLeadIsOne_keepsGameInProgress() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game =
@@ -244,7 +244,7 @@ class GameServiceTest {
   }
 
   @Test
-  void recordFrame_winByTwoCompletesGameWhenLeadOfTwo() {
+  void recordFrame_whenWinByTwoEnabledAndLeadIsTwo_completesGame() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game =
@@ -272,7 +272,7 @@ class GameServiceTest {
   // --- validation ---
 
   @Test
-  void recordFrame_throwsWhenP1BagsExceedFour() {
+  void recordFrame_whenPlayerOneBagsExceedFour_throwsInvalidFrameException() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -284,7 +284,7 @@ class GameServiceTest {
   }
 
   @Test
-  void recordFrame_throwsWhenP2BagsExceedFour() {
+  void recordFrame_whenPlayerTwoBagsExceedFour_throwsInvalidFrameException() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -296,7 +296,7 @@ class GameServiceTest {
   }
 
   @Test
-  void recordFrame_throwsWhenGameNotInProgress() {
+  void recordFrame_whenGameIsPending_throwsInvalidGameStateException() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game =
@@ -314,10 +314,29 @@ class GameServiceTest {
         .isInstanceOf(InvalidGameStateException.class);
   }
 
+  @Test
+  void recordFrame_whenGameCompleted_throwsInvalidGameStateException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .status(GameStatus.COMPLETED)
+            .createdBy(p1)
+            .build();
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    assertThatThrownBy(
+            () -> gameService.recordFrame(game.getId(), new RecordFrameRequest(0, 0, 0, 0)))
+        .isInstanceOf(InvalidGameStateException.class);
+  }
+
   // --- getGame ---
 
   @Test
-  void getGame_throwsWhenNotFound() {
+  void getGame_whenGameNotFound_throwsGameNotFoundException() {
     UUID id = UUID.randomUUID();
     when(gameRepository.findById(id)).thenReturn(Optional.empty());
 
@@ -327,7 +346,7 @@ class GameServiceTest {
   // --- cancelGame ---
 
   @Test
-  void cancelGame_setsStatusToCancelled() {
+  void cancelGame_whenGameIsInProgress_setsStatusToCancelled() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game = inProgressGame(p1, p2);
@@ -340,7 +359,7 @@ class GameServiceTest {
   }
 
   @Test
-  void cancelGame_throwsWhenAlreadyCompleted() {
+  void cancelGame_whenGameAlreadyCompleted_throwsInvalidGameStateException() {
     User p1 = playerOne();
     User p2 = playerTwo();
     Game game =

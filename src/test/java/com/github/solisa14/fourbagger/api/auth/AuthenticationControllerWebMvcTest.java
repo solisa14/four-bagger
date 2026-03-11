@@ -36,7 +36,7 @@ class AuthenticationControllerWebMvcTest {
   @MockitoBean private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
 
   @Test
-  void register_returnsValidationError() throws Exception {
+  void register_whenUsernameTooShort_returnsBadRequest() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("abc", "user@example.com", "Password1!", "Test", "User");
 
@@ -51,7 +51,7 @@ class AuthenticationControllerWebMvcTest {
   }
 
   @Test
-  void login_returnsValidationError() throws Exception {
+  void login_whenPasswordMissing_returnsBadRequest() throws Exception {
     LoginRequest request = new LoginRequest("user1", "");
 
     mockMvc
@@ -64,7 +64,7 @@ class AuthenticationControllerWebMvcTest {
   }
 
   @Test
-  void register_returnsConflictWhenDatabaseConstraintBubblesUp() throws Exception {
+  void register_whenDataIntegrityViolationBubblesUp_returnsConflict() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
     when(authenticationService.registerUser(request))
@@ -80,7 +80,7 @@ class AuthenticationControllerWebMvcTest {
   }
 
   @Test
-  void register_returnsConflictWhenUsernameAlreadyExists() throws Exception {
+  void register_whenUsernameAlreadyExists_returnsConflict() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
     when(authenticationService.registerUser(request))
@@ -98,7 +98,7 @@ class AuthenticationControllerWebMvcTest {
   }
 
   @Test
-  void register_returnsConflictWhenEmailAlreadyExists() throws Exception {
+  void register_whenEmailAlreadyExists_returnsConflict() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
     when(authenticationService.registerUser(request))
@@ -114,7 +114,7 @@ class AuthenticationControllerWebMvcTest {
   }
 
   @Test
-  void refreshToken_returnsUnauthorizedWhenCookieIsMissing() throws Exception {
+  void refreshToken_whenCookieIsMissing_returnsUnauthorized() throws Exception {
     mockMvc
         .perform(post("/api/v1/auth/refresh-token"))
         .andExpect(status().isUnauthorized())

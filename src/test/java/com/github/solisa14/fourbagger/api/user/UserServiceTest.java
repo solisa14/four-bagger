@@ -32,7 +32,7 @@ class UserServiceTest {
   @InjectMocks private UserService userService;
 
   @Test
-  void createUser_throwsWhenUsernameExists() {
+  void createUser_whenUsernameExists_throwsUserAlreadyExistsException() {
     RegisterUserRequest request = TestDataFactory.registerUserRequest();
     when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.of(new User()));
 
@@ -41,7 +41,7 @@ class UserServiceTest {
   }
 
   @Test
-  void createUser_throwsWhenEmailExists() {
+  void createUser_whenEmailExists_throwsEmailAlreadyExistsException() {
     RegisterUserRequest request = TestDataFactory.registerUserRequest();
     when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.<User>empty());
     when(userRepository.findUserByEmail(request.email())).thenReturn(Optional.of(new User()));
@@ -51,7 +51,7 @@ class UserServiceTest {
   }
 
   @Test
-  void createUser_savesUserWithEncodedPasswordAndRole() {
+  void createUser_whenRequestIsValid_savesUserWithEncodedPasswordAndRole() {
     RegisterUserRequest request = TestDataFactory.registerUserRequest();
     when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.<User>empty());
     when(userRepository.findUserByEmail(request.email())).thenReturn(Optional.<User>empty());
@@ -77,7 +77,7 @@ class UserServiceTest {
   }
 
   @Test
-  void createUser_throwsFriendlyConflictWhenDatabaseConstraintWinsRace() {
+  void createUser_whenInsertRaceTriggersConstraint_throwsUserAlreadyExistsException() {
     RegisterUserRequest request = TestDataFactory.registerUserRequest();
     when(userRepository.findUserByUsername(request.username()))
         .thenReturn(Optional.<User>empty())
@@ -93,7 +93,7 @@ class UserServiceTest {
   }
 
   @Test
-  void getUser_throwsWhenNotFound() {
+  void getUser_whenUserNotFound_throwsUserNotFoundException() {
     UUID id = UUID.randomUUID();
     when(userRepository.findById(id)).thenReturn(Optional.empty());
 
@@ -101,7 +101,7 @@ class UserServiceTest {
   }
 
   @Test
-  void updateProfile_updatesNames() {
+  void updateProfile_whenRequestHasNames_updatesNames() {
     UUID id = UUID.randomUUID();
     User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
@@ -116,7 +116,7 @@ class UserServiceTest {
   }
 
   @Test
-  void updatePassword_throwsWhenCurrentPasswordInvalid() {
+  void updatePassword_whenCurrentPasswordIsInvalid_throwsInvalidPasswordException() {
     UUID id = UUID.randomUUID();
     User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
@@ -128,7 +128,7 @@ class UserServiceTest {
   }
 
   @Test
-  void updatePassword_updatesWhenCurrentPasswordValid() {
+  void updatePassword_whenCurrentPasswordIsValid_updatesPasswordAndInvalidatesSessions() {
     UUID id = UUID.randomUUID();
     User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
