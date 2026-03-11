@@ -31,6 +31,19 @@ public class Game {
   @JoinColumn(name = "player_two_id", nullable = false)
   private User playerTwo;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "player_one_partner_id")
+  private User playerOnePartner;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "player_two_partner_id")
+  private User playerTwoPartner;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "game_type", nullable = false, length = 50)
+  @Builder.Default
+  private GameType gameType = GameType.SINGLES;
+
   @Column(name = "player_one_score", nullable = false)
   @Builder.Default
   private int playerOneScore = 0;

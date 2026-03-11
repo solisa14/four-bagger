@@ -11,28 +11,31 @@ import org.springframework.transaction.annotation.Transactional;
 public class GameService {
 
   private final GameRepository gameRepository;
+  private final GameCreationService gameCreationService;
   private final UserService userService;
 
-  public GameService(GameRepository gameRepository, UserService userService) {
+  public GameService(
+      GameRepository gameRepository,
+      GameCreationService gameCreationService,
+      UserService userService) {
     this.gameRepository = gameRepository;
+    this.gameCreationService = gameCreationService;
     this.userService = userService;
   }
 
   @Transactional
   public Game createGame(User currentUser, CreateGameRequest request) {
     User playerTwo = userService.getUser(request.playerTwoId());
+    GameParticipants participants = resolveParticipants(currentUser, playerTwo, request);
+    CreateGameCommand command =
+        new CreateGameCommand(
+            participants, request.targetScore(), request.winByTwo(), null, currentUser);
+    return gameCreationService.createPendingGame(command);
+  }
 
-    Game game =
-        Game.builder()
-            .playerOne(currentUser)
-            .playerTwo(playerTwo)
-            .targetScore(request.resolvedTargetScore())
-            .winByTwo(request.resolvedWinByTwo())
-            .status(GameStatus.PENDING)
-            .createdBy(currentUser)
-            .build();
-
-    return gameRepository.save(game);
+  @Transactional
+  public Game createGame(CreateGameCommand command) {
+    return gameCreationService.createPendingGame(command);
   }
 
   @Transactional
@@ -59,6 +62,8 @@ public class GameService {
     }
 
     validateBagCounts(request);
+    int frameNumber = game.getFrames().size() + 1;
+    validateThrowersForFrame(game, frameNumber, request);
 
     int p1Points = 0;
     int p2Points = 0;
@@ -76,7 +81,7 @@ public class GameService {
     Frame frame =
         Frame.builder()
             .game(game)
-            .frameNumber(game.getFrames().size() + 1)
+            .frameNumber(frameNumber)
             .playerOneBagsIn(request.p1BagsIn())
             .playerOneBagsOn(request.p1BagsOn())
             .playerTwoBagsIn(request.p2BagsIn())
@@ -144,6 +149,48 @@ public class GameService {
     } else if (p2Wins) {
       game.setWinner(game.getPlayerTwo());
       game.setStatus(GameStatus.COMPLETED);
+    }
+  }
+
+  private GameParticipants resolveParticipants(
+      User currentUser, User playerTwo, CreateGameRequest request) {
+    GameType gameType = request.resolvedGameType();
+    if (gameType == GameType.DOUBLES) {
+      if (request.playerOnePartnerId() == null || request.playerTwoPartnerId() == null) {
+        throw new InvalidGameConfigurationException(
+            "Doubles games require both partner IDs to be provided");
+      }
+      User playerOnePartner = userService.getUser(request.playerOnePartnerId());
+      User playerTwoPartner = userService.getUser(request.playerTwoPartnerId());
+      return GameParticipants.doubles(currentUser, playerOnePartner, playerTwo, playerTwoPartner);
+    }
+    return GameParticipants.singles(currentUser, playerTwo);
+  }
+
+  private void validateThrowersForFrame(Game game, int frameNumber, RecordFrameRequest request) {
+    if (game.getGameType() != GameType.DOUBLES) {
+      return;
+    }
+
+    if (game.getPlayerOnePartner() == null || game.getPlayerTwoPartner() == null) {
+      throw new InvalidGameConfigurationException(
+          "Doubles game is missing partner assignments and cannot record frames");
+    }
+    if (request.playerOneThrowerId() == null || request.playerTwoThrowerId() == null) {
+      throw new InvalidFrameException("Doubles frames require both thrower IDs");
+    }
+
+    UUID expectedPlayerOneThrower =
+        frameNumber % 2 == 1 ? game.getPlayerOne().getId() : game.getPlayerOnePartner().getId();
+    UUID expectedPlayerTwoThrower =
+        frameNumber % 2 == 1 ? game.getPlayerTwo().getId() : game.getPlayerTwoPartner().getId();
+
+    if (!expectedPlayerOneThrower.equals(request.playerOneThrowerId())
+        || !expectedPlayerTwoThrower.equals(request.playerTwoThrowerId())) {
+      throw new InvalidFrameException(
+          "Invalid throwing pair for frame "
+              + frameNumber
+              + "; doubles pairs must alternate by frame");
     }
   }
 }

@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class GameServiceTest {
 
   @Mock private GameRepository gameRepository;
+  @Mock private GameCreationService gameCreationService;
   @Mock private UserService userService;
 
   @InjectMocks private GameService gameService;
@@ -52,7 +54,18 @@ class GameServiceTest {
     User p1 = playerOne();
     User p2 = playerTwo();
     when(userService.getUser(p2.getId())).thenReturn(p2);
-    when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
+    Game created =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .gameType(GameType.SINGLES)
+            .targetScore(21)
+            .winByTwo(false)
+            .status(GameStatus.PENDING)
+            .createdBy(p1)
+            .build();
+    when(gameCreationService.createPendingGame(any(CreateGameCommand.class))).thenReturn(created);
 
     CreateGameRequest request = new CreateGameRequest(p2.getId(), null, null);
     Game game = gameService.createGame(p1, request);
@@ -60,6 +73,7 @@ class GameServiceTest {
     assertThat(game.getStatus()).isEqualTo(GameStatus.PENDING);
     assertThat(game.getPlayerOne()).isEqualTo(p1);
     assertThat(game.getPlayerTwo()).isEqualTo(p2);
+    assertThat(game.getGameType()).isEqualTo(GameType.SINGLES);
     assertThat(game.getTargetScore()).isEqualTo(21);
     assertThat(game.isWinByTwo()).isFalse();
   }
@@ -69,13 +83,95 @@ class GameServiceTest {
     User p1 = playerOne();
     User p2 = playerTwo();
     when(userService.getUser(p2.getId())).thenReturn(p2);
-    when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
+        .thenAnswer(
+            inv -> {
+              CreateGameCommand command = inv.getArgument(0);
+              return Game.builder()
+                  .id(UUID.randomUUID())
+                  .playerOne(command.participants().teamOne().player())
+                  .playerTwo(command.participants().teamTwo().player())
+                  .gameType(command.participants().gameType())
+                  .targetScore(command.resolvedTargetScore())
+                  .winByTwo(command.resolvedWinByTwo())
+                  .status(GameStatus.PENDING)
+                  .createdBy(command.createdBy())
+                  .build();
+            });
 
     CreateGameRequest request = new CreateGameRequest(p2.getId(), 15, true);
     Game game = gameService.createGame(p1, request);
 
     assertThat(game.getTargetScore()).isEqualTo(15);
     assertThat(game.isWinByTwo()).isTrue();
+  }
+
+  @Test
+  void createGame_whenDoublesRequest_buildsDoublesParticipants() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    User p1Partner =
+        TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
+    User p2Partner =
+        TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
+    when(userService.getUser(p2.getId())).thenReturn(p2);
+    when(userService.getUser(p1Partner.getId())).thenReturn(p1Partner);
+    when(userService.getUser(p2Partner.getId())).thenReturn(p2Partner);
+    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
+        .thenAnswer(
+            inv -> {
+              CreateGameCommand command = inv.getArgument(0);
+              return Game.builder()
+                  .id(UUID.randomUUID())
+                  .playerOne(command.participants().teamOne().player())
+                  .playerOnePartner(command.participants().teamOne().partner())
+                  .playerTwo(command.participants().teamTwo().player())
+                  .playerTwoPartner(command.participants().teamTwo().partner())
+                  .gameType(command.participants().gameType())
+                  .targetScore(command.resolvedTargetScore())
+                  .winByTwo(command.resolvedWinByTwo())
+                  .status(GameStatus.PENDING)
+                  .createdBy(command.createdBy())
+                  .build();
+            });
+
+    CreateGameRequest request =
+        new CreateGameRequest(
+            p2.getId(), p1Partner.getId(), p2Partner.getId(), GameType.DOUBLES, 21, false);
+    Game game = gameService.createGame(p1, request);
+
+    assertThat(game.getGameType()).isEqualTo(GameType.DOUBLES);
+    assertThat(game.getPlayerOnePartner()).isEqualTo(p1Partner);
+    assertThat(game.getPlayerTwoPartner()).isEqualTo(p2Partner);
+  }
+
+  @Test
+  void createGame_whenDoublesPartnersMissing_throwsInvalidGameConfigurationException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    when(userService.getUser(p2.getId())).thenReturn(p2);
+
+    CreateGameRequest request =
+        new CreateGameRequest(p2.getId(), null, null, GameType.DOUBLES, 21, false);
+
+    assertThatThrownBy(() -> gameService.createGame(p1, request))
+        .isInstanceOf(InvalidGameConfigurationException.class);
+    verify(gameCreationService, never()).createPendingGame(any(CreateGameCommand.class));
+  }
+
+  @Test
+  void createGame_withCommand_delegatesToCreationService() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    CreateGameCommand command =
+        new CreateGameCommand(GameParticipants.singles(p1, p2), null, null, UUID.randomUUID(), p1);
+    Game created = Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2).build();
+    when(gameCreationService.createPendingGame(command)).thenReturn(created);
+
+    Game result = gameService.createGame(command);
+
+    assertThat(result).isEqualTo(created);
+    verify(gameCreationService).createPendingGame(command);
   }
 
   // --- startGame ---
@@ -197,6 +293,8 @@ class GameServiceTest {
     gameService.recordFrame(game.getId(), new RecordFrameRequest(1, 0, 0, 0));
 
     assertThat(game.getPlayerOneScore()).isEqualTo(6);
+    assertThat(game.getFrames()).hasSize(2);
+    assertThat(game.getFrames()).extracting(Frame::getFrameNumber).containsExactly(1, 2);
   }
 
   // --- win detection ---
@@ -374,5 +472,118 @@ class GameServiceTest {
 
     assertThatThrownBy(() -> gameService.cancelGame(game.getId()))
         .isInstanceOf(InvalidGameStateException.class);
+  }
+
+  // --- recordFrame: doubles ---
+
+  @Test
+  void recordFrame_whenDoublesAndThrowerIdsMissing_throwsInvalidFrameException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    User p1Partner =
+        TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
+    User p2Partner =
+        TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
+    Game game = inProgressGame(p1, p2);
+    game.setGameType(GameType.DOUBLES);
+    game.setPlayerOnePartner(p1Partner);
+    game.setPlayerTwoPartner(p2Partner);
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    assertThatThrownBy(
+            () -> gameService.recordFrame(game.getId(), new RecordFrameRequest(1, 0, 0, 0)))
+        .isInstanceOf(InvalidFrameException.class);
+  }
+
+  @Test
+  void recordFrame_whenDoublesAndWrongThrowersForOddFrame_throwsInvalidFrameException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    User p1Partner =
+        TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
+    User p2Partner =
+        TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
+    Game game = inProgressGame(p1, p2);
+    game.setGameType(GameType.DOUBLES);
+    game.setPlayerOnePartner(p1Partner);
+    game.setPlayerTwoPartner(p2Partner);
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    RecordFrameRequest request =
+        new RecordFrameRequest(1, 0, 0, 0, p1Partner.getId(), p2Partner.getId());
+
+    assertThatThrownBy(() -> gameService.recordFrame(game.getId(), request))
+        .isInstanceOf(InvalidFrameException.class);
+  }
+
+  @Test
+  void recordFrame_whenDoublesAndCorrectThrowersForFrame_parsesSuccessfully() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    User p1Partner =
+        TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
+    User p2Partner =
+        TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
+    Game game = inProgressGame(p1, p2);
+    game.setGameType(GameType.DOUBLES);
+    game.setPlayerOnePartner(p1Partner);
+    game.setPlayerTwoPartner(p2Partner);
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+    when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    Frame firstFrame =
+        gameService.recordFrame(
+            game.getId(), new RecordFrameRequest(1, 0, 0, 0, p1.getId(), p2.getId()));
+
+    assertThat(firstFrame.getFrameNumber()).isEqualTo(1);
+    assertThat(game.getFrames()).hasSize(1);
+
+    Frame existing =
+        Frame.builder()
+            .game(game)
+            .frameNumber(1)
+            .playerOneBagsIn(1)
+            .playerTwoBagsIn(0)
+            .playerOneFramePoints(3)
+            .playerTwoFramePoints(0)
+            .build();
+    game.getFrames().clear();
+    game.getFrames().add(existing);
+
+    Frame secondFrame =
+        gameService.recordFrame(
+            game.getId(), new RecordFrameRequest(0, 1, 0, 0, p1Partner.getId(), p2Partner.getId()));
+
+    assertThat(secondFrame.getFrameNumber()).isEqualTo(2);
+  }
+
+  @Test
+  void createGame_whenSinglesRequest_containsSinglesParticipantsInCommand() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    when(userService.getUser(p2.getId())).thenReturn(p2);
+    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
+        .thenAnswer(
+            inv -> {
+              CreateGameCommand command = inv.getArgument(0);
+              return Game.builder()
+                  .id(UUID.randomUUID())
+                  .playerOne(command.participants().teamOne().player())
+                  .playerTwo(command.participants().teamTwo().player())
+                  .gameType(command.participants().gameType())
+                  .createdBy(command.createdBy())
+                  .status(GameStatus.PENDING)
+                  .build();
+            });
+
+    gameService.createGame(p1, new CreateGameRequest(p2.getId(), 21, false));
+
+    ArgumentCaptor<CreateGameCommand> commandCaptor =
+        ArgumentCaptor.forClass(CreateGameCommand.class);
+    verify(gameCreationService).createPendingGame(commandCaptor.capture());
+    CreateGameCommand command = commandCaptor.getValue();
+    assertThat(command.participants().gameType()).isEqualTo(GameType.SINGLES);
+    assertThat(command.participants().teamOne().player()).isEqualTo(p1);
+    assertThat(command.participants().teamTwo().player()).isEqualTo(p2);
   }
 }

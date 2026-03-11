@@ -6,8 +6,11 @@ import java.util.UUID;
 
 public record GameResponse(
     UUID id,
+    GameType gameType,
     PlayerInfo playerOne,
+    PlayerInfo playerOnePartner,
     PlayerInfo playerTwo,
+    PlayerInfo playerTwoPartner,
     int playerOneScore,
     int playerTwoScore,
     int targetScore,
@@ -21,8 +24,11 @@ public record GameResponse(
   public static GameResponse from(Game game) {
     return new GameResponse(
         game.getId(),
+        game.getGameType(),
         PlayerInfo.from(game.getPlayerOne()),
+        game.getPlayerOnePartner() != null ? PlayerInfo.from(game.getPlayerOnePartner()) : null,
         PlayerInfo.from(game.getPlayerTwo()),
+        game.getPlayerTwoPartner() != null ? PlayerInfo.from(game.getPlayerTwoPartner()) : null,
         game.getPlayerOneScore(),
         game.getPlayerTwoScore(),
         game.getTargetScore(),

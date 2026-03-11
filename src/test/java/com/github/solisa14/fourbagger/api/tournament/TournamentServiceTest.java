@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
@@ -21,6 +22,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 class TournamentServiceTest {
 
   @Mock private TournamentRepository tournamentRepository;
+  @Spy private TournamentBracketService tournamentBracketService = new TournamentBracketService();
 
   @InjectMocks private TournamentService tournamentService;
 
@@ -180,6 +182,10 @@ class TournamentServiceTest {
     assertThat(tournament.getRounds())
         .extracting(TournamentRound::getScoringMode)
         .containsOnly(ScoringMode.STANDARD);
+    assertThat(tournament.getRounds().get(0).getMatches()).hasSize(2);
+    assertThat(tournament.getRounds().get(1).getMatches()).hasSize(1);
+    assertThat(tournament.getRounds().get(0).getMatches())
+        .allSatisfy(match -> assertThat(match.getStatus()).isEqualTo(MatchStatus.PENDING));
     verify(tournamentRepository).save(tournament);
   }
 
@@ -223,6 +229,8 @@ class TournamentServiceTest {
     assertThat(tournament.getRounds())
         .extracting(TournamentRound::getScoringMode)
         .containsExactly(ScoringMode.EXACT, ScoringMode.STANDARD);
+    assertThat(tournament.getRounds().get(0).getMatches()).hasSize(2);
+    assertThat(tournament.getRounds().get(1).getMatches()).hasSize(1);
     verify(tournamentRepository).save(tournament);
   }
 
@@ -269,6 +277,9 @@ class TournamentServiceTest {
         .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3);
     assertThat(tournament.getRounds()).hasSize(2);
+    assertThat(tournament.getRounds().get(0).getMatches()).hasSize(2);
+    assertThat(tournament.getRounds().get(1).getMatches()).hasSize(1);
+    assertThat(tournament.getRounds().get(0).getMatches()).filteredOn(Match::isBye).hasSize(1);
     verify(tournamentRepository).save(tournament);
   }
 

@@ -13,4 +13,6 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
   @Query(
       "SELECT g FROM Game g WHERE g.playerOne = :user OR g.playerTwo = :user ORDER BY g.createdAt DESC")
   List<Game> findByPlayer(User user);
+
+  List<Game> findByTournamentMatchIdOrderByCreatedAtAsc(UUID tournamentMatchId);
 }

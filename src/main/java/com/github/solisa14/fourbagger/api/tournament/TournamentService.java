@@ -14,9 +14,13 @@ public class TournamentService {
   private static final SecureRandom RANDOM = new SecureRandom();
   private static final int MAX_JOIN_CODE_ATTEMPTS = 5;
   private final TournamentRepository tournamentRepository;
+  private final TournamentBracketService tournamentBracketService;
 
-  public TournamentService(TournamentRepository tournamentRepository) {
+  public TournamentService(
+      TournamentRepository tournamentRepository,
+      TournamentBracketService tournamentBracketService) {
     this.tournamentRepository = tournamentRepository;
+    this.tournamentBracketService = tournamentBracketService;
   }
 
   public TournamentParticipant joinTournament(String joinCode, User user) {
@@ -97,19 +101,7 @@ public class TournamentService {
       tournament.getTeams().add(team);
     }
 
-    if (tournament.getRounds().isEmpty()) {
-      int roundCount = calculateRoundCount(shuffledParticipants.size());
-      for (int roundNumber = 1; roundNumber <= roundCount; roundNumber++) {
-        TournamentRound round =
-            TournamentRound.builder()
-                .tournament(tournament)
-                .roundNumber(roundNumber)
-                .bestOf(1)
-                .scoringMode(ScoringMode.STANDARD)
-                .build();
-        tournament.getRounds().add(round);
-      }
-    }
+    tournamentBracketService.planBracket(tournament, tournament.getTeams());
 
     tournament.setStatus(TournamentStatus.BRACKET_READY);
     tournamentRepository.save(tournament);
@@ -196,15 +188,5 @@ public class TournamentService {
 
   private boolean isValidBestOf(int bestOf) {
     return bestOf == 1 || bestOf == 3 || bestOf == 5 || bestOf == 7;
-  }
-
-  private int calculateRoundCount(int teamCount) {
-    int rounds = 0;
-    int bracketSize = 1;
-    while (bracketSize < teamCount) {
-      bracketSize *= 2;
-      rounds++;
-    }
-    return rounds;
   }
 }

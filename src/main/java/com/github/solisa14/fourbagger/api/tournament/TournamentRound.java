@@ -2,6 +2,8 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -41,6 +43,11 @@ public class TournamentRound {
   @Column(name = "scoring_mode", nullable = false)
   @Builder.Default
   private ScoringMode scoringMode = ScoringMode.STANDARD;
+
+  @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
+  @OrderBy("matchNumber ASC")
+  @Builder.Default
+  private List<Match> matches = new ArrayList<>();
 
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
