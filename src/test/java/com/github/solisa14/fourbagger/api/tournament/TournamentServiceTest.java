@@ -485,6 +485,18 @@ class TournamentServiceTest {
   }
 
   @Test
+  void deleteTournament_whenTournamentIsInProgress_stillDeletesTournament() {
+    Tournament tournament = registrationTournament();
+    tournament.setStatus(TournamentStatus.IN_PROGRESS);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    tournamentService.deleteTournament(tournament.getId());
+
+    verify(tournamentRepository).deleteById(tournament.getId());
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
   void deleteTournament_whenTournamentDoesNotExist_throwsNotFoundException() {
     UUID tournamentId = UUID.randomUUID();
     when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
