@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
 class TournamentServiceTest {
@@ -61,11 +62,48 @@ class TournamentServiceTest {
   }
 
   @Test
+  void removeParticipant_whenTournamentHasMultipleTeams_removesOnlyTargetTeam() {
+    Tournament tournament = registrationTournament();
+    TournamentTeam teamOne =
+        TournamentTeam.builder()
+            .id(UUID.randomUUID())
+            .tournament(tournament)
+            .playerOne(player())
+            .build();
+    TournamentTeam teamTwo =
+        TournamentTeam.builder()
+            .id(UUID.randomUUID())
+            .tournament(tournament)
+            .playerOne(player())
+            .build();
+    tournament.getTeams().add(teamOne);
+    tournament.getTeams().add(teamTwo);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    tournamentService.removeParticipant(tournament.getId(), teamOne.getId());
+
+    assertThat(tournament.getTeams()).containsExactly(teamTwo);
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
   void removeParticipant_whenTournamentIsNotInRegistration_throwsException() {
     Tournament tournament = registrationTournament();
     tournament.setStatus(TournamentStatus.IN_PROGRESS);
     UUID participantId = UUID.randomUUID();
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    assertThatThrownBy(() -> tournamentService.removeParticipant(tournament.getId(), participantId))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void removeParticipant_whenTournamentIsBracketReady_throwsException() {
+    Tournament tournament = registrationTournament();
+    tournament.setStatus(TournamentStatus.BRACKET_READY);
+    UUID participantId = UUID.randomUUID();
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
     assertThatThrownBy(() -> tournamentService.removeParticipant(tournament.getId(), participantId))
         .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
@@ -123,6 +161,8 @@ class TournamentServiceTest {
 
     assertThat(team.getPlayerOne()).isEqualTo(player);
     assertThat(team.getTournament()).isEqualTo(tournament);
+    assertThat(tournament.getTeams()).containsExactly(team);
+    verify(tournamentRepository, times(1)).save(tournament);
   }
 
   @Test
@@ -133,6 +173,46 @@ class TournamentServiceTest {
 
     assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", player()))
         .isInstanceOf(InvalidTournamentStateException.class);
+  }
+
+  @Test
+  void joinTournament_whenBracketReady_throwsException() {
+    Tournament tournament = registrationTournament();
+    tournament.setStatus(TournamentStatus.BRACKET_READY);
+    when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", player()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void joinTournament_whenCompleted_throwsException() {
+    Tournament tournament = registrationTournament();
+    tournament.setStatus(TournamentStatus.COMPLETED);
+    when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", player()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void joinTournament_whenUserAlreadyJoined_throwsConflictException() {
+    User existingUser = player();
+    Tournament tournament = registrationTournament();
+    TournamentTeam existingTeam =
+        TournamentTeam.builder()
+            .id(UUID.randomUUID())
+            .tournament(tournament)
+            .playerOne(existingUser)
+            .build();
+    tournament.getTeams().add(existingTeam);
+    when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", existingUser))
+        .isInstanceOf(DuplicateTournamentParticipantException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
   @Test
@@ -154,5 +234,31 @@ class TournamentServiceTest {
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     assertThat(result.getOrganizer()).isEqualTo(organizer);
     assertThat(result.getTitle()).isEqualTo("Test Tournament");
+  }
+
+  @Test
+  void createTournament_whenJoinCodeCollisionRetriesAndEventuallySucceeds() {
+    User organizer = organizer();
+    when(tournamentRepository.save(any(Tournament.class)))
+        .thenThrow(
+            new DataIntegrityViolationException("duplicate key value violates unique constraint"))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    Tournament result = tournamentService.createTournament(organizer, "Test Tournament");
+
+    assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
+    verify(tournamentRepository, times(2)).save(any(Tournament.class));
+  }
+
+  @Test
+  void createTournament_whenJoinCodeCollisionPersists_throwsJoinCodeGenerationException() {
+    User organizer = organizer();
+    when(tournamentRepository.save(any(Tournament.class)))
+        .thenThrow(
+            new DataIntegrityViolationException("duplicate key value violates unique constraint"));
+
+    assertThatThrownBy(() -> tournamentService.createTournament(organizer, "Test Tournament"))
+        .isInstanceOf(JoinCodeGenerationException.class);
+    verify(tournamentRepository, times(5)).save(any(Tournament.class));
   }
 }
