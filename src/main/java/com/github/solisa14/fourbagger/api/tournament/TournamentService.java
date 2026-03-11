@@ -2,6 +2,7 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.user.User;
 import java.security.SecureRandom;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -37,6 +38,11 @@ public class TournamentService {
             .joinCode(joinCode)
             .build();
     return tournamentRepository.save(tournament);
+  }
+
+  public void deleteTournament(UUID id) {
+    tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
+    tournamentRepository.deleteById(id);
   }
 
   private String generateJoinCode() {

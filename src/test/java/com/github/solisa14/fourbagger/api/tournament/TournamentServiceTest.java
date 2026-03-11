@@ -1,21 +1,20 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TournamentServiceTest {
@@ -42,6 +41,25 @@ class TournamentServiceTest {
         .status(TournamentStatus.REGISTRATION)
         .joinCode("ABC123")
         .build();
+  }
+
+  // --- deleteTournament ---
+  @Test
+  void deleteTournament_whenTournamentExists_deletesTournament() {
+    Tournament tournament = registrationTournament();
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    tournamentService.deleteTournament(tournament.getId());
+    verify(tournamentRepository).deleteById(tournament.getId());
+  }
+
+  @Test
+  void deleteTournament_whenTournamentDoesNotExist_throwsNotFoundException() {
+    UUID tournamentId = UUID.randomUUID();
+    when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> tournamentService.deleteTournament(tournamentId))
+        .isInstanceOf(TournamentNotFoundException.class);
+    verify(tournamentRepository, never()).deleteById(any(UUID.class));
   }
 
   // --- joinTournament ---
