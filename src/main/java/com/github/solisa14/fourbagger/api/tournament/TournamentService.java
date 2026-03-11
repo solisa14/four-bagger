@@ -97,7 +97,61 @@ public class TournamentService {
       tournament.getTeams().add(team);
     }
 
+    if (tournament.getRounds().isEmpty()) {
+      int roundCount = calculateRoundCount(shuffledParticipants.size());
+      for (int roundNumber = 1; roundNumber <= roundCount; roundNumber++) {
+        TournamentRound round =
+            TournamentRound.builder()
+                .tournament(tournament)
+                .roundNumber(roundNumber)
+                .bestOf(1)
+                .scoringMode(ScoringMode.STANDARD)
+                .build();
+        tournament.getRounds().add(round);
+      }
+    }
+
     tournament.setStatus(TournamentStatus.BRACKET_READY);
+    tournamentRepository.save(tournament);
+  }
+
+  public void updateRoundSettings(
+      UUID tournamentId, int roundNumber, Integer bestOf, ScoringMode scoringMode) {
+    Tournament tournament =
+        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+
+    if (tournament.getStatus() != TournamentStatus.BRACKET_READY) {
+      throw new InvalidTournamentStateException(
+          "Round settings can only be changed when tournament is BRACKET_READY");
+    }
+
+    if (roundNumber <= 0
+        || roundNumber > calculateRoundCount(tournament.getParticipants().size())) {
+      throw new InvalidRoundConfigurationException(
+          "Round number must be greater than 0 and less than the number of rounds");
+    }
+
+    if (bestOf == null && scoringMode == null) {
+      throw new InvalidRoundConfigurationException("At least one round setting must be provided");
+    }
+
+    TournamentRound round =
+        tournament.getRounds().stream()
+            .filter(r -> roundNumber == r.getRoundNumber())
+            .findFirst()
+            .orElseThrow(TournamentRoundNotFoundException::new);
+
+    if (bestOf != null) {
+      if (!isValidBestOf(bestOf)) {
+        throw new InvalidRoundConfigurationException("bestOf must be one of: 1, 3, 5, or 7");
+      }
+      round.setBestOf(bestOf);
+    }
+
+    if (scoringMode != null) {
+      round.setScoringMode(scoringMode);
+    }
+
     tournamentRepository.save(tournament);
   }
 
@@ -127,5 +181,19 @@ public class TournamentService {
     }
 
     tournamentRepository.save(tournament);
+  }
+
+  private boolean isValidBestOf(int bestOf) {
+    return bestOf == 1 || bestOf == 3 || bestOf == 5 || bestOf == 7;
+  }
+
+  private int calculateRoundCount(int teamCount) {
+    int rounds = 0;
+    int bracketSize = 1;
+    while (bracketSize < teamCount) {
+      bracketSize *= 2;
+      rounds++;
+    }
+    return rounds;
   }
 }

@@ -45,6 +45,10 @@ public class Tournament {
   @Builder.Default
   private List<TournamentTeam> teams = new ArrayList<>();
 
+  @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  private List<TournamentRound> rounds = new ArrayList<>();
+
   @CreationTimestamp
   @Column(nullable = false, updatable = false)
   private Instant createdAt;

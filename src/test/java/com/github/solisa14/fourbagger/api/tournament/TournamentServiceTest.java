@@ -61,6 +61,16 @@ class TournamentServiceTest {
     return tournament;
   }
 
+  private TournamentRound round(Tournament tournament, int roundNumber) {
+    return TournamentRound.builder()
+        .id(UUID.randomUUID())
+        .tournament(tournament)
+        .roundNumber(roundNumber)
+        .bestOf(1)
+        .scoringMode(ScoringMode.STANDARD)
+        .build();
+  }
+
   // --- removeParticipant ---
   @Test
   void removeParticipant_whenTournamentIsInRegistration_removesParticipant() {
@@ -162,6 +172,14 @@ class TournamentServiceTest {
         .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3, 4);
     assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerTwo).containsOnlyNulls();
+    assertThat(tournament.getRounds()).hasSize(2);
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getRoundNumber)
+        .containsExactly(1, 2);
+    assertThat(tournament.getRounds()).extracting(TournamentRound::getBestOf).containsOnly(1);
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getScoringMode)
+        .containsOnly(ScoringMode.STANDARD);
     verify(tournamentRepository).save(tournament);
   }
 
@@ -183,6 +201,14 @@ class TournamentServiceTest {
     tournament.getTeams().get(1).setSeed(20);
     tournament.getTeams().get(2).setSeed(30);
     tournament.getTeams().get(3).setSeed(40);
+    TournamentRound roundOne = round(tournament, 1);
+    TournamentRound roundTwo = round(tournament, 2);
+    roundOne.setBestOf(3);
+    roundOne.setScoringMode(ScoringMode.EXACT);
+    roundTwo.setBestOf(5);
+    roundTwo.setScoringMode(ScoringMode.STANDARD);
+    tournament.getRounds().add(roundOne);
+    tournament.getRounds().add(roundTwo);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -192,6 +218,11 @@ class TournamentServiceTest {
     assertThat(tournament.getTeams())
         .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3, 4);
+    assertThat(tournament.getRounds()).hasSize(2);
+    assertThat(tournament.getRounds()).extracting(TournamentRound::getBestOf).containsExactly(3, 5);
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getScoringMode)
+        .containsExactly(ScoringMode.EXACT, ScoringMode.STANDARD);
     verify(tournamentRepository).save(tournament);
   }
 
@@ -237,6 +268,7 @@ class TournamentServiceTest {
     assertThat(tournament.getTeams())
         .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3);
+    assertThat(tournament.getRounds()).hasSize(2);
     verify(tournamentRepository).save(tournament);
   }
 
@@ -247,6 +279,130 @@ class TournamentServiceTest {
 
     assertThatThrownBy(() -> tournamentService.generateBracket(tournamentId))
         .isInstanceOf(TournamentNotFoundException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  // --- updateRoundSettings ---
+
+  @Test
+  void updateRoundSettings_whenTournamentIsBracketReady_updatesBothFields() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    tournament.getRounds().add(round(tournament, 1));
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    tournamentService.updateRoundSettings(tournament.getId(), 1, 3, ScoringMode.EXACT);
+
+    TournamentRound updatedRound = tournament.getRounds().get(0);
+    assertThat(updatedRound.getBestOf()).isEqualTo(3);
+    assertThat(updatedRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void updateRoundSettings_whenOnlyBestOfProvided_updatesBestOfOnly() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    TournamentRound tournamentRound = round(tournament, 1);
+    tournamentRound.setScoringMode(ScoringMode.EXACT);
+    tournament.getRounds().add(tournamentRound);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    tournamentService.updateRoundSettings(tournament.getId(), 1, 5, null);
+
+    assertThat(tournamentRound.getBestOf()).isEqualTo(5);
+    assertThat(tournamentRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void updateRoundSettings_whenOnlyScoringModeProvided_updatesScoringModeOnly() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    TournamentRound tournamentRound = round(tournament, 1);
+    tournamentRound.setBestOf(7);
+    tournament.getRounds().add(tournamentRound);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    tournamentService.updateRoundSettings(tournament.getId(), 1, null, ScoringMode.EXACT);
+
+    assertThat(tournamentRound.getBestOf()).isEqualTo(7);
+    assertThat(tournamentRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void updateRoundSettings_whenTournamentIsNotBracketReady_throwsException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.REGISTRATION, 4);
+    tournament.getRounds().add(round(tournament, 1));
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(tournament.getId(), 1, 3, ScoringMode.EXACT))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void updateRoundSettings_whenTournamentDoesNotExist_throwsNotFoundException() {
+    UUID tournamentId = UUID.randomUUID();
+    when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () -> tournamentService.updateRoundSettings(tournamentId, 1, 3, ScoringMode.EXACT))
+        .isInstanceOf(TournamentNotFoundException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void updateRoundSettings_whenRoundNumberIsZero_throwsInvalidRoundConfigurationException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    tournament.getRounds().add(round(tournament, 1));
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), 0, 3, ScoringMode.STANDARD))
+        .isInstanceOf(InvalidRoundConfigurationException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void updateRoundSettings_whenRoundDoesNotExist_throwsTournamentRoundNotFoundException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    tournament.getRounds().add(round(tournament, 1));
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), 2, 3, ScoringMode.STANDARD))
+        .isInstanceOf(TournamentRoundNotFoundException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void updateRoundSettings_whenBestOfIsInvalid_throwsInvalidRoundConfigurationException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    tournament.getRounds().add(round(tournament, 1));
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), 1, 2, ScoringMode.STANDARD))
+        .isInstanceOf(InvalidRoundConfigurationException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void updateRoundSettings_whenNoFieldsProvided_throwsInvalidRoundConfigurationException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    tournament.getRounds().add(round(tournament, 1));
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(
+            () -> tournamentService.updateRoundSettings(tournament.getId(), 1, null, null))
+        .isInstanceOf(InvalidRoundConfigurationException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
