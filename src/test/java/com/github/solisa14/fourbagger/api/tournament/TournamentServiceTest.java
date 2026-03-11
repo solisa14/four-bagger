@@ -1,0 +1,92 @@
+package com.github.solisa14.fourbagger.api.tournament;
+
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
+import com.github.solisa14.fourbagger.api.user.Role;
+import com.github.solisa14.fourbagger.api.user.User;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class TournamentServiceTest {
+
+  @Mock private TournamentRepository tournamentRepository;
+
+  @InjectMocks private TournamentService tournamentService;
+
+  private User organizer() {
+    return TestDataFactory.user(
+        UUID.randomUUID(), "organizer", "org@example.com", "encoded", Role.USER);
+  }
+
+  private User player() {
+    return TestDataFactory.user(
+        UUID.randomUUID(), "player", "player@example.com", "encoded", Role.USER);
+  }
+
+  private Tournament registrationTournament() {
+    return Tournament.builder()
+        .id(UUID.randomUUID())
+        .organizer(organizer())
+        .title("Test Tournament")
+        .status(TournamentStatus.REGISTRATION)
+        .joinCode("ABC123")
+        .build();
+  }
+
+  // --- joinTournament ---
+
+  @Test
+  void joinTournament_whenRegistrationOpen_addsTeamToTournament() {
+    User player = player();
+    Tournament tournament = registrationTournament();
+    when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    TournamentTeam team = tournamentService.joinTournament("ABC123", player);
+
+    assertThat(team.getPlayerOne()).isEqualTo(player);
+    assertThat(team.getTournament()).isEqualTo(tournament);
+  }
+
+  @Test
+  void joinTournament_whenNotRegistration_throwsException() {
+    Tournament tournament = registrationTournament();
+    tournament.setStatus(TournamentStatus.IN_PROGRESS);
+    when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", player()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+  }
+
+  @Test
+  void joinTournament_whenJoinCodeNotFound_throwsNotFoundException() {
+    when(tournamentRepository.findByJoinCode("BADCODE")).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> tournamentService.joinTournament("BADCODE", player()))
+        .isInstanceOf(TournamentNotFoundException.class);
+  }
+
+  // --- createTournament ---
+
+  @Test
+  void createTournament_initializeTournamentWithCorrectDefaults() {
+    User organizer = organizer();
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+    Tournament result = tournamentService.createTournament(organizer, "Test Tournament");
+    assertThat(result.getStatus()).isEqualTo(TournamentStatus.REGISTRATION);
+    assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
+    assertThat(result.getOrganizer()).isEqualTo(organizer);
+    assertThat(result.getTitle()).isEqualTo("Test Tournament");
+  }
+}
