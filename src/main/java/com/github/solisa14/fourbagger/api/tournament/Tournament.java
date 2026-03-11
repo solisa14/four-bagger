@@ -39,6 +39,10 @@ public class Tournament {
 
   @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
+  private List<TournamentParticipant> participants = new ArrayList<>();
+
+  @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
   private List<TournamentTeam> teams = new ArrayList<>();
 
   @CreationTimestamp

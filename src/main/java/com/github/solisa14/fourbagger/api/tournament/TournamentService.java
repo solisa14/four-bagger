@@ -2,6 +2,9 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.user.User;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -16,7 +19,7 @@ public class TournamentService {
     this.tournamentRepository = tournamentRepository;
   }
 
-  public TournamentTeam joinTournament(String joinCode, User user) {
+  public TournamentParticipant joinTournament(String joinCode, User user) {
     Tournament tournament =
         tournamentRepository.findByJoinCode(joinCode).orElseThrow(TournamentNotFoundException::new);
 
@@ -25,20 +28,17 @@ public class TournamentService {
     }
 
     boolean alreadyJoined =
-        tournament.getTeams().stream()
-            .anyMatch(
-                team ->
-                    user.getId().equals(team.getPlayerOne().getId())
-                        || (team.getPlayerTwo() != null
-                            && user.getId().equals(team.getPlayerTwo().getId())));
+        tournament.getParticipants().stream()
+            .anyMatch(participant -> user.getId().equals(participant.getUser().getId()));
     if (alreadyJoined) {
       throw new DuplicateTournamentParticipantException();
     }
 
-    TournamentTeam team = TournamentTeam.builder().tournament(tournament).playerOne(user).build();
-    tournament.getTeams().add(team);
+    TournamentParticipant participant =
+        TournamentParticipant.builder().tournament(tournament).user(user).build();
+    tournament.getParticipants().add(participant);
     tournamentRepository.save(tournament);
-    return team;
+    return participant;
   }
 
   public Tournament createTournament(User organizer, String title) {
@@ -67,6 +67,40 @@ public class TournamentService {
     tournamentRepository.deleteById(id);
   }
 
+  public void generateBracket(UUID tournamentId) {
+    Tournament tournament =
+        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+
+    if (tournament.getStatus() != TournamentStatus.REGISTRATION
+        && tournament.getStatus() != TournamentStatus.BRACKET_READY) {
+      throw new InvalidTournamentStateException(
+          "Cannot generate or reshuffle bracket unless tournament is in REGISTRATION or BRACKET_READY");
+    }
+
+    if (tournament.getParticipants().size() <= 2) {
+      throw new InvalidTournamentStateException(
+          "Cannot generate bracket with 2 or fewer participants");
+    }
+
+    List<TournamentParticipant> shuffledParticipants =
+        new ArrayList<>(tournament.getParticipants());
+    Collections.shuffle(shuffledParticipants, RANDOM);
+
+    tournament.getTeams().clear();
+    for (int i = 0; i < shuffledParticipants.size(); i++) {
+      TournamentTeam team =
+          TournamentTeam.builder()
+              .tournament(tournament)
+              .playerOne(shuffledParticipants.get(i).getUser())
+              .seed(i + 1)
+              .build();
+      tournament.getTeams().add(team);
+    }
+
+    tournament.setStatus(TournamentStatus.BRACKET_READY);
+    tournamentRepository.save(tournament);
+  }
+
   private String generateJoinCode() {
     String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     StringBuilder sb = new StringBuilder(6);
@@ -84,9 +118,12 @@ public class TournamentService {
       throw new InvalidTournamentStateException("Cannot remove participants after registration");
     }
 
-    boolean removed = tournament.getTeams().removeIf(team -> participantId.equals(team.getId()));
+    boolean removed =
+        tournament
+            .getParticipants()
+            .removeIf(participant -> participantId.equals(participant.getId()));
     if (!removed) {
-      throw new TournamentTeamNotFoundException();
+      throw new TournamentParticipantNotFoundException();
     }
 
     tournamentRepository.save(tournament);

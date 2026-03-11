@@ -44,45 +44,62 @@ class TournamentServiceTest {
         .build();
   }
 
+  private TournamentParticipant participant(Tournament tournament) {
+    return TournamentParticipant.builder()
+        .id(UUID.randomUUID())
+        .tournament(tournament)
+        .user(player())
+        .build();
+  }
+
+  private Tournament tournamentWithParticipants(TournamentStatus status, int participantCount) {
+    Tournament tournament = registrationTournament();
+    tournament.setStatus(status);
+    for (int i = 0; i < participantCount; i++) {
+      tournament.getParticipants().add(participant(tournament));
+    }
+    return tournament;
+  }
+
   // --- removeParticipant ---
   @Test
   void removeParticipant_whenTournamentIsInRegistration_removesParticipant() {
     Tournament tournament = registrationTournament();
-    TournamentTeam team =
-        TournamentTeam.builder()
+    TournamentParticipant participant =
+        TournamentParticipant.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(player())
+            .user(player())
             .build();
-    tournament.getTeams().add(team);
+    tournament.getParticipants().add(participant);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    tournamentService.removeParticipant(tournament.getId(), team.getId());
-    assertThat(tournament.getTeams()).isEmpty();
+    tournamentService.removeParticipant(tournament.getId(), participant.getId());
+    assertThat(tournament.getParticipants()).isEmpty();
     verify(tournamentRepository).save(tournament);
   }
 
   @Test
-  void removeParticipant_whenTournamentHasMultipleTeams_removesOnlyTargetTeam() {
+  void removeParticipant_whenTournamentHasMultipleParticipants_removesOnlyTargetParticipant() {
     Tournament tournament = registrationTournament();
-    TournamentTeam teamOne =
-        TournamentTeam.builder()
+    TournamentParticipant participantOne =
+        TournamentParticipant.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(player())
+            .user(player())
             .build();
-    TournamentTeam teamTwo =
-        TournamentTeam.builder()
+    TournamentParticipant participantTwo =
+        TournamentParticipant.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(player())
+            .user(player())
             .build();
-    tournament.getTeams().add(teamOne);
-    tournament.getTeams().add(teamTwo);
+    tournament.getParticipants().add(participantOne);
+    tournament.getParticipants().add(participantTwo);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    tournamentService.removeParticipant(tournament.getId(), teamOne.getId());
+    tournamentService.removeParticipant(tournament.getId(), participantOne.getId());
 
-    assertThat(tournament.getTeams()).containsExactly(teamTwo);
+    assertThat(tournament.getParticipants()).containsExactly(participantTwo);
     verify(tournamentRepository).save(tournament);
   }
 
@@ -110,12 +127,12 @@ class TournamentServiceTest {
   }
 
   @Test
-  void removeParticipant_whenTeamDoesNotExist_throwsNotFoundException() {
+  void removeParticipant_whenParticipantDoesNotExist_throwsNotFoundException() {
     Tournament tournament = registrationTournament();
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     assertThatThrownBy(
             () -> tournamentService.removeParticipant(tournament.getId(), UUID.randomUUID()))
-        .isInstanceOf(TournamentTeamNotFoundException.class);
+        .isInstanceOf(TournamentParticipantNotFoundException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -125,6 +142,110 @@ class TournamentServiceTest {
     UUID participantId = UUID.randomUUID();
     when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> tournamentService.removeParticipant(tournamentId, participantId))
+        .isInstanceOf(TournamentNotFoundException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  // --- generateBracket ---
+
+  @Test
+  void generateBracket_whenTournamentIsInRegistration_setsBracketReadyAndAssignsSeeds() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.REGISTRATION, 4);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    tournamentService.generateBracket(tournament.getId());
+
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
+    assertThat(tournament.getTeams()).hasSize(4);
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
+        .containsExactlyInAnyOrder(1, 2, 3, 4);
+    assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerTwo).containsOnlyNulls();
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void generateBracket_whenTournamentIsAlreadyBracketReady_reshufflesAndReassignsSeeds() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    tournament
+        .getParticipants()
+        .forEach(
+            p ->
+                tournament
+                    .getTeams()
+                    .add(
+                        TournamentTeam.builder()
+                            .tournament(tournament)
+                            .playerOne(p.getUser())
+                            .build()));
+    tournament.getTeams().get(0).setSeed(10);
+    tournament.getTeams().get(1).setSeed(20);
+    tournament.getTeams().get(2).setSeed(30);
+    tournament.getTeams().get(3).setSeed(40);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    tournamentService.generateBracket(tournament.getId());
+
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
+        .containsExactlyInAnyOrder(1, 2, 3, 4);
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void generateBracket_whenTournamentIsInProgress_throwsException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.IN_PROGRESS, 4);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.generateBracket(tournament.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void generateBracket_whenTournamentIsCompleted_throwsException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.COMPLETED, 4);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.generateBracket(tournament.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void generateBracket_whenTournamentHasTwoOrFewerParticipants_throwsException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.REGISTRATION, 2);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.generateBracket(tournament.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void generateBracket_whenTournamentHasThreeParticipants_assignsAllSeeds() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.REGISTRATION, 3);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    tournamentService.generateBracket(tournament.getId());
+
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
+        .containsExactlyInAnyOrder(1, 2, 3);
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void generateBracket_whenTournamentDoesNotExist_throwsNotFoundException() {
+    UUID tournamentId = UUID.randomUUID();
+    when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> tournamentService.generateBracket(tournamentId))
         .isInstanceOf(TournamentNotFoundException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
@@ -151,17 +272,17 @@ class TournamentServiceTest {
   // --- joinTournament ---
 
   @Test
-  void joinTournament_whenRegistrationOpen_addsTeamToTournament() {
+  void joinTournament_whenRegistrationOpen_addsParticipantToTournament() {
     User player = player();
     Tournament tournament = registrationTournament();
     when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
     when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    TournamentTeam team = tournamentService.joinTournament("ABC123", player);
+    TournamentParticipant participant = tournamentService.joinTournament("ABC123", player);
 
-    assertThat(team.getPlayerOne()).isEqualTo(player);
-    assertThat(team.getTournament()).isEqualTo(tournament);
-    assertThat(tournament.getTeams()).containsExactly(team);
+    assertThat(participant.getUser()).isEqualTo(player);
+    assertThat(participant.getTournament()).isEqualTo(tournament);
+    assertThat(tournament.getParticipants()).containsExactly(participant);
     verify(tournamentRepository, times(1)).save(tournament);
   }
 
@@ -201,13 +322,13 @@ class TournamentServiceTest {
   void joinTournament_whenUserAlreadyJoined_throwsConflictException() {
     User existingUser = player();
     Tournament tournament = registrationTournament();
-    TournamentTeam existingTeam =
-        TournamentTeam.builder()
+    TournamentParticipant existingParticipant =
+        TournamentParticipant.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(existingUser)
+            .user(existingUser)
             .build();
-    tournament.getTeams().add(existingTeam);
+    tournament.getParticipants().add(existingParticipant);
     when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", existingUser))
