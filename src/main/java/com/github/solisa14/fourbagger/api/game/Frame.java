@@ -6,6 +6,11 @@ import java.util.UUID;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+/**
+ * Entity representing a single frame (or round) within a cornhole game. It tracks the number of
+ * bags in the hole and on the board for each side, as well as the net points calculated for that
+ * frame.
+ */
 @Entity
 @Table(name = "frames")
 @NoArgsConstructor

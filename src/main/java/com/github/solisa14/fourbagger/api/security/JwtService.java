@@ -25,6 +25,12 @@ public class JwtService {
   private final String secretKey;
   private final long jwtExpiration;
 
+  /**
+   * Constructs a JwtService.
+   *
+   * @param secretKey the secret key used for signing JWTs
+   * @param jwtExpiration the expiration time for JWTs in milliseconds
+   */
   public JwtService(
       @Value("${app.security.jwt.secret-key}") String secretKey,
       @Value("${app.security.jwt.expiration-ms}") long jwtExpiration) {

@@ -9,6 +9,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * Represents a specific round within a tournament bracket (e.g., Quarterfinals, Semifinals). It
+ * dictates the scoring rules and the number of games required to win a match in this round.
+ */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter

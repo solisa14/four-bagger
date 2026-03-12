@@ -10,6 +10,11 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * Represents a cornhole tournament. A tournament goes through various states, from registration to
+ * completion. It contains participants, teams formed from those participants, and a bracket
+ * organized into rounds and matches.
+ */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter

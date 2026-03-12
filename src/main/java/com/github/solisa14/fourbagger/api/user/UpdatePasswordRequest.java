@@ -3,6 +3,12 @@ package com.github.solisa14.fourbagger.api.user;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
+/**
+ * Request payload for updating a user's password.
+ *
+ * @param currentPassword the user's current password, required for verification
+ * @param newPassword the new password to set, must meet complexity requirements
+ */
 public record UpdatePasswordRequest(
     @NotBlank(message = "Must enter current password") String currentPassword,
     @NotBlank(message = "New password is required")

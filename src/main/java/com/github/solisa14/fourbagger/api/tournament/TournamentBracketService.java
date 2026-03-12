@@ -9,9 +9,22 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service responsible for generating and seeding a single-elimination tournament bracket. Computes
+ * necessary rounds, handles byes for non-power-of-two team counts, and links matches so winners
+ * automatically progress.
+ */
 @Service
 public class TournamentBracketService {
 
+  /**
+   * Plans the entire bracket layout for a tournament given a list of seeded teams. Calculates the
+   * number of required rounds, creates the matches, seeds the first round, assigns byes to top
+   * seeds if necessary, and wires matches to progress to the next round.
+   *
+   * @param tournament the tournament entity being planned
+   * @param seededTeams a list of teams ordered by seed
+   */
   public void planBracket(Tournament tournament, List<TournamentTeam> seededTeams) {
     int bracketSize = calculateBracketSize(seededTeams.size());
     int roundCount = Integer.numberOfTrailingZeros(bracketSize);

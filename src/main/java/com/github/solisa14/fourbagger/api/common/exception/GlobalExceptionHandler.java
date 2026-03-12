@@ -83,6 +83,14 @@ public class GlobalExceptionHandler {
     return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
   }
 
+  /**
+   * Handles missing request cookie exceptions.
+   *
+   * <p>Returns HTTP 401 Unauthorized when a required cookie is missing from the request.
+   *
+   * @param ex the missing request cookie exception
+   * @return response entity with HTTP 401 and an error message specifying the missing cookie
+   */
   @ExceptionHandler(MissingRequestCookieException.class)
   public ResponseEntity<ErrorResponse> handleMissingRequestCookieException(
       MissingRequestCookieException ex) {
@@ -95,6 +103,14 @@ public class GlobalExceptionHandler {
     return buildResponse(HttpStatus.UNAUTHORIZED, message);
   }
 
+  /**
+   * Handles data integrity violation exceptions.
+   *
+   * <p>Returns HTTP 409 Conflict when a database operation violates integrity constraints.
+   *
+   * @param ex the data integrity violation exception
+   * @return response entity with HTTP 409 and a conflict error message
+   */
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
       DataIntegrityViolationException ex) {

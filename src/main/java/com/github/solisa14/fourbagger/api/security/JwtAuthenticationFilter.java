@@ -32,6 +32,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   private final JwtService jwtService;
   private final UserDetailsService userDetailsService;
 
+  /**
+   * Constructs a JwtAuthenticationFilter.
+   *
+   * @param jwtService the service used for JWT operations
+   * @param userDetailsService the service used to load user details
+   */
   public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
     this.jwtService = jwtService;
     this.userDetailsService = userDetailsService;

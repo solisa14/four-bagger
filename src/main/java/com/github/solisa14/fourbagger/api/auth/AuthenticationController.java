@@ -28,6 +28,14 @@ public class AuthenticationController {
   private final long refreshTokenDurationMs;
   private final boolean isCookieSecure;
 
+  /**
+   * Constructs an AuthenticationController.
+   *
+   * @param authenticationService the service for handling authentication workflows
+   * @param jwtService the service for JWT operations
+   * @param refreshTokenDurationMs the duration of refresh tokens in milliseconds
+   * @param isCookieSecure whether cookies should be secure
+   */
   public AuthenticationController(
       AuthenticationService authenticationService,
       JwtService jwtService,

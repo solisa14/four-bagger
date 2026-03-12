@@ -9,6 +9,10 @@ import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service responsible for managing the lifecycle of a tournament. This includes creation,
+ * participant registration, bracket generation, and updating round configuration settings.
+ */
 @Service
 public class TournamentService {
   private static final SecureRandom RANDOM = new SecureRandom();
@@ -23,6 +27,16 @@ public class TournamentService {
     this.tournamentBracketService = tournamentBracketService;
   }
 
+  /**
+   * Allows a user to join a tournament using a unique join code.
+   *
+   * @param joinCode the 6-character code of the tournament to join
+   * @param user the user attempting to join
+   * @return the created participant record
+   * @throws TournamentNotFoundException if no tournament matches the join code
+   * @throws InvalidTournamentStateException if the tournament is not in REGISTRATION state
+   * @throws DuplicateTournamentParticipantException if the user has already joined
+   */
   public TournamentParticipant joinTournament(String joinCode, User user) {
     Tournament tournament =
         tournamentRepository.findByJoinCode(joinCode).orElseThrow(TournamentNotFoundException::new);
@@ -45,6 +59,14 @@ public class TournamentService {
     return participant;
   }
 
+  /**
+   * Creates a new tournament with the given title and a randomly generated join code.
+   *
+   * @param organizer the user organizing the tournament
+   * @param title the title of the tournament
+   * @return the newly created tournament
+   * @throws JoinCodeGenerationException if a unique join code could not be generated
+   */
   public Tournament createTournament(User organizer, String title) {
     for (int attempt = 1; attempt <= MAX_JOIN_CODE_ATTEMPTS; attempt++) {
       String joinCode = generateJoinCode();
@@ -66,11 +88,27 @@ public class TournamentService {
     throw new JoinCodeGenerationException();
   }
 
+  /**
+   * Deletes a tournament and all its associated data.
+   *
+   * @param id the UUID of the tournament to delete
+   * @throws TournamentNotFoundException if the tournament does not exist
+   */
   public void deleteTournament(UUID id) {
     tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
     tournamentRepository.deleteById(id);
   }
 
+  /**
+   * Generates or regenerates the tournament bracket based on current participants. Participants are
+   * randomly shuffled and seeded before generating matchups. The tournament transitions to the
+   * BRACKET_READY state.
+   *
+   * @param tournamentId the UUID of the tournament
+   * @throws TournamentNotFoundException if the tournament does not exist
+   * @throws InvalidTournamentStateException if the tournament has already started or has too few
+   *     participants
+   */
   public void generateBracket(UUID tournamentId) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
@@ -107,6 +145,16 @@ public class TournamentService {
     tournamentRepository.save(tournament);
   }
 
+  /**
+   * Updates the rules (best-of series count and scoring mode) for a specific round.
+   *
+   * @param tournamentId the UUID of the tournament
+   * @param roundNumber the number of the round to configure
+   * @param bestOf the number of games required to win a match in this round (must be 1, 3, 5, or 7)
+   * @param scoringMode the scoring mode rules for the round
+   * @throws InvalidRoundConfigurationException if the parameters are invalid
+   * @throws InvalidTournamentStateException if the tournament is not in the BRACKET_READY state
+   */
   public void updateRoundSettings(
       UUID tournamentId, int roundNumber, Integer bestOf, ScoringMode scoringMode) {
     Tournament tournament =
@@ -145,6 +193,12 @@ public class TournamentService {
     tournamentRepository.save(tournament);
   }
 
+  /**
+   * Transitions a tournament from BRACKET_READY to IN_PROGRESS, allowing matches to be played.
+   *
+   * @param tournamentId the UUID of the tournament
+   * @throws InvalidTournamentStateException if the tournament bracket has not been generated
+   */
   public void startTournament(UUID tournamentId) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
@@ -167,6 +221,16 @@ public class TournamentService {
     return sb.toString();
   }
 
+  /**
+   * Removes a participant from a tournament before registration closes.
+   *
+   * @param tournamentId the UUID of the tournament
+   * @param participantId the UUID of the participant to remove
+   * @throws InvalidTournamentStateException if the tournament is no longer in the REGISTRATION
+   *     phase
+   * @throws TournamentParticipantNotFoundException if the participant does not exist in this
+   *     tournament
+   */
   public void removeParticipant(UUID tournamentId, UUID participantId) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);

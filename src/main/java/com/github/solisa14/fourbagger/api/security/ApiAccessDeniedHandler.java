@@ -19,10 +19,24 @@ public class ApiAccessDeniedHandler implements AccessDeniedHandler {
 
   private final ObjectMapper objectMapper;
 
+  /**
+   * Constructs an ApiAccessDeniedHandler.
+   *
+   * @param objectMapper the object mapper used to serialize the error response
+   */
   public ApiAccessDeniedHandler(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
 
+  /**
+   * Handles an access denied exception by writing a standard error response to the output stream.
+   *
+   * @param request the HTTP request
+   * @param response the HTTP response
+   * @param accessDeniedException the access denied exception
+   * @throws IOException if an input or output exception occurs
+   * @throws ServletException if a servlet exception occurs
+   */
   @Override
   public void handle(
       HttpServletRequest request,

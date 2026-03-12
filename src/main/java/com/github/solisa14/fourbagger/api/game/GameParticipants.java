@@ -5,8 +5,22 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Encapsulates the participants in a game, ensuring valid team configurations based on the game
+ * type (singles vs doubles).
+ *
+ * @param gameType The type of game (singles or doubles).
+ * @param teamOne The first team.
+ * @param teamTwo The second team.
+ */
 public record GameParticipants(GameType gameType, GameSide teamOne, GameSide teamTwo) {
 
+  /**
+   * Constructs a {@link GameParticipants} record and validates the configuration. Ensures that all
+   * participants are distinct and match the game type requirements.
+   *
+   * @throws InvalidGameConfigurationException if configuration is invalid or participants overlap.
+   */
   public GameParticipants {
     if (gameType == null) {
       throw new InvalidGameConfigurationException("Game type is required");
@@ -23,11 +37,27 @@ public record GameParticipants(GameType gameType, GameSide teamOne, GameSide tea
     validateUniqueParticipants(teamOne, teamTwo);
   }
 
+  /**
+   * Factory method to create participants for a singles game.
+   *
+   * @param playerOne First player.
+   * @param playerTwo Second player.
+   * @return A valid participants configuration for singles.
+   */
   public static GameParticipants singles(User playerOne, User playerTwo) {
     return new GameParticipants(
         GameType.SINGLES, GameSide.singles(playerOne), GameSide.singles(playerTwo));
   }
 
+  /**
+   * Factory method to create participants for a doubles game.
+   *
+   * @param playerOne Player one on team one.
+   * @param playerOnePartner Partner for player one on team one.
+   * @param playerTwo Player two on team two.
+   * @param playerTwoPartner Partner for player two on team two.
+   * @return A valid participants configuration for doubles.
+   */
   public static GameParticipants doubles(
       User playerOne, User playerOnePartner, User playerTwo, User playerTwoPartner) {
     return new GameParticipants(

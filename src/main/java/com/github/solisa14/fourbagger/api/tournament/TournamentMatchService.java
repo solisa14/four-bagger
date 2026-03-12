@@ -14,6 +14,11 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service responsible for managing the execution and progression of tournament matches. Handles
+ * starting matches by creating backing games, recording game completions, advancing winning teams,
+ * and completing the overall tournament when the final match finishes.
+ */
 @Service
 public class TournamentMatchService {
 
@@ -33,6 +38,16 @@ public class TournamentMatchService {
     this.gameCreationService = gameCreationService;
   }
 
+  /**
+   * Starts a match by creating its first game (or retrieving an existing uncompleted game).
+   * Validates that both teams are assigned and the match is ready to be played.
+   *
+   * @param tournamentId the UUID of the tournament
+   * @param matchId the UUID of the match to start
+   * @return the Game instance created or retrieved for this match
+   * @throws InvalidTournamentStateException if the tournament or match is not ready to start
+   * @throws MatchNotFoundException if the match cannot be found
+   */
   @Transactional
   public Game startMatch(UUID tournamentId, UUID matchId) {
     Tournament tournament =
@@ -74,6 +89,15 @@ public class TournamentMatchService {
     return game;
   }
 
+  /**
+   * Processes the result of a completed game, applying the win to the corresponding tournament
+   * match. If a team clinches the necessary number of wins for the round's "best of" requirement,
+   * the match is completed and the winner is advanced to the next match. If the final match of the
+   * tournament finishes, the tournament is marked as COMPLETED.
+   *
+   * @param gameId the UUID of the completed game
+   * @throws InvalidGameStateException if the game is not completed or not linked to a match
+   */
   @Transactional
   public void processCompletedGame(UUID gameId) {
     Game game =

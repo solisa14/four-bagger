@@ -22,6 +22,15 @@ public class AuthenticationService {
   private final JwtService jwtService;
   private final RefreshTokenService refreshTokenService;
 
+  /**
+   * Constructs an AuthenticationService.
+   *
+   * @param userService the user service
+   * @param userRepository the user repository
+   * @param authenticationManager the authentication manager
+   * @param jwtService the JWT service
+   * @param refreshTokenService the refresh token service
+   */
   public AuthenticationService(
       UserService userService,
       UserRepository userRepository,

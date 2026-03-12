@@ -17,9 +17,24 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = AtLeastOneFieldRequiredValidator.class)
 public @interface AtLeastOneFieldRequired {
+  /**
+   * The default error message to return when validation fails.
+   *
+   * @return the error message
+   */
   String message() default "At least one field must be provided";
 
+  /**
+   * The groups the constraint belongs to.
+   *
+   * @return the groups
+   */
   Class<?>[] groups() default {};
 
+  /**
+   * The payload associated with the constraint.
+   *
+   * @return the payload
+   */
   Class<? extends Payload>[] payload() default {};
 }

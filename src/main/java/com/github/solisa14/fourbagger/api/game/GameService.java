@@ -8,6 +8,10 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Core service containing business logic for game management. Handles creating games, recording
+ * frames, and applying scoring rules.
+ */
 @Service
 public class GameService {
 
@@ -28,17 +32,37 @@ public class GameService {
     scoringPolicies.put(GameScoringMode.EXACT, new ExactGameScoringPolicy());
   }
 
+  /**
+   * Creates a new game from a user request.
+   *
+   * @param currentUser The user making the request.
+   * @param request The request payload.
+   * @return The created game.
+   */
   @Transactional
   public Game createGame(User currentUser, CreateGameRequest request) {
     CreateGameCommand command = gameRequestMapper.toCreateCommand(currentUser, request, null);
     return gameCreationService.createPendingGame(command);
   }
 
+  /**
+   * Creates a new game from a domain command.
+   *
+   * @param command The command to create the game.
+   * @return The created game.
+   */
   @Transactional
   public Game createGame(CreateGameCommand command) {
     return gameCreationService.createPendingGame(command);
   }
 
+  /**
+   * Transitions a game from PENDING to IN_PROGRESS.
+   *
+   * @param gameId The ID of the game to start.
+   * @return The updated game.
+   * @throws InvalidGameStateException if the game is not PENDING.
+   */
   @Transactional
   public Game startGame(UUID gameId) {
     Game game = getGame(gameId);
@@ -52,6 +76,16 @@ public class GameService {
     return gameRepository.save(game);
   }
 
+  /**
+   * Records a new frame for an in-progress game and applies scoring. In doubles, validates that the
+   * throwers are alternating correctly.
+   *
+   * @param gameId The ID of the game.
+   * @param request The frame details including bags in/on and thrower IDs.
+   * @return The newly recorded frame.
+   * @throws InvalidGameStateException if the game is not IN_PROGRESS.
+   * @throws InvalidFrameException if bag counts are invalid or throwers are out of turn.
+   */
   @Transactional
   public Frame recordFrame(UUID gameId, RecordFrameRequest request) {
     Game game = getGame(gameId);
@@ -94,14 +128,34 @@ public class GameService {
     return frame;
   }
 
+  /**
+   * Retrieves a game by its ID.
+   *
+   * @param gameId The ID of the game.
+   * @return The game entity.
+   * @throws GameNotFoundException if the game does not exist.
+   */
   public Game getGame(UUID gameId) {
     return gameRepository.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
   }
 
+  /**
+   * Retrieves a list of games associated with a user.
+   *
+   * @param user The user.
+   * @return List of games where the user is a player.
+   */
   public List<Game> listUserGames(User user) {
     return gameRepository.findByPlayer(user);
   }
 
+  /**
+   * Cancels a game, preventing any further updates.
+   *
+   * @param gameId The ID of the game to cancel.
+   * @return The cancelled game.
+   * @throws InvalidGameStateException if the game is already completed or cancelled.
+   */
   @Transactional
   public Game cancelGame(UUID gameId) {
     Game game = getGame(gameId);

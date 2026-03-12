@@ -16,6 +16,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Service for managing refresh tokens, including creation, rotation, and deletion. */
 @Service
 public class RefreshTokenService {
 
@@ -25,16 +26,34 @@ public class RefreshTokenService {
   @Value("${app.security.jwt.refresh-token.expiration-ms}")
   private Long refreshTokenDurationMs;
 
+  /**
+   * Constructs a RefreshTokenService.
+   *
+   * @param refreshTokenRepository the repository for refresh tokens
+   * @param userRepository the repository for users
+   */
   public RefreshTokenService(
       RefreshTokenRepository refreshTokenRepository, UserRepository userRepository) {
     this.refreshTokenRepository = refreshTokenRepository;
     this.userRepository = userRepository;
   }
 
+  /**
+   * Finds a refresh token by its raw token string.
+   *
+   * @param token the raw refresh token
+   * @return an Optional containing the refresh token if found
+   */
   public Optional<RefreshToken> findByToken(String token) {
     return refreshTokenRepository.findByTokenHash(hashToken(token));
   }
 
+  /**
+   * Issues a new refresh token for a user.
+   *
+   * @param userId the UUID of the user
+   * @return the newly created refresh token session
+   */
   @Transactional
   public RefreshTokenSession issueRefreshToken(UUID userId) {
     User user = loadUser(userId);
@@ -60,6 +79,13 @@ public class RefreshTokenService {
     return new RefreshTokenSession(user, rawToken);
   }
 
+  /**
+   * Rotates a given refresh token, replacing it with a new one.
+   *
+   * @param token the raw refresh token to rotate
+   * @return the new refresh token session
+   * @throws TokenRefreshException if the token is not found or has expired
+   */
   @Transactional
   public RefreshTokenSession rotateRefreshToken(String token) {
     RefreshToken oldToken =
@@ -76,6 +102,13 @@ public class RefreshTokenService {
     return new RefreshTokenSession(oldToken.getUser(), newRawToken);
   }
 
+  /**
+   * Verifies that a refresh token has not expired.
+   *
+   * @param token the refresh token entity to check
+   * @return the token if it is valid
+   * @throws TokenRefreshException if the token has expired
+   */
   public RefreshToken verifyExpiration(RefreshToken token) {
     if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
       refreshTokenRepository.delete(token);
@@ -85,16 +118,29 @@ public class RefreshTokenService {
     return token;
   }
 
+  /**
+   * Deletes all refresh tokens for a user by their user ID.
+   *
+   * @param userId the UUID of the user
+   */
   @Transactional
   public void deleteByUserId(UUID userId) {
     refreshTokenRepository.deleteByUserId(userId);
   }
 
+  /**
+   * Deletes a specific refresh token by its raw token string.
+   *
+   * @param token the raw refresh token
+   */
   @Transactional
   public void deleteByToken(String token) {
     refreshTokenRepository.deleteByTokenHash(hashToken(token));
   }
 
+  /**
+   * Purges all expired refresh tokens from the database. Runs automatically at midnight every day.
+   */
   @Transactional
   @Scheduled(cron = "0 0 0 * * *") // Run daily at midnight
   public void purgeExpiredTokens() {

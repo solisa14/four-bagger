@@ -21,6 +21,13 @@ public class UserService {
   private final BCryptPasswordEncoder passwordEncoder;
   private final RefreshTokenService refreshTokenService;
 
+  /**
+   * Constructs a new UserService with the required dependencies.
+   *
+   * @param userRepository the repository for user data access
+   * @param passwordEncoder the encoder used for hashing passwords
+   * @param refreshTokenService the service for managing refresh tokens
+   */
   public UserService(
       UserRepository userRepository,
       BCryptPasswordEncoder passwordEncoder,
@@ -72,10 +79,25 @@ public class UserService {
     }
   }
 
+  /**
+   * Retrieves a user by their unique identifier.
+   *
+   * @param id the UUID of the user to retrieve
+   * @return the found User entity
+   * @throws UserNotFoundException if no user is found with the provided ID
+   */
   public User getUser(UUID id) {
     return userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
   }
 
+  /**
+   * Updates a user's profile information.
+   *
+   * @param id the UUID of the user to update
+   * @param request the profile update request payload containing optional fields
+   * @return the updated User entity
+   * @throws UserNotFoundException if no user is found with the provided ID
+   */
   @Transactional
   public User updateProfile(UUID id, UpdateProfileRequest request) {
     User user = getUser(id);
@@ -88,6 +110,15 @@ public class UserService {
     return userRepository.save(user);
   }
 
+  /**
+   * Updates a user's password and revokes all active refresh tokens for security.
+   *
+   * @param id the UUID of the user changing their password
+   * @param request the password update request payload containing current and new passwords
+   * @throws InvalidPasswordException if the provided current password does not match the stored
+   *     hash
+   * @throws UserNotFoundException if no user is found with the provided ID
+   */
   @Transactional
   public void updatePassword(UUID id, UpdatePasswordRequest request) {
     User user = getUser(id);

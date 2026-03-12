@@ -3,6 +3,7 @@ package com.github.solisa14.fourbagger.api.game;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Service dedicated to handling the creation of new game instances. */
 @Service
 public class GameCreationService {
 
@@ -12,6 +13,12 @@ public class GameCreationService {
     this.gameRepository = gameRepository;
   }
 
+  /**
+   * Creates a new pending game based on the provided command.
+   *
+   * @param command The command object containing game configuration and participants.
+   * @return The newly created and saved game.
+   */
   @Transactional
   public Game createPendingGame(CreateGameCommand command) {
     GameParticipants participants = command.participants();

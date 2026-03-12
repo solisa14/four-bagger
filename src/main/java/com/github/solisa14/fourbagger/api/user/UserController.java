@@ -22,16 +22,34 @@ public class UserController {
 
   private final UserService userService;
 
+  /**
+   * Constructs a new UserController.
+   *
+   * @param userService the user service to use
+   */
   public UserController(UserService userService) {
     this.userService = userService;
   }
 
+  /**
+   * Retrieves the currently authenticated user's profile information.
+   *
+   * @param currentUser the currently authenticated user, injected by Spring Security
+   * @return a ResponseEntity containing the user's profile data
+   */
   @GetMapping("/me")
   public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal User currentUser) {
     User user = userService.getUser(currentUser.getId());
     return ResponseEntity.ok(mapToResponse(user));
   }
 
+  /**
+   * Updates the currently authenticated user's profile information.
+   *
+   * @param currentUser the currently authenticated user, injected by Spring Security
+   * @param request the profile update request payload
+   * @return a ResponseEntity containing the updated user profile data
+   */
   @PatchMapping("/me")
   public ResponseEntity<UserResponse> updateProfile(
       @AuthenticationPrincipal User currentUser, @Valid @RequestBody UpdateProfileRequest request) {
@@ -39,6 +57,13 @@ public class UserController {
     return ResponseEntity.ok(mapToResponse(updatedUser));
   }
 
+  /**
+   * Updates the currently authenticated user's password.
+   *
+   * @param currentUser the currently authenticated user, injected by Spring Security
+   * @param request the password update request payload containing current and new passwords
+   * @return an empty ResponseEntity upon successful update
+   */
   @PutMapping("/me/password")
   public ResponseEntity<Void> updatePassword(
       @AuthenticationPrincipal User currentUser,
@@ -47,6 +72,12 @@ public class UserController {
     return ResponseEntity.ok().build();
   }
 
+  /**
+   * Maps a User entity to a UserResponse DTO.
+   *
+   * @param user the user entity to map
+   * @return the mapped user response DTO
+   */
   private UserResponse mapToResponse(User user) {
     return new UserResponse(
         user.getId(),

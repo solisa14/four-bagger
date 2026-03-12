@@ -5,6 +5,11 @@ import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.*;
 
+/**
+ * Represents a user who has registered to participate in a specific tournament. In a singles
+ * tournament, a participant directly maps to a team. In doubles, participants are combined to form
+ * teams.
+ */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter

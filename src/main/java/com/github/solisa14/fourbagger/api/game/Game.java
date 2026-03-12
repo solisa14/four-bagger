@@ -10,6 +10,10 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * Entity representing a cornhole game, either standalone or as part of a tournament match. Tracks
+ * participants, scoring rules, current score, and the sequence of frames played.
+ */
 @Entity
 @Table(name = "games")
 @NoArgsConstructor

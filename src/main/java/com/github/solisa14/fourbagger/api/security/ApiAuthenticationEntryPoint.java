@@ -21,10 +21,25 @@ public class ApiAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
   private final ObjectMapper objectMapper;
 
+  /**
+   * Constructs an ApiAuthenticationEntryPoint.
+   *
+   * @param objectMapper the object mapper used to serialize the error response
+   */
   public ApiAuthenticationEntryPoint(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
 
+  /**
+   * Commences an authentication scheme by writing a standard error response for unauthenticated
+   * requests.
+   *
+   * @param request the HTTP request
+   * @param response the HTTP response
+   * @param authException the authentication exception
+   * @throws IOException if an input or output exception occurs
+   * @throws ServletException if a servlet exception occurs
+   */
   @Override
   public void commence(
       HttpServletRequest request,

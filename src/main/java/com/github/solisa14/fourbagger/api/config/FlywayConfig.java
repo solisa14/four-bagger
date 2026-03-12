@@ -9,10 +9,21 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Configuration class for Flyway database migrations.
+ *
+ * <p>Ensures that Flyway migrations are executed before the JPA entity manager factory is created,
+ * allowing Hibernate to validate or interact with the migrated schema.
+ */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(prefix = "spring.flyway", name = "enabled", matchIfMissing = true)
 public class FlywayConfig {
 
+  /**
+   * Post-processor to ensure the entity manager factory depends on Flyway.
+   *
+   * @return the bean factory post-processor
+   */
   @Bean
   public static BeanFactoryPostProcessor flywayDependsOnPostProcessor() {
     return beanFactory -> {
@@ -34,6 +45,13 @@ public class FlywayConfig {
     };
   }
 
+  /**
+   * Configures and initializes Flyway with the provided data source and locations.
+   *
+   * @param dataSource the data source to use for migrations
+   * @param locations the locations of the migration scripts
+   * @return the configured Flyway instance
+   */
   @Bean(initMethod = "migrate")
   public Flyway flyway(
       DataSource dataSource,

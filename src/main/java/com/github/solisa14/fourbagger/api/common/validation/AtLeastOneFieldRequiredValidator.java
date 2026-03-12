@@ -13,6 +13,15 @@ import java.lang.reflect.Field;
 public class AtLeastOneFieldRequiredValidator
     implements ConstraintValidator<AtLeastOneFieldRequired, Object> {
 
+  /**
+   * Implements the validation logic.
+   *
+   * <p>Validates that the object contains at least one non-blank string field.
+   *
+   * @param obj the object to validate
+   * @param context context in which the constraint is evaluated
+   * @return true if the object is valid, false otherwise
+   */
   @Override
   public boolean isValid(Object obj, ConstraintValidatorContext context) {
     if (obj == null) {

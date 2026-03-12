@@ -5,6 +5,10 @@ import com.github.solisa14.fourbagger.api.user.UserService;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
+/**
+ * Mapper component responsible for transforming game-related API requests into internal domain
+ * commands.
+ */
 @Component
 public class GameRequestMapper {
 
@@ -14,6 +18,16 @@ public class GameRequestMapper {
     this.userService = userService;
   }
 
+  /**
+   * Converts a {@link CreateGameRequest} into a {@link CreateGameCommand}. Resolves the
+   * participants and applies default game rules where optional fields are not provided in the
+   * request.
+   *
+   * @param currentUser The user initiating the request.
+   * @param request The request payload containing game configuration.
+   * @param tournamentMatchId The ID of the tournament match, if applicable.
+   * @return A valid {@link CreateGameCommand}.
+   */
   public CreateGameCommand toCreateCommand(
       User currentUser, CreateGameRequest request, UUID tournamentMatchId) {
     User playerTwo = userService.getUser(request.playerTwoId());

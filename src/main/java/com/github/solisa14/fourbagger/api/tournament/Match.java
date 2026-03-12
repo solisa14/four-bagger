@@ -7,6 +7,11 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+/**
+ * Represents a single contest between two teams within a tournament round. A match may consist of
+ * one or more games depending on the round's "best of" configuration. It tracks the wins for each
+ * team and progresses the winner to the subsequent match in the bracket.
+ */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
