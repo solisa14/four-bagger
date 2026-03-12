@@ -64,8 +64,9 @@ public class GameService {
    * @throws InvalidGameStateException if the game is not PENDING.
    */
   @Transactional
-  public Game startGame(UUID gameId) {
+  public Game startGame(User currentUser, UUID gameId) {
     Game game = getGame(gameId);
+    authorizeMutation(currentUser, game);
 
     if (game.getStatus() != GameStatus.PENDING) {
       throw new InvalidGameStateException(
@@ -87,8 +88,9 @@ public class GameService {
    * @throws InvalidFrameException if bag counts are invalid or throwers are out of turn.
    */
   @Transactional
-  public Frame recordFrame(UUID gameId, RecordFrameRequest request) {
+  public Frame recordFrame(User currentUser, UUID gameId, RecordFrameRequest request) {
     Game game = getGame(gameId);
+    authorizeMutation(currentUser, game);
 
     if (game.getStatus() != GameStatus.IN_PROGRESS) {
       throw new InvalidGameStateException(
@@ -157,8 +159,9 @@ public class GameService {
    * @throws InvalidGameStateException if the game is already completed or cancelled.
    */
   @Transactional
-  public Game cancelGame(UUID gameId) {
+  public Game cancelGame(User currentUser, UUID gameId) {
     Game game = getGame(gameId);
+    authorizeMutation(currentUser, game);
 
     if (game.getStatus() == GameStatus.COMPLETED || game.getStatus() == GameStatus.CANCELLED) {
       throw new InvalidGameStateException("Cannot cancel a game with status: " + game.getStatus());
@@ -184,6 +187,24 @@ public class GameService {
               + ") + bags on ("
               + request.p2BagsOn()
               + ") cannot exceed 4");
+    }
+  }
+
+  private void authorizeMutation(User currentUser, Game game) {
+    UUID currentUserId = currentUser.getId();
+    boolean isAuthorizedParticipant =
+        game.getPlayerOne().getId().equals(currentUserId)
+            || game.getPlayerTwo().getId().equals(currentUserId)
+            || (game.getPlayerOnePartner() != null
+                && game.getPlayerOnePartner().getId().equals(currentUserId))
+            || (game.getPlayerTwoPartner() != null
+                && game.getPlayerTwoPartner().getId().equals(currentUserId));
+
+    boolean isGameCreator =
+        game.getCreatedBy() != null && game.getCreatedBy().getId().equals(currentUserId);
+
+    if (!isAuthorizedParticipant && !isGameCreator) {
+      throw new GameAccessDeniedException(game.getId());
     }
   }
 

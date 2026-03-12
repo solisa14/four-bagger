@@ -47,8 +47,9 @@ public class GameController {
    * @return A response containing the updated game details.
    */
   @PostMapping("/{gameId}/start")
-  public ResponseEntity<GameResponse> startGame(@PathVariable UUID gameId) {
-    Game game = gameService.startGame(gameId);
+  public ResponseEntity<GameResponse> startGame(
+      @AuthenticationPrincipal User currentUser, @PathVariable UUID gameId) {
+    Game game = gameService.startGame(currentUser, gameId);
     return ResponseEntity.ok(GameResponse.from(game));
   }
 
@@ -61,8 +62,10 @@ public class GameController {
    */
   @PostMapping("/{gameId}/frames")
   public ResponseEntity<GameResponse> recordFrame(
-      @PathVariable UUID gameId, @Valid @RequestBody RecordFrameRequest request) {
-    gameService.recordFrame(gameId, request);
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable UUID gameId,
+      @Valid @RequestBody RecordFrameRequest request) {
+    gameService.recordFrame(currentUser, gameId, request);
     Game game = gameService.getGame(gameId);
     return ResponseEntity.status(201).body(GameResponse.from(game));
   }
@@ -100,8 +103,9 @@ public class GameController {
    * @return A response containing the cancelled game details.
    */
   @PostMapping("/{gameId}/cancel")
-  public ResponseEntity<GameResponse> cancelGame(@PathVariable UUID gameId) {
-    Game game = gameService.cancelGame(gameId);
+  public ResponseEntity<GameResponse> cancelGame(
+      @AuthenticationPrincipal User currentUser, @PathVariable UUID gameId) {
+    Game game = gameService.cancelGame(currentUser, gameId);
     return ResponseEntity.ok(GameResponse.from(game));
   }
 }

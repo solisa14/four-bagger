@@ -99,7 +99,10 @@ class GameControllerWebMvcTest {
   void recordFrame_whenGameNotInProgress_returnsBadRequest() throws Exception {
     User principal = authenticatedUser();
     UUID gameId = UUID.randomUUID();
-    when(gameService.recordFrame(eq(gameId), any(RecordFrameRequest.class)))
+    when(gameService.recordFrame(
+            org.mockito.ArgumentMatchers.nullable(User.class),
+            eq(gameId),
+            any(RecordFrameRequest.class)))
         .thenThrow(
             new InvalidGameStateException(
                 "Cannot record a frame for a game that is not IN_PROGRESS"));
@@ -113,5 +116,18 @@ class GameControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
         .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void cancelGame_whenUserCannotModifyGame_returnsForbidden() throws Exception {
+    User principal = authenticatedUser();
+    UUID gameId = UUID.randomUUID();
+    when(gameService.cancelGame(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId)))
+        .thenThrow(new GameAccessDeniedException(gameId));
+
+    mockMvc
+        .perform(post("/api/v1/games/{gameId}/cancel", gameId).with(user(principal)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.message").value("You are not allowed to modify game: " + gameId));
   }
 }

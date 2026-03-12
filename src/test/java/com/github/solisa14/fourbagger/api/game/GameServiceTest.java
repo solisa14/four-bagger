@@ -34,6 +34,11 @@ class GameServiceTest {
     return TestDataFactory.user(UUID.randomUUID(), "p2", "p2@example.com", "encoded", Role.USER);
   }
 
+  private User otherUser() {
+    return TestDataFactory.user(
+        UUID.randomUUID(), "other", "other@example.com", "encoded", Role.USER);
+  }
+
   private Game inProgressGame(User p1, User p2) {
     return Game.builder()
         .id(UUID.randomUUID())
@@ -207,7 +212,7 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    Game started = gameService.startGame(game.getId());
+    Game started = gameService.startGame(p1, game.getId());
 
     assertThat(started.getStatus()).isEqualTo(GameStatus.IN_PROGRESS);
   }
@@ -219,8 +224,27 @@ class GameServiceTest {
     Game game = inProgressGame(p1, p2);
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
-    assertThatThrownBy(() -> gameService.startGame(game.getId()))
+    assertThatThrownBy(() -> gameService.startGame(p1, game.getId()))
         .isInstanceOf(InvalidGameStateException.class);
+  }
+
+  @Test
+  void startGame_whenUserIsNotParticipantOrCreator_throwsGameAccessDeniedException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    User outsider = otherUser();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .status(GameStatus.PENDING)
+            .createdBy(p1)
+            .build();
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    assertThatThrownBy(() -> gameService.startGame(outsider, game.getId()))
+        .isInstanceOf(GameAccessDeniedException.class);
   }
 
   // --- recordFrame: cancellation scoring ---
@@ -235,7 +259,7 @@ class GameServiceTest {
 
     // p1: 1 in (3pts) + 1 on (1pt) = 4; p2: 0 in + 1 on = 1; net = 3 to p1
     RecordFrameRequest request = new RecordFrameRequest(1, 1, 0, 1);
-    Frame frame = gameService.recordFrame(game.getId(), request);
+    Frame frame = gameService.recordFrame(p1, game.getId(), request);
 
     assertThat(frame.getPlayerOneFramePoints()).isEqualTo(3);
     assertThat(frame.getPlayerTwoFramePoints()).isEqualTo(0);
@@ -253,7 +277,7 @@ class GameServiceTest {
 
     // p1: 0 in + 0 on = 0; p2: 1 in (3pts) + 2 on (2pts) = 5; net = 5 to p2
     RecordFrameRequest request = new RecordFrameRequest(0, 0, 1, 2);
-    Frame frame = gameService.recordFrame(game.getId(), request);
+    Frame frame = gameService.recordFrame(p1, game.getId(), request);
 
     assertThat(frame.getPlayerOneFramePoints()).isEqualTo(0);
     assertThat(frame.getPlayerTwoFramePoints()).isEqualTo(5);
@@ -271,7 +295,7 @@ class GameServiceTest {
 
     // p1: 1 in (3) = 3; p2: 1 in (3) = 3; cancels out
     RecordFrameRequest request = new RecordFrameRequest(1, 0, 1, 0);
-    Frame frame = gameService.recordFrame(game.getId(), request);
+    Frame frame = gameService.recordFrame(p1, game.getId(), request);
 
     assertThat(frame.getPlayerOneFramePoints()).isEqualTo(0);
     assertThat(frame.getPlayerTwoFramePoints()).isEqualTo(0);
@@ -289,7 +313,7 @@ class GameServiceTest {
 
     // p1: 4 in = 12pts; p2: 0; net = 12
     RecordFrameRequest request = new RecordFrameRequest(4, 0, 0, 0);
-    Frame frame = gameService.recordFrame(game.getId(), request);
+    Frame frame = gameService.recordFrame(p1, game.getId(), request);
 
     assertThat(frame.getPlayerOneFramePoints()).isEqualTo(12);
     assertThat(game.getPlayerOneScore()).isEqualTo(12);
@@ -304,9 +328,9 @@ class GameServiceTest {
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
     // Frame 1: p1 nets 3
-    gameService.recordFrame(game.getId(), new RecordFrameRequest(1, 0, 0, 0));
+    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0));
     // Frame 2: p1 nets 3 more
-    gameService.recordFrame(game.getId(), new RecordFrameRequest(1, 0, 0, 0));
+    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0));
 
     assertThat(game.getPlayerOneScore()).isEqualTo(6);
     assertThat(game.getFrames()).hasSize(2);
@@ -325,7 +349,7 @@ class GameServiceTest {
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
     // p1 nets 3 → total 21
-    gameService.recordFrame(game.getId(), new RecordFrameRequest(1, 0, 0, 0));
+    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0));
 
     assertThat(game.getStatus()).isEqualTo(GameStatus.COMPLETED);
     assertThat(game.getWinner()).isEqualTo(p1);
@@ -351,7 +375,7 @@ class GameServiceTest {
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
     // p1 nets 1 → 21 vs 20, lead = 1, not enough with winByTwo
-    gameService.recordFrame(game.getId(), new RecordFrameRequest(0, 1, 0, 0));
+    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 1, 0, 0));
 
     assertThat(game.getStatus()).isEqualTo(GameStatus.IN_PROGRESS);
     assertThat(game.getWinner()).isNull();
@@ -377,7 +401,7 @@ class GameServiceTest {
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
     // p1 nets 1 more → 22 vs 20, lead = 2, game over
-    gameService.recordFrame(game.getId(), new RecordFrameRequest(0, 1, 0, 0));
+    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 1, 0, 0));
 
     assertThat(game.getStatus()).isEqualTo(GameStatus.COMPLETED);
     assertThat(game.getWinner()).isEqualTo(p1);
@@ -393,7 +417,7 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    gameService.recordFrame(game.getId(), new RecordFrameRequest(1, 0, 0, 0));
+    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0));
 
     assertThat(game.getPlayerOneScore()).isEqualTo(11);
     assertThat(game.getStatus()).isEqualTo(GameStatus.IN_PROGRESS);
@@ -410,7 +434,7 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    gameService.recordFrame(game.getId(), new RecordFrameRequest(1, 0, 0, 0));
+    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0));
 
     assertThat(game.getPlayerOneScore()).isEqualTo(21);
     assertThat(game.getStatus()).isEqualTo(GameStatus.COMPLETED);
@@ -427,7 +451,7 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-            () -> gameService.recordFrame(game.getId(), new RecordFrameRequest(3, 2, 0, 0)))
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(3, 2, 0, 0)))
         .isInstanceOf(InvalidFrameException.class);
   }
 
@@ -439,7 +463,7 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-            () -> gameService.recordFrame(game.getId(), new RecordFrameRequest(0, 0, 2, 3)))
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 0, 2, 3)))
         .isInstanceOf(InvalidFrameException.class);
   }
 
@@ -458,7 +482,7 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-            () -> gameService.recordFrame(game.getId(), new RecordFrameRequest(0, 0, 0, 0)))
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 0, 0, 0)))
         .isInstanceOf(InvalidGameStateException.class);
   }
 
@@ -477,8 +501,22 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-            () -> gameService.recordFrame(game.getId(), new RecordFrameRequest(0, 0, 0, 0)))
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 0, 0, 0)))
         .isInstanceOf(InvalidGameStateException.class);
+  }
+
+  @Test
+  void recordFrame_whenUserIsNotParticipantOrCreator_throwsGameAccessDeniedException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    User outsider = otherUser();
+    Game game = inProgressGame(p1, p2);
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    assertThatThrownBy(
+            () ->
+                gameService.recordFrame(outsider, game.getId(), new RecordFrameRequest(1, 0, 0, 0)))
+        .isInstanceOf(GameAccessDeniedException.class);
   }
 
   // --- getGame ---
@@ -501,7 +539,7 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    Game cancelled = gameService.cancelGame(game.getId());
+    Game cancelled = gameService.cancelGame(p1, game.getId());
 
     assertThat(cancelled.getStatus()).isEqualTo(GameStatus.CANCELLED);
   }
@@ -520,8 +558,20 @@ class GameServiceTest {
             .build();
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
-    assertThatThrownBy(() -> gameService.cancelGame(game.getId()))
+    assertThatThrownBy(() -> gameService.cancelGame(p1, game.getId()))
         .isInstanceOf(InvalidGameStateException.class);
+  }
+
+  @Test
+  void cancelGame_whenUserIsNotParticipantOrCreator_throwsGameAccessDeniedException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    User outsider = otherUser();
+    Game game = inProgressGame(p1, p2);
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    assertThatThrownBy(() -> gameService.cancelGame(outsider, game.getId()))
+        .isInstanceOf(GameAccessDeniedException.class);
   }
 
   // --- recordFrame: doubles ---
@@ -541,7 +591,7 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-            () -> gameService.recordFrame(game.getId(), new RecordFrameRequest(1, 0, 0, 0)))
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0)))
         .isInstanceOf(InvalidFrameException.class);
   }
 
@@ -562,7 +612,7 @@ class GameServiceTest {
     RecordFrameRequest request =
         new RecordFrameRequest(1, 0, 0, 0, p1Partner.getId(), p2Partner.getId());
 
-    assertThatThrownBy(() -> gameService.recordFrame(game.getId(), request))
+    assertThatThrownBy(() -> gameService.recordFrame(p1, game.getId(), request))
         .isInstanceOf(InvalidFrameException.class);
   }
 
@@ -583,7 +633,7 @@ class GameServiceTest {
 
     Frame firstFrame =
         gameService.recordFrame(
-            game.getId(), new RecordFrameRequest(1, 0, 0, 0, p1.getId(), p2.getId()));
+            p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0, p1.getId(), p2.getId()));
 
     assertThat(firstFrame.getFrameNumber()).isEqualTo(1);
     assertThat(game.getFrames()).hasSize(1);
@@ -602,7 +652,9 @@ class GameServiceTest {
 
     Frame secondFrame =
         gameService.recordFrame(
-            game.getId(), new RecordFrameRequest(0, 1, 0, 0, p1Partner.getId(), p2Partner.getId()));
+            p1,
+            game.getId(),
+            new RecordFrameRequest(0, 1, 0, 0, p1Partner.getId(), p2Partner.getId()));
 
     assertThat(secondFrame.getFrameNumber()).isEqualTo(2);
   }
