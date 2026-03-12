@@ -9,6 +9,7 @@ import com.github.solisa14.fourbagger.api.game.CreateGameCommand;
 import com.github.solisa14.fourbagger.api.game.Game;
 import com.github.solisa14.fourbagger.api.game.GameCreationService;
 import com.github.solisa14.fourbagger.api.game.GameRepository;
+import com.github.solisa14.fourbagger.api.game.GameScoringMode;
 import com.github.solisa14.fourbagger.api.game.GameStatus;
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
@@ -92,6 +93,26 @@ class TournamentMatchServiceTest {
   }
 
   @Test
+  void startMatch_whenRoundUsesExactScoring_mapsToExactGameScoringMode() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    match.getRound().setScoringMode(ScoringMode.EXACT);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+    when(gameRepository.findByTournamentMatchIdOrderByCreatedAtAsc(match.getId()))
+        .thenReturn(List.of());
+    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
+        .thenReturn(Game.builder().id(UUID.randomUUID()).status(GameStatus.PENDING).build());
+
+    tournamentMatchService.startMatch(tournament.getId(), match.getId());
+
+    ArgumentCaptor<CreateGameCommand> commandCaptor =
+        ArgumentCaptor.forClass(CreateGameCommand.class);
+    verify(gameCreationService).createPendingGame(commandCaptor.capture());
+    assertThat(commandCaptor.getValue().resolvedScoringMode()).isEqualTo(GameScoringMode.EXACT);
+  }
+
+  @Test
   void startMatch_whenGameAlreadyExists_returnsExistingGameWithoutCreatingAnother() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
@@ -105,6 +126,44 @@ class TournamentMatchServiceTest {
 
     assertThat(result).isEqualTo(existingGame);
     verify(gameCreationService, never()).createPendingGame(any(CreateGameCommand.class));
+  }
+
+  @Test
+  void startMatch_whenMatchIsBye_throwsInvalidTournamentStateException() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    match.setBye(true);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+
+    assertThatThrownBy(() -> tournamentMatchService.startMatch(tournament.getId(), match.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+  }
+
+  @Test
+  void startMatch_whenMatchTeamMissing_throwsInvalidTournamentStateException() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    match.setTeamTwo(null);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+
+    assertThatThrownBy(() -> tournamentMatchService.startMatch(tournament.getId(), match.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class);
+  }
+
+  @Test
+  void startMatch_whenMatchBelongsToDifferentTournament_throwsInvalidTournamentStateException() {
+    Tournament requestedTournament = tournament(TournamentStatus.IN_PROGRESS);
+    Tournament ownerTournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(ownerTournament, false);
+    when(tournamentRepository.findById(requestedTournament.getId()))
+        .thenReturn(Optional.of(requestedTournament));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+
+    assertThatThrownBy(
+            () -> tournamentMatchService.startMatch(requestedTournament.getId(), match.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class);
   }
 
   @Test
@@ -135,6 +194,61 @@ class TournamentMatchServiceTest {
   }
 
   @Test
+  void processCompletedGame_whenBestOfFive_requiresThreeWinsToClinch() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    match.getRound().setBestOf(5);
+    match.setStatus(MatchStatus.IN_PROGRESS);
+    match.setTeamOneWins(1);
+
+    Game completedGame =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .status(GameStatus.COMPLETED)
+            .winner(match.getTeamOne().getPlayerOne())
+            .tournamentMatchId(match.getId())
+            .build();
+    when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
+        .thenReturn(Game.builder().id(UUID.randomUUID()).build());
+
+    tournamentMatchService.processCompletedGame(completedGame.getId());
+
+    assertThat(match.getTeamOneWins()).isEqualTo(2);
+    assertThat(match.getStatus()).isEqualTo(MatchStatus.IN_PROGRESS);
+    verify(gameCreationService).createPendingGame(any(CreateGameCommand.class));
+  }
+
+  @Test
+  void processCompletedGame_whenRoundUsesExactScoring_nextGameUsesExactScoringMode() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    match.getRound().setBestOf(3);
+    match.getRound().setScoringMode(ScoringMode.EXACT);
+    match.setStatus(MatchStatus.IN_PROGRESS);
+
+    Game completedGame =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .status(GameStatus.COMPLETED)
+            .winner(match.getTeamOne().getPlayerOne())
+            .tournamentMatchId(match.getId())
+            .build();
+    when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
+        .thenReturn(Game.builder().id(UUID.randomUUID()).build());
+
+    tournamentMatchService.processCompletedGame(completedGame.getId());
+
+    ArgumentCaptor<CreateGameCommand> commandCaptor =
+        ArgumentCaptor.forClass(CreateGameCommand.class);
+    verify(gameCreationService).createPendingGame(commandCaptor.capture());
+    assertThat(commandCaptor.getValue().resolvedScoringMode()).isEqualTo(GameScoringMode.EXACT);
+  }
+
+  @Test
   void processCompletedGame_whenSeriesClinched_advancesWinnerToNextMatch() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
@@ -162,6 +276,33 @@ class TournamentMatchServiceTest {
     assertThat(match.getWinner()).isEqualTo(match.getTeamOne());
     assertThat(nextMatch.getTeamTwo()).isEqualTo(match.getTeamOne());
     verify(matchRepository, times(2)).save(any(Match.class));
+  }
+
+  @Test
+  void processCompletedGame_whenSeriesClinchedAndAdvancingToPositionOne_setsTeamOne() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    Match nextMatch = match(tournament, false);
+    nextMatch.setTeamOne(null);
+    nextMatch.setTeamTwo(null);
+    match.setNextMatch(nextMatch);
+    match.setNextMatchPosition(1);
+    match.getRound().setBestOf(3);
+    match.setTeamOneWins(1);
+
+    Game completedGame =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .status(GameStatus.COMPLETED)
+            .winner(match.getTeamOne().getPlayerOne())
+            .tournamentMatchId(match.getId())
+            .build();
+    when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+
+    tournamentMatchService.processCompletedGame(completedGame.getId());
+
+    assertThat(nextMatch.getTeamOne()).isEqualTo(match.getTeamOne());
   }
 
   @Test

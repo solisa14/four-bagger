@@ -69,6 +69,54 @@ class TournamentBracketServiceTest {
   }
 
   @Test
+  void planBracket_whenSixTeams_assignsTwoByesToTopSeeds() {
+    Tournament tournament = tournament();
+    List<TournamentTeam> teams = seededTeams(tournament, 6);
+    tournament.getTeams().addAll(teams);
+
+    tournamentBracketService.planBracket(tournament, teams);
+
+    TournamentRound roundOne =
+        tournament.getRounds().stream()
+            .filter(r -> r.getRoundNumber() == 1)
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(roundOne.getMatches()).hasSize(4);
+    assertThat(roundOne.getMatches()).filteredOn(Match::isBye).hasSize(2);
+    assertThat(
+            roundOne.getMatches().stream()
+                .filter(Match::isBye)
+                .map(m -> m.getWinner().getSeed())
+                .toList())
+        .containsExactlyInAnyOrder(1, 2);
+  }
+
+  @Test
+  void planBracket_whenFiveTeams_assignsThreeByesToTopSeeds() {
+    Tournament tournament = tournament();
+    List<TournamentTeam> teams = seededTeams(tournament, 5);
+    tournament.getTeams().addAll(teams);
+
+    tournamentBracketService.planBracket(tournament, teams);
+
+    TournamentRound roundOne =
+        tournament.getRounds().stream()
+            .filter(r -> r.getRoundNumber() == 1)
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(roundOne.getMatches()).hasSize(4);
+    assertThat(roundOne.getMatches()).filteredOn(Match::isBye).hasSize(3);
+    assertThat(
+            roundOne.getMatches().stream()
+                .filter(Match::isBye)
+                .map(m -> m.getWinner().getSeed())
+                .toList())
+        .containsExactlyInAnyOrder(1, 2, 3);
+  }
+
+  @Test
   void planBracket_whenRoundsAlreadyConfigured_preservesRoundRules() {
     Tournament tournament = tournament();
     TournamentRound roundOne =

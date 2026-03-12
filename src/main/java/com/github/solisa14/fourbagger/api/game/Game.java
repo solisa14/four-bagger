@@ -44,6 +44,11 @@ public class Game {
   @Builder.Default
   private GameType gameType = GameType.SINGLES;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "scoring_mode", nullable = false, length = 50)
+  @Builder.Default
+  private GameScoringMode scoringMode = GameScoringMode.STANDARD;
+
   @Column(name = "player_one_score", nullable = false)
   @Builder.Default
   private int playerOneScore = 0;

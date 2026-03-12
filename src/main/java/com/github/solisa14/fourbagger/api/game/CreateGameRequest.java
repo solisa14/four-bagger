@@ -10,27 +10,22 @@ public record CreateGameRequest(
     UUID playerOnePartnerId,
     UUID playerTwoPartnerId,
     GameType gameType,
+    GameScoringMode scoringMode,
     @Min(11) @Max(21) Integer targetScore,
     Boolean winByTwo) {
 
+  public CreateGameRequest(
+      UUID playerTwoId,
+      UUID playerOnePartnerId,
+      UUID playerTwoPartnerId,
+      GameType gameType,
+      Integer targetScore,
+      Boolean winByTwo) {
+    this(
+        playerTwoId, playerOnePartnerId, playerTwoPartnerId, gameType, null, targetScore, winByTwo);
+  }
+
   public CreateGameRequest(UUID playerTwoId, Integer targetScore, Boolean winByTwo) {
-    this(playerTwoId, null, null, null, targetScore, winByTwo);
-  }
-
-  public int resolvedTargetScore() {
-    return targetScore != null ? targetScore : 21;
-  }
-
-  public boolean resolvedWinByTwo() {
-    return winByTwo != null && winByTwo;
-  }
-
-  public GameType resolvedGameType() {
-    if (gameType != null) {
-      return gameType;
-    }
-    return playerOnePartnerId != null || playerTwoPartnerId != null
-        ? GameType.DOUBLES
-        : GameType.SINGLES;
+    this(playerTwoId, null, null, null, null, targetScore, winByTwo);
   }
 }

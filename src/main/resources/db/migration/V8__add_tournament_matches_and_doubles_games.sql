@@ -1,5 +1,6 @@
 ALTER TABLE games
     ADD COLUMN game_type VARCHAR(50) NOT NULL DEFAULT 'SINGLES',
+    ADD COLUMN scoring_mode VARCHAR(50) NOT NULL DEFAULT 'STANDARD',
     ADD COLUMN player_one_partner_id UUID,
     ADD COLUMN player_two_partner_id UUID;
 
@@ -8,6 +9,7 @@ ALTER TABLE games
     ADD CONSTRAINT fk_games_player_two_partner FOREIGN KEY (player_two_partner_id) REFERENCES users (id);
 
 CREATE INDEX idx_games_game_type ON games (game_type);
+CREATE INDEX idx_games_scoring_mode ON games (scoring_mode);
 CREATE INDEX idx_games_tournament_match_id ON games (tournament_match_id);
 
 CREATE TABLE tournament_matches

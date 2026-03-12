@@ -1,8 +1,9 @@
 package com.github.solisa14.fourbagger.api.game;
 
 import com.github.solisa14.fourbagger.api.user.User;
-import com.github.solisa14.fourbagger.api.user.UserService;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,24 +13,24 @@ public class GameService {
 
   private final GameRepository gameRepository;
   private final GameCreationService gameCreationService;
-  private final UserService userService;
+  private final GameRequestMapper gameRequestMapper;
+  private final Map<GameScoringMode, GameScoringPolicy> scoringPolicies =
+      new EnumMap<>(GameScoringMode.class);
 
   public GameService(
       GameRepository gameRepository,
       GameCreationService gameCreationService,
-      UserService userService) {
+      GameRequestMapper gameRequestMapper) {
     this.gameRepository = gameRepository;
     this.gameCreationService = gameCreationService;
-    this.userService = userService;
+    this.gameRequestMapper = gameRequestMapper;
+    scoringPolicies.put(GameScoringMode.STANDARD, new StandardGameScoringPolicy());
+    scoringPolicies.put(GameScoringMode.EXACT, new ExactGameScoringPolicy());
   }
 
   @Transactional
   public Game createGame(User currentUser, CreateGameRequest request) {
-    User playerTwo = userService.getUser(request.playerTwoId());
-    GameParticipants participants = resolveParticipants(currentUser, playerTwo, request);
-    CreateGameCommand command =
-        new CreateGameCommand(
-            participants, request.targetScore(), request.winByTwo(), null, currentUser);
+    CreateGameCommand command = gameRequestMapper.toCreateCommand(currentUser, request, null);
     return gameCreationService.createPendingGame(command);
   }
 
@@ -74,9 +75,7 @@ public class GameService {
     } else if (p1Raw < p2Raw) {
       p2Points = p2Raw - p1Raw;
     }
-    game.setPlayerOneScore(game.getPlayerOneScore() + p1Points);
-    game.setPlayerTwoScore(game.getPlayerTwoScore() + p2Points);
-    checkAndSetWinner(game);
+    applyScoringPolicy(game, p1Points, p2Points);
 
     Frame frame =
         Frame.builder()
@@ -134,37 +133,14 @@ public class GameService {
     }
   }
 
-  private void checkAndSetWinner(Game game) {
-    int p1Score = game.getPlayerOneScore();
-    int p2Score = game.getPlayerTwoScore();
-    int target = game.getTargetScore();
-    boolean winByTwo = game.isWinByTwo();
-
-    boolean p1Wins = p1Score >= target && (!winByTwo || (p1Score - p2Score) >= 2);
-    boolean p2Wins = p2Score >= target && (!winByTwo || (p2Score - p1Score) >= 2);
-
-    if (p1Wins) {
-      game.setWinner(game.getPlayerOne());
-      game.setStatus(GameStatus.COMPLETED);
-    } else if (p2Wins) {
-      game.setWinner(game.getPlayerTwo());
-      game.setStatus(GameStatus.COMPLETED);
+  private void applyScoringPolicy(Game game, int playerOneFramePoints, int playerTwoFramePoints) {
+    GameScoringMode scoringMode =
+        game.getScoringMode() != null ? game.getScoringMode() : GameScoringMode.STANDARD;
+    GameScoringPolicy scoringPolicy = scoringPolicies.get(scoringMode);
+    if (scoringPolicy == null) {
+      throw new InvalidGameConfigurationException("Unsupported game scoring mode: " + scoringMode);
     }
-  }
-
-  private GameParticipants resolveParticipants(
-      User currentUser, User playerTwo, CreateGameRequest request) {
-    GameType gameType = request.resolvedGameType();
-    if (gameType == GameType.DOUBLES) {
-      if (request.playerOnePartnerId() == null || request.playerTwoPartnerId() == null) {
-        throw new InvalidGameConfigurationException(
-            "Doubles games require both partner IDs to be provided");
-      }
-      User playerOnePartner = userService.getUser(request.playerOnePartnerId());
-      User playerTwoPartner = userService.getUser(request.playerTwoPartnerId());
-      return GameParticipants.doubles(currentUser, playerOnePartner, playerTwo, playerTwoPartner);
-    }
-    return GameParticipants.singles(currentUser, playerTwo);
+    scoringPolicy.applyFrame(game, playerOneFramePoints, playerTwoFramePoints);
   }
 
   private void validateThrowersForFrame(Game game, int frameNumber, RecordFrameRequest request) {

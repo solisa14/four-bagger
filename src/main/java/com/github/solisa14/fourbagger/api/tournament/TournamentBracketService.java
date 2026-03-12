@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -39,6 +40,7 @@ public class TournamentBracketService {
 
     wireNextMatches(matchesByRound);
     seedFirstRound(matchesByRound.getFirst(), seededTeams, bracketSize);
+    validateByes(matchesByRound.getFirst(), seededTeams.size(), bracketSize);
     autoAdvanceByes(matchesByRound.getFirst());
   }
 
@@ -139,6 +141,29 @@ public class TournamentBracketService {
       } else if (match.getNextMatchPosition() != null && match.getNextMatchPosition() == 2) {
         match.getNextMatch().setTeamTwo(match.getWinner());
       }
+    }
+  }
+
+  private void validateByes(List<Match> firstRoundMatches, int teamCount, int bracketSize) {
+    int expectedByeCount = bracketSize - teamCount;
+    List<Match> byeMatches = firstRoundMatches.stream().filter(Match::isBye).toList();
+    if (byeMatches.size() != expectedByeCount) {
+      throw new InvalidTournamentStateException("Invalid number of bye matches generated");
+    }
+    if (expectedByeCount == 0) {
+      return;
+    }
+
+    List<Integer> byeSeeds =
+        byeMatches.stream()
+            .map(Match::getWinner)
+            .filter(team -> team != null && team.getSeed() != null)
+            .map(TournamentTeam::getSeed)
+            .sorted()
+            .toList();
+    List<Integer> expectedSeeds = IntStream.rangeClosed(1, expectedByeCount).boxed().toList();
+    if (!byeSeeds.equals(expectedSeeds)) {
+      throw new InvalidTournamentStateException("Byes must be assigned to top seeds");
     }
   }
 

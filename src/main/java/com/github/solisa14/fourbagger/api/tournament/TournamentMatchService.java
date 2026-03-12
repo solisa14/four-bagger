@@ -5,6 +5,7 @@ import com.github.solisa14.fourbagger.api.game.Game;
 import com.github.solisa14.fourbagger.api.game.GameCreationService;
 import com.github.solisa14.fourbagger.api.game.GameParticipants;
 import com.github.solisa14.fourbagger.api.game.GameRepository;
+import com.github.solisa14.fourbagger.api.game.GameScoringMode;
 import com.github.solisa14.fourbagger.api.game.GameStatus;
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.game.InvalidGameStateException;
@@ -65,14 +66,7 @@ public class TournamentMatchService {
       return existingGames.getFirst();
     }
 
-    GameParticipants participants = resolveParticipants(match);
-    CreateGameCommand command =
-        new CreateGameCommand(
-            participants,
-            resolveTargetScore(match.getRound().getScoringMode()),
-            resolveWinByTwo(match.getRound().getScoringMode()),
-            match.getId(),
-            tournament.getOrganizer());
+    CreateGameCommand command = buildCreateGameCommand(match, tournament.getOrganizer());
 
     Game game = gameCreationService.createPendingGame(command);
     match.setStatus(MatchStatus.IN_PROGRESS);
@@ -117,12 +111,7 @@ public class TournamentMatchService {
     }
 
     CreateGameCommand command =
-        new CreateGameCommand(
-            resolveParticipants(match),
-            resolveTargetScore(match.getRound().getScoringMode()),
-            resolveWinByTwo(match.getRound().getScoringMode()),
-            match.getId(),
-            match.getRound().getTournament().getOrganizer());
+        buildCreateGameCommand(match, match.getRound().getTournament().getOrganizer());
     gameCreationService.createPendingGame(command);
     match.setStatus(MatchStatus.IN_PROGRESS);
     matchRepository.save(match);
@@ -203,11 +192,21 @@ public class TournamentMatchService {
         "Game winner is not a participant in the linked match");
   }
 
-  private Integer resolveTargetScore(ScoringMode scoringMode) {
-    return 21;
+  private CreateGameCommand buildCreateGameCommand(
+      Match match, com.github.solisa14.fourbagger.api.user.User createdBy) {
+    return new CreateGameCommand(
+        resolveParticipants(match),
+        21,
+        false,
+        resolveGameScoringMode(match.getRound().getScoringMode()),
+        match.getId(),
+        createdBy);
   }
 
-  private Boolean resolveWinByTwo(ScoringMode scoringMode) {
-    return false;
+  private GameScoringMode resolveGameScoringMode(ScoringMode scoringMode) {
+    if (scoringMode == ScoringMode.EXACT) {
+      return GameScoringMode.EXACT;
+    }
+    return GameScoringMode.STANDARD;
   }
 }

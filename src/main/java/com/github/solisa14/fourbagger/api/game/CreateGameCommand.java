@@ -7,6 +7,7 @@ public record CreateGameCommand(
     GameParticipants participants,
     Integer targetScore,
     Boolean winByTwo,
+    GameScoringMode scoringMode,
     UUID tournamentMatchId,
     User createdBy) {
 
@@ -25,5 +26,9 @@ public record CreateGameCommand(
 
   public boolean resolvedWinByTwo() {
     return winByTwo != null && winByTwo;
+  }
+
+  public GameScoringMode resolvedScoringMode() {
+    return scoringMode != null ? scoringMode : GameScoringMode.STANDARD;
   }
 }

@@ -284,6 +284,26 @@ class TournamentServiceTest {
   }
 
   @Test
+  void generateBracket_whenTournamentHasSixParticipants_assignsTwoByesToTopSeeds() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.REGISTRATION, 6);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    tournamentService.generateBracket(tournament.getId());
+
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
+    assertThat(tournament.getRounds()).hasSize(3);
+    assertThat(tournament.getRounds().get(0).getMatches()).hasSize(4);
+    assertThat(tournament.getRounds().get(0).getMatches()).filteredOn(Match::isBye).hasSize(2);
+    assertThat(
+            tournament.getRounds().get(0).getMatches().stream()
+                .filter(Match::isBye)
+                .map(m -> m.getWinner().getSeed())
+                .toList())
+        .containsExactlyInAnyOrder(1, 2);
+  }
+
+  @Test
   void generateBracket_whenTournamentDoesNotExist_throwsNotFoundException() {
     UUID tournamentId = UUID.randomUUID();
     when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
