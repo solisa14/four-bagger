@@ -11,38 +11,29 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Core service containing business logic for game management. Handles creating games, recording
  * frames, and applying scoring rules.
+ *
+ * <p>Coordinates between the repository and scoring policies to manage the full lifecycle of a
+ * game.
  */
 @Service
 public class GameService {
 
   private final GameRepository gameRepository;
   private final GameCreationService gameCreationService;
-  private final GameRequestMapper gameRequestMapper;
   private final Map<GameScoringMode, GameScoringPolicy> scoringPolicies =
       new EnumMap<>(GameScoringMode.class);
 
-  public GameService(
-      GameRepository gameRepository,
-      GameCreationService gameCreationService,
-      GameRequestMapper gameRequestMapper) {
+  /**
+   * Constructs a new GameService with required dependencies.
+   *
+   * @param gameRepository the repository for game data access
+   * @param gameCreationService the service for handling complex game creation logic
+   */
+  public GameService(GameRepository gameRepository, GameCreationService gameCreationService) {
     this.gameRepository = gameRepository;
     this.gameCreationService = gameCreationService;
-    this.gameRequestMapper = gameRequestMapper;
     scoringPolicies.put(GameScoringMode.STANDARD, new StandardGameScoringPolicy());
     scoringPolicies.put(GameScoringMode.EXACT, new ExactGameScoringPolicy());
-  }
-
-  /**
-   * Creates a new game from a user request.
-   *
-   * @param currentUser The user making the request.
-   * @param request The request payload.
-   * @return The created game.
-   */
-  @Transactional
-  public Game createGame(User currentUser, CreateGameRequest request) {
-    CreateGameCommand command = gameRequestMapper.toCreateCommand(currentUser, request, null);
-    return gameCreationService.createPendingGame(command);
   }
 
   /**
@@ -59,9 +50,11 @@ public class GameService {
   /**
    * Transitions a game from PENDING to IN_PROGRESS.
    *
+   * @param currentUser the user attempting to start the game
    * @param gameId The ID of the game to start.
    * @return The updated game.
    * @throws InvalidGameStateException if the game is not PENDING.
+   * @throws GameAccessDeniedException if the user is not authorized to start the game
    */
   @Transactional
   public Game startGame(User currentUser, UUID gameId) {
@@ -81,11 +74,13 @@ public class GameService {
    * Records a new frame for an in-progress game and applies scoring. In doubles, validates that the
    * throwers are alternating correctly.
    *
+   * @param currentUser the user recording the frame
    * @param gameId The ID of the game.
    * @param request The frame details including bags in/on and thrower IDs.
    * @return The newly recorded frame.
    * @throws InvalidGameStateException if the game is not IN_PROGRESS.
    * @throws InvalidFrameException if bag counts are invalid or throwers are out of turn.
+   * @throws GameAccessDeniedException if the user is not authorized to record frames for the game
    */
   @Transactional
   public Frame recordFrame(User currentUser, UUID gameId, RecordFrameRequest request) {
@@ -154,9 +149,11 @@ public class GameService {
   /**
    * Cancels a game, preventing any further updates.
    *
+   * @param currentUser the user attempting to cancel the game
    * @param gameId The ID of the game to cancel.
    * @return The cancelled game.
    * @throws InvalidGameStateException if the game is already completed or cancelled.
+   * @throws GameAccessDeniedException if the user is not authorized to cancel the game
    */
   @Transactional
   public Game cancelGame(User currentUser, UUID gameId) {

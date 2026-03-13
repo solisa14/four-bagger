@@ -20,6 +20,12 @@ public class TournamentService {
   private final TournamentRepository tournamentRepository;
   private final TournamentBracketService tournamentBracketService;
 
+  /**
+   * Constructs a new TournamentService with required dependencies.
+   *
+   * @param tournamentRepository the repository for tournament data access
+   * @param tournamentBracketService the service for generating tournament brackets
+   */
   public TournamentService(
       TournamentRepository tournamentRepository,
       TournamentBracketService tournamentBracketService) {
@@ -71,20 +77,19 @@ public class TournamentService {
   }
 
   /**
-   * Creates a new tournament with the given title and a randomly generated join code.
+   * Creates a new tournament with the given command and a randomly generated join code.
    *
-   * @param organizer the user organizing the tournament
-   * @param title the title of the tournament
+   * @param command the command containing tournament details
    * @return the newly created tournament
    * @throws JoinCodeGenerationException if a unique join code could not be generated
    */
-  public Tournament createTournament(User organizer, String title) {
+  public Tournament createTournament(CreateTournamentCommand command) {
     for (int attempt = 1; attempt <= MAX_JOIN_CODE_ATTEMPTS; attempt++) {
       String joinCode = generateJoinCode();
       Tournament tournament =
           Tournament.builder()
-              .organizer(organizer)
-              .title(title)
+              .organizer(command.organizer())
+              .title(command.title())
               .status(TournamentStatus.REGISTRATION)
               .joinCode(joinCode)
               .build();

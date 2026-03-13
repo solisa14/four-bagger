@@ -28,25 +28,6 @@ public record MatchResponse(
     TeamSummary winner) {
 
   /**
-   * Creates a {@link MatchResponse} from a {@link Match} entity.
-   *
-   * @param match the match entity to convert
-   * @return the response DTO
-   */
-  public static MatchResponse from(Match match) {
-    return new MatchResponse(
-        match.getId(),
-        match.getMatchNumber(),
-        match.getStatus(),
-        match.isBye(),
-        match.getTeamOne() != null ? TeamSummary.from(match.getTeamOne()) : null,
-        match.getTeamTwo() != null ? TeamSummary.from(match.getTeamTwo()) : null,
-        match.getTeamOneWins(),
-        match.getTeamTwoWins(),
-        match.getWinner() != null ? TeamSummary.from(match.getWinner()) : null);
-  }
-
-  /**
    * Summary of a tournament team for inclusion in match responses.
    *
    * @param id the team's unique identifier
@@ -56,19 +37,5 @@ public record MatchResponse(
    */
   public record TeamSummary(
       UUID id, String playerOneUsername, String playerTwoUsername, Integer seed) {
-
-    /**
-     * Creates a {@link TeamSummary} from a {@link TournamentTeam} entity.
-     *
-     * @param team the team entity to convert
-     * @return the team summary DTO
-     */
-    static TeamSummary from(TournamentTeam team) {
-      return new TeamSummary(
-          team.getId(),
-          team.getPlayerOne().getUsername(),
-          team.getPlayerTwo() != null ? team.getPlayerTwo().getUsername() : null,
-          team.getSeed());
-    }
   }
 }

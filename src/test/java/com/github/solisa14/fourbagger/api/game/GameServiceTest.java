@@ -12,7 +12,6 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,7 +21,6 @@ class GameServiceTest {
 
   @Mock private GameRepository gameRepository;
   @Mock private GameCreationService gameCreationService;
-  @Mock private GameRequestMapper gameRequestMapper;
 
   @InjectMocks private GameService gameService;
 
@@ -52,132 +50,6 @@ class GameServiceTest {
   }
 
   // --- createGame ---
-
-  @Test
-  void createGame_whenOptionalSettingsMissing_usesDefaultsAndPendingStatus() {
-    User p1 = playerOne();
-    User p2 = playerTwo();
-    CreateGameRequest request = new CreateGameRequest(p2.getId(), null, null);
-    CreateGameCommand command =
-        new CreateGameCommand(GameParticipants.singles(p1, p2), null, null, null, null, p1);
-    when(gameRequestMapper.toCreateCommand(p1, request, null)).thenReturn(command);
-    Game created =
-        Game.builder()
-            .id(UUID.randomUUID())
-            .playerOne(p1)
-            .playerTwo(p2)
-            .gameType(GameType.SINGLES)
-            .scoringMode(GameScoringMode.STANDARD)
-            .targetScore(21)
-            .winByTwo(false)
-            .status(GameStatus.PENDING)
-            .createdBy(p1)
-            .build();
-    when(gameCreationService.createPendingGame(any(CreateGameCommand.class))).thenReturn(created);
-
-    Game game = gameService.createGame(p1, request);
-
-    assertThat(game.getStatus()).isEqualTo(GameStatus.PENDING);
-    assertThat(game.getPlayerOne()).isEqualTo(p1);
-    assertThat(game.getPlayerTwo()).isEqualTo(p2);
-    assertThat(game.getGameType()).isEqualTo(GameType.SINGLES);
-    assertThat(game.getTargetScore()).isEqualTo(21);
-    assertThat(game.isWinByTwo()).isFalse();
-    verify(gameRequestMapper).toCreateCommand(p1, request, null);
-  }
-
-  @Test
-  void createGame_whenCustomSettingsProvided_appliesTargetScoreAndWinByTwo() {
-    User p1 = playerOne();
-    User p2 = playerTwo();
-    CreateGameRequest request = new CreateGameRequest(p2.getId(), 15, true);
-    CreateGameCommand mappedCommand =
-        new CreateGameCommand(
-            GameParticipants.singles(p1, p2), 15, true, GameScoringMode.STANDARD, null, p1);
-    when(gameRequestMapper.toCreateCommand(p1, request, null)).thenReturn(mappedCommand);
-    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
-        .thenAnswer(
-            inv -> {
-              CreateGameCommand command = inv.getArgument(0);
-              return Game.builder()
-                  .id(UUID.randomUUID())
-                  .playerOne(command.participants().teamOne().player())
-                  .playerTwo(command.participants().teamTwo().player())
-                  .gameType(command.participants().gameType())
-                  .scoringMode(command.resolvedScoringMode())
-                  .targetScore(command.resolvedTargetScore())
-                  .winByTwo(command.resolvedWinByTwo())
-                  .status(GameStatus.PENDING)
-                  .createdBy(command.createdBy())
-                  .build();
-            });
-
-    Game game = gameService.createGame(p1, request);
-
-    assertThat(game.getTargetScore()).isEqualTo(15);
-    assertThat(game.isWinByTwo()).isTrue();
-  }
-
-  @Test
-  void createGame_whenDoublesRequest_buildsDoublesParticipants() {
-    User p1 = playerOne();
-    User p2 = playerTwo();
-    User p1Partner =
-        TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
-    User p2Partner =
-        TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
-    CreateGameRequest request =
-        new CreateGameRequest(
-            p2.getId(), p1Partner.getId(), p2Partner.getId(), GameType.DOUBLES, 21, false);
-    CreateGameCommand mappedCommand =
-        new CreateGameCommand(
-            GameParticipants.doubles(p1, p1Partner, p2, p2Partner),
-            21,
-            false,
-            GameScoringMode.STANDARD,
-            null,
-            p1);
-    when(gameRequestMapper.toCreateCommand(p1, request, null)).thenReturn(mappedCommand);
-    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
-        .thenAnswer(
-            inv -> {
-              CreateGameCommand command = inv.getArgument(0);
-              return Game.builder()
-                  .id(UUID.randomUUID())
-                  .playerOne(command.participants().teamOne().player())
-                  .playerOnePartner(command.participants().teamOne().partner())
-                  .playerTwo(command.participants().teamTwo().player())
-                  .playerTwoPartner(command.participants().teamTwo().partner())
-                  .gameType(command.participants().gameType())
-                  .scoringMode(command.resolvedScoringMode())
-                  .targetScore(command.resolvedTargetScore())
-                  .winByTwo(command.resolvedWinByTwo())
-                  .status(GameStatus.PENDING)
-                  .createdBy(command.createdBy())
-                  .build();
-            });
-
-    Game game = gameService.createGame(p1, request);
-
-    assertThat(game.getGameType()).isEqualTo(GameType.DOUBLES);
-    assertThat(game.getPlayerOnePartner()).isEqualTo(p1Partner);
-    assertThat(game.getPlayerTwoPartner()).isEqualTo(p2Partner);
-  }
-
-  @Test
-  void createGame_whenDoublesPartnersMissing_throwsInvalidGameConfigurationException() {
-    User p1 = playerOne();
-    User p2 = playerTwo();
-
-    CreateGameRequest request =
-        new CreateGameRequest(p2.getId(), null, null, GameType.DOUBLES, 21, false);
-    when(gameRequestMapper.toCreateCommand(p1, request, null))
-        .thenThrow(new InvalidGameConfigurationException("Doubles games require both partner IDs"));
-
-    assertThatThrownBy(() -> gameService.createGame(p1, request))
-        .isInstanceOf(InvalidGameConfigurationException.class);
-    verify(gameCreationService, never()).createPendingGame(any(CreateGameCommand.class));
-  }
 
   @Test
   void createGame_withCommand_delegatesToCreationService() {
@@ -657,40 +529,5 @@ class GameServiceTest {
             new RecordFrameRequest(0, 1, 0, 0, p1Partner.getId(), p2Partner.getId()));
 
     assertThat(secondFrame.getFrameNumber()).isEqualTo(2);
-  }
-
-  @Test
-  void createGame_whenSinglesRequest_containsSinglesParticipantsInCommand() {
-    User p1 = playerOne();
-    User p2 = playerTwo();
-    CreateGameRequest request = new CreateGameRequest(p2.getId(), 21, false);
-    CreateGameCommand mappedCommand =
-        new CreateGameCommand(
-            GameParticipants.singles(p1, p2), 21, false, GameScoringMode.STANDARD, null, p1);
-    when(gameRequestMapper.toCreateCommand(p1, request, null)).thenReturn(mappedCommand);
-    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
-        .thenAnswer(
-            inv -> {
-              CreateGameCommand command = inv.getArgument(0);
-              return Game.builder()
-                  .id(UUID.randomUUID())
-                  .playerOne(command.participants().teamOne().player())
-                  .playerTwo(command.participants().teamTwo().player())
-                  .gameType(command.participants().gameType())
-                  .scoringMode(command.resolvedScoringMode())
-                  .createdBy(command.createdBy())
-                  .status(GameStatus.PENDING)
-                  .build();
-            });
-
-    gameService.createGame(p1, request);
-
-    ArgumentCaptor<CreateGameCommand> commandCaptor =
-        ArgumentCaptor.forClass(CreateGameCommand.class);
-    verify(gameCreationService).createPendingGame(commandCaptor.capture());
-    CreateGameCommand command = commandCaptor.getValue();
-    assertThat(command.participants().gameType()).isEqualTo(GameType.SINGLES);
-    assertThat(command.participants().teamOne().player()).isEqualTo(p1);
-    assertThat(command.participants().teamTwo().player()).isEqualTo(p2);
   }
 }

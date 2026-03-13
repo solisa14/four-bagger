@@ -633,7 +633,9 @@ class TournamentServiceTest {
   void createTournament_initializeTournamentWithCorrectDefaults() {
     User organizer = organizer();
     when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
-    Tournament result = tournamentService.createTournament(organizer, "Test Tournament");
+    Tournament result =
+        tournamentService.createTournament(
+            new CreateTournamentCommand(organizer, "Test Tournament"));
     assertThat(result.getStatus()).isEqualTo(TournamentStatus.REGISTRATION);
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     assertThat(result.getOrganizer()).isEqualTo(organizer);
@@ -648,7 +650,9 @@ class TournamentServiceTest {
             new DataIntegrityViolationException("duplicate key value violates unique constraint"))
         .thenAnswer(inv -> inv.getArgument(0));
 
-    Tournament result = tournamentService.createTournament(organizer, "Test Tournament");
+    Tournament result =
+        tournamentService.createTournament(
+            new CreateTournamentCommand(organizer, "Test Tournament"));
 
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     verify(tournamentRepository, times(2)).save(any(Tournament.class));
@@ -661,7 +665,10 @@ class TournamentServiceTest {
         .thenThrow(
             new DataIntegrityViolationException("duplicate key value violates unique constraint"));
 
-    assertThatThrownBy(() -> tournamentService.createTournament(organizer, "Test Tournament"))
+    assertThatThrownBy(
+            () ->
+                tournamentService.createTournament(
+                    new CreateTournamentCommand(organizer, "Test Tournament")))
         .isInstanceOf(JoinCodeGenerationException.class);
     verify(tournamentRepository, times(5)).save(any(Tournament.class));
   }

@@ -24,7 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(GameController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, GameMapper.class})
 class GameControllerWebMvcTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -32,6 +32,7 @@ class GameControllerWebMvcTest {
   @Autowired private MockMvc mockMvc;
   @MockitoBean private GameService gameService;
   @MockitoBean private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
+  @MockitoBean private com.github.solisa14.fourbagger.api.user.UserService userService;
 
   private User authenticatedUser() {
     return TestDataFactory.user(

@@ -1,7 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,7 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(TournamentController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, TournamentMapper.class})
 class TournamentControllerWebMvcTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -45,7 +44,8 @@ class TournamentControllerWebMvcTest {
     User principal = authenticatedUser();
     Tournament tournament =
         TestDataFactory.tournament(UUID.randomUUID(), principal, "TestTournament", "ABC123");
-    when(tournamentService.createTournament(any(), eq("TestTournament"))).thenReturn(tournament);
+    when(tournamentService.createTournament(any(CreateTournamentCommand.class)))
+        .thenReturn(tournament);
 
     mockMvc
         .perform(

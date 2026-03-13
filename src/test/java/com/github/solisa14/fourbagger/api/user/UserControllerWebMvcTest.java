@@ -21,7 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, UserMapper.class})
 class UserControllerWebMvcTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();

@@ -27,6 +27,7 @@ public class AuthenticationController {
   private final JwtService jwtService;
   private final long refreshTokenDurationMs;
   private final boolean isCookieSecure;
+  private final AuthMapper authMapper;
 
   /**
    * Constructs an AuthenticationController.
@@ -35,16 +36,19 @@ public class AuthenticationController {
    * @param jwtService the service for JWT operations
    * @param refreshTokenDurationMs the duration of refresh tokens in milliseconds
    * @param isCookieSecure whether cookies should be secure
+   * @param authMapper the authentication mapper
    */
   public AuthenticationController(
       AuthenticationService authenticationService,
       JwtService jwtService,
       @Value("${app.security.jwt.refresh-token.expiration-ms}") long refreshTokenDurationMs,
-      @Value("${app.security.cookie.secure}") boolean isCookieSecure) {
+      @Value("${app.security.cookie.secure}") boolean isCookieSecure,
+      AuthMapper authMapper) {
     this.authenticationService = authenticationService;
     this.jwtService = jwtService;
     this.refreshTokenDurationMs = refreshTokenDurationMs;
     this.isCookieSecure = isCookieSecure;
+    this.authMapper = authMapper;
   }
 
   /**
@@ -61,10 +65,13 @@ public class AuthenticationController {
   @PostMapping("/register")
   public ResponseEntity<RegisterUserResponse> register(
       @Valid @RequestBody RegisterUserRequest request) {
-    RegisterUserResponse response = authenticationService.registerUser(request);
-    AuthenticationResponse authResponse =
+    var command = authMapper.toCommand(request);
+    var createdUser = authenticationService.registerUser(command);
+    RegisterUserResponse response = authMapper.toRegisterResponse(createdUser);
+
+    TokenPair authResponse =
         authenticationService.authenticate(
-            new LoginRequest(request.username(), request.password()));
+            new LoginCommand(request.username(), request.password()));
 
     ResponseCookie jwtCookie = createAccessTokenCookie(authResponse.accessToken());
     ResponseCookie refreshCookie = createRefreshTokenCookie(authResponse.refreshToken());
@@ -83,7 +90,7 @@ public class AuthenticationController {
    */
   @PostMapping("/login")
   public ResponseEntity<Void> login(@Valid @RequestBody LoginRequest request) {
-    AuthenticationResponse authResponse = authenticationService.authenticate(request);
+    TokenPair authResponse = authenticationService.authenticate(authMapper.toCommand(request));
     ResponseCookie jwtCookie = createAccessTokenCookie(authResponse.accessToken());
     ResponseCookie refreshCookie = createRefreshTokenCookie(authResponse.refreshToken());
 
@@ -102,7 +109,7 @@ public class AuthenticationController {
   @PostMapping("/refresh-token")
   public ResponseEntity<Void> refreshToken(
       @CookieValue(name = "refreshToken") String refreshToken) {
-    AuthenticationResponse authResponse = authenticationService.refreshToken(refreshToken);
+    TokenPair authResponse = authenticationService.refreshToken(refreshToken);
     ResponseCookie jwtCookie = createAccessTokenCookie(authResponse.accessToken());
     ResponseCookie refreshCookie = createRefreshTokenCookie(authResponse.refreshToken());
 

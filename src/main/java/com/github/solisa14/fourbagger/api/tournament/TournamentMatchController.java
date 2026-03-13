@@ -15,9 +15,24 @@ import org.springframework.web.bind.annotation.*;
 class TournamentMatchController {
 
   private final TournamentMatchService tournamentMatchService;
+  private final com.github.solisa14.fourbagger.api.game.GameMapper gameMapper;
+  private final TournamentMapper tournamentMapper;
 
-  TournamentMatchController(TournamentMatchService tournamentMatchService) {
+  /**
+   * Constructs a new TournamentMatchController.
+   *
+   * @param tournamentMatchService the service for match-related business logic
+   * @param gameMapper the game mapper for conversion between game DTOs and domain objects
+   * @param tournamentMapper the tournament mapper for conversion between tournament DTOs and domain
+   *     objects
+   */
+  TournamentMatchController(
+      TournamentMatchService tournamentMatchService,
+      com.github.solisa14.fourbagger.api.game.GameMapper gameMapper,
+      TournamentMapper tournamentMapper) {
     this.tournamentMatchService = tournamentMatchService;
+    this.gameMapper = gameMapper;
+    this.tournamentMapper = tournamentMapper;
   }
 
   /**
@@ -32,7 +47,7 @@ class TournamentMatchController {
   ResponseEntity<GameResponse> startMatch(
       @PathVariable UUID tournamentId, @PathVariable UUID matchId) {
     Game game = tournamentMatchService.startMatch(tournamentId, matchId);
-    return ResponseEntity.ok(GameResponse.from(game));
+    return ResponseEntity.ok(gameMapper.toGameResponse(game));
   }
 
   /**
@@ -46,7 +61,7 @@ class TournamentMatchController {
   ResponseEntity<MatchResponse> getMatch(
       @PathVariable UUID tournamentId, @PathVariable UUID matchId) {
     Match match = tournamentMatchService.getMatch(tournamentId, matchId);
-    return ResponseEntity.ok(MatchResponse.from(match));
+    return ResponseEntity.ok(tournamentMapper.toMatchResponse(match));
   }
 
   /**

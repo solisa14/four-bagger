@@ -38,27 +38,4 @@ public record GameSummaryResponse(
     Instant createdAt,
     Instant updatedAt) {
 
-  /**
-   * Factory method to create a {@link GameSummaryResponse} from a {@link Game} entity.
-   *
-   * @param game The game entity.
-   * @return The game summary response.
-   */
-  public static GameSummaryResponse from(Game game) {
-    return new GameSummaryResponse(
-        game.getId(),
-        game.getGameType(),
-        PlayerInfo.from(game.getPlayerOne()),
-        game.getPlayerOnePartner() != null ? PlayerInfo.from(game.getPlayerOnePartner()) : null,
-        PlayerInfo.from(game.getPlayerTwo()),
-        game.getPlayerTwoPartner() != null ? PlayerInfo.from(game.getPlayerTwoPartner()) : null,
-        game.getPlayerOneScore(),
-        game.getPlayerTwoScore(),
-        game.getTargetScore(),
-        game.isWinByTwo(),
-        game.getStatus(),
-        game.getWinner() != null ? PlayerInfo.from(game.getWinner()) : null,
-        game.getCreatedAt(),
-        game.getUpdatedAt());
-  }
 }

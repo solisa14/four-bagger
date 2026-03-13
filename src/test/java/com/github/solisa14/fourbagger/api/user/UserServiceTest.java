@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
-import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,29 +32,32 @@ class UserServiceTest {
 
   @Test
   void createUser_whenUsernameExists_throwsUserAlreadyExistsException() {
-    RegisterUserRequest request = TestDataFactory.registerUserRequest();
-    when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.of(new User()));
+    CreateUserCommand command =
+        new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
+    when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.of(new User()));
 
-    assertThatThrownBy(() -> userService.createUser(request))
+    assertThatThrownBy(() -> userService.createUser(command))
         .isInstanceOf(UserAlreadyExistsException.class);
   }
 
   @Test
   void createUser_whenEmailExists_throwsEmailAlreadyExistsException() {
-    RegisterUserRequest request = TestDataFactory.registerUserRequest();
-    when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.<User>empty());
-    when(userRepository.findUserByEmail(request.email())).thenReturn(Optional.of(new User()));
+    CreateUserCommand command =
+        new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
+    when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.<User>empty());
+    when(userRepository.findUserByEmail(command.email())).thenReturn(Optional.of(new User()));
 
-    assertThatThrownBy(() -> userService.createUser(request))
+    assertThatThrownBy(() -> userService.createUser(command))
         .isInstanceOf(EmailAlreadyExistsException.class);
   }
 
   @Test
   void createUser_whenRequestIsValid_savesUserWithEncodedPasswordAndRole() {
-    RegisterUserRequest request = TestDataFactory.registerUserRequest();
-    when(userRepository.findUserByUsername(request.username())).thenReturn(Optional.<User>empty());
-    when(userRepository.findUserByEmail(request.email())).thenReturn(Optional.<User>empty());
-    when(passwordEncoder.encode(request.password())).thenReturn("encoded");
+    CreateUserCommand command =
+        new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
+    when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.<User>empty());
+    when(userRepository.findUserByEmail(command.email())).thenReturn(Optional.<User>empty());
+    when(passwordEncoder.encode(command.password())).thenReturn("encoded");
     when(userRepository.save(any(User.class)))
         .thenAnswer(
             invocation -> {
@@ -64,13 +66,13 @@ class UserServiceTest {
               return user;
             });
 
-    User created = userService.createUser(request);
+    User created = userService.createUser(command);
 
     ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
     verify(userRepository).save(captor.capture());
     User saved = captor.getValue();
-    assertThat(saved.getUsername()).isEqualTo(request.username());
-    assertThat(saved.getEmail()).isEqualTo(request.email());
+    assertThat(saved.getUsername()).isEqualTo(command.username());
+    assertThat(saved.getEmail()).isEqualTo(command.email());
     assertThat(saved.getPassword()).isEqualTo("encoded");
     assertThat(saved.getRole()).isEqualTo(Role.USER);
     assertThat(created.getId()).isNotNull();
@@ -78,18 +80,19 @@ class UserServiceTest {
 
   @Test
   void createUser_whenInsertRaceTriggersConstraint_throwsUserAlreadyExistsException() {
-    RegisterUserRequest request = TestDataFactory.registerUserRequest();
-    when(userRepository.findUserByUsername(request.username()))
+    CreateUserCommand command =
+        new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
+    when(userRepository.findUserByUsername(command.username()))
         .thenReturn(Optional.<User>empty())
         .thenReturn(Optional.of(new User()));
-    when(userRepository.findUserByEmail(request.email()))
+    when(userRepository.findUserByEmail(command.email()))
         .thenReturn(Optional.<User>empty())
         .thenReturn(Optional.<User>empty());
-    when(passwordEncoder.encode(request.password())).thenReturn("encoded");
+    when(passwordEncoder.encode(command.password())).thenReturn("encoded");
     when(userRepository.save(any(User.class)))
         .thenThrow(new DataIntegrityViolationException("uk_users_username"));
 
-    assertThatThrownBy(() -> userService.createUser(request))
+    assertThatThrownBy(() -> userService.createUser(command))
         .isInstanceOf(UserAlreadyExistsException.class);
   }
 
@@ -108,9 +111,9 @@ class UserServiceTest {
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
     when(userRepository.save(any(User.class)))
         .thenAnswer(invocation -> invocation.getArgument(0, User.class));
-    UpdateProfileRequest request = new UpdateProfileRequest("New", "Name");
+    UpdateProfileCommand command = new UpdateProfileCommand("New", "Name");
 
-    User updated = userService.updateProfile(id, request);
+    User updated = userService.updateProfile(id, command);
 
     assertThat(updated.getFirstName()).isEqualTo("New");
     assertThat(updated.getLastName()).isEqualTo("Name");
@@ -124,7 +127,7 @@ class UserServiceTest {
     when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
 
     assertThatThrownBy(
-            () -> userService.updatePassword(id, new UpdatePasswordRequest("bad", "NewPassword1!")))
+            () -> userService.updatePassword(id, new UpdatePasswordCommand("bad", "NewPassword1!")))
         .isInstanceOf(InvalidPasswordException.class);
   }
 
@@ -138,7 +141,7 @@ class UserServiceTest {
     when(userRepository.save(any(User.class)))
         .thenAnswer(invocation -> invocation.getArgument(0, User.class));
 
-    userService.updatePassword(id, new UpdatePasswordRequest("current", "NewPassword1!"));
+    userService.updatePassword(id, new UpdatePasswordCommand("current", "NewPassword1!"));
 
     assertThat(user.getPassword()).isEqualTo("new-encoded");
     verify(userRepository).save(user);

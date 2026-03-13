@@ -1,5 +1,6 @@
 package com.github.solisa14.fourbagger.api.auth;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AuthenticationController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, AuthMapper.class})
 @TestPropertySource(
     properties = {
       "app.security.jwt.refresh-token.expiration-ms=604800000",
@@ -67,7 +68,7 @@ class AuthenticationControllerWebMvcTest {
   void register_whenDataIntegrityViolationBubblesUp_returnsConflict() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
-    when(authenticationService.registerUser(request))
+    when(authenticationService.registerUser(any(RegisterUserCommand.class)))
         .thenThrow(new DataIntegrityViolationException("uk_users_username"));
 
     mockMvc
@@ -83,7 +84,7 @@ class AuthenticationControllerWebMvcTest {
   void register_whenUsernameAlreadyExists_returnsConflict() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
-    when(authenticationService.registerUser(request))
+    when(authenticationService.registerUser(any(RegisterUserCommand.class)))
         .thenThrow(new UserAlreadyExistsException(request.username()));
 
     mockMvc
@@ -101,7 +102,7 @@ class AuthenticationControllerWebMvcTest {
   void register_whenEmailAlreadyExists_returnsConflict() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
-    when(authenticationService.registerUser(request))
+    when(authenticationService.registerUser(any(RegisterUserCommand.class)))
         .thenThrow(new EmailAlreadyExistsException(request.email()));
 
     mockMvc

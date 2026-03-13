@@ -27,22 +27,4 @@ public record FrameResponse(
     int playerTwoFramePoints,
     Instant createdAt) {
 
-  /**
-   * Factory method to create a {@link FrameResponse} from a {@link Frame} entity.
-   *
-   * @param frame The frame entity.
-   * @return The frame response object.
-   */
-  public static FrameResponse from(Frame frame) {
-    return new FrameResponse(
-        frame.getId(),
-        frame.getFrameNumber(),
-        frame.getPlayerOneBagsIn(),
-        frame.getPlayerOneBagsOn(),
-        frame.getPlayerTwoBagsIn(),
-        frame.getPlayerTwoBagsOn(),
-        frame.getPlayerOneFramePoints(),
-        frame.getPlayerTwoFramePoints(),
-        frame.getCreatedAt());
-  }
 }

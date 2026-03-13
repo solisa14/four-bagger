@@ -32,12 +32,17 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(TournamentMatchController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({
+  GlobalExceptionHandler.class,
+  TournamentMapper.class,
+  com.github.solisa14.fourbagger.api.game.GameMapper.class
+})
 class TournamentMatchControllerWebMvcTest {
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private TournamentMatchService tournamentMatchService;
   @MockitoBean private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
+  @MockitoBean private com.github.solisa14.fourbagger.api.user.UserService userService;
 
   private User authenticatedUser() {
     return TestDataFactory.user(

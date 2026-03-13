@@ -16,11 +16,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class GameRequestMapperTest {
+class GameMapperTest {
 
   @Mock private UserService userService;
 
-  @InjectMocks private GameRequestMapper gameRequestMapper;
+  @InjectMocks private GameMapper gameMapper;
 
   @Test
   void toCreateCommand_whenNoOptionalValues_appliesDefaultsInMapper() {
@@ -29,7 +29,7 @@ class GameRequestMapperTest {
     CreateGameRequest request = new CreateGameRequest(playerTwo.getId(), null, null);
     when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
 
-    CreateGameCommand command = gameRequestMapper.toCreateCommand(currentUser, request, null);
+    CreateGameCommand command = gameMapper.toCreateCommand(currentUser, request, null);
 
     assertThat(command.participants().gameType()).isEqualTo(GameType.SINGLES);
     assertThat(command.participants().teamOne().player()).isEqualTo(currentUser);
@@ -58,7 +58,7 @@ class GameRequestMapperTest {
     when(userService.getUser(playerOnePartner.getId())).thenReturn(playerOnePartner);
     when(userService.getUser(playerTwoPartner.getId())).thenReturn(playerTwoPartner);
 
-    CreateGameCommand command = gameRequestMapper.toCreateCommand(currentUser, request, null);
+    CreateGameCommand command = gameMapper.toCreateCommand(currentUser, request, null);
 
     assertThat(command.participants().gameType()).isEqualTo(GameType.DOUBLES);
     assertThat(command.participants().teamOne().partner()).isEqualTo(playerOnePartner);
@@ -74,7 +74,7 @@ class GameRequestMapperTest {
         new CreateGameRequest(playerTwo.getId(), null, null, GameType.DOUBLES, null, 21, false);
     when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
 
-    assertThatThrownBy(() -> gameRequestMapper.toCreateCommand(currentUser, request, null))
+    assertThatThrownBy(() -> gameMapper.toCreateCommand(currentUser, request, null))
         .isInstanceOf(InvalidGameConfigurationException.class);
   }
 

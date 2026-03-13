@@ -21,6 +21,7 @@ public class AuthenticationService {
   private final AuthenticationManager authenticationManager;
   private final JwtService jwtService;
   private final RefreshTokenService refreshTokenService;
+  private final AuthMapper authMapper;
 
   /**
    * Constructs an AuthenticationService.
@@ -30,55 +31,52 @@ public class AuthenticationService {
    * @param authenticationManager the authentication manager
    * @param jwtService the JWT service
    * @param refreshTokenService the refresh token service
+   * @param authMapper the authentication mapper
    */
   public AuthenticationService(
       UserService userService,
       UserRepository userRepository,
       AuthenticationManager authenticationManager,
       JwtService jwtService,
-      RefreshTokenService refreshTokenService) {
+      RefreshTokenService refreshTokenService,
+      AuthMapper authMapper) {
     this.userService = userService;
     this.userRepository = userRepository;
     this.authenticationManager = authenticationManager;
     this.jwtService = jwtService;
     this.refreshTokenService = refreshTokenService;
+    this.authMapper = authMapper;
   }
 
   /**
    * Processes new user registration and prepares response with account details.
    *
-   * @param request registration details including credentials and required profile fields
-   * @return response containing the created user's public information
+   * @param command registration details including credentials and required profile fields
+   * @return the created user entity
    */
-  public RegisterUserResponse registerUser(RegisterUserRequest request) {
-    User createdUser = userService.createUser(request);
-
-    return new RegisterUserResponse(
-        createdUser.getId(),
-        createdUser.getUsername(),
-        createdUser.getEmail(),
-        createdUser.getRole());
+  public User registerUser(RegisterUserCommand command) {
+    return userService.createUser(authMapper.toCreateUserCommand(command));
   }
 
   /**
    * Authenticates a user with the provided credentials and generates a JWT and Refresh Token.
    *
-   * @param request login request containing username and password
-   * @return the generated tokens
+   * @param command login command containing username and password
+   * @return the generated token pair
    */
-  public AuthenticationResponse authenticate(LoginRequest request) {
+  public TokenPair authenticate(LoginCommand command) {
     authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(request.username(), request.password()));
+        new UsernamePasswordAuthenticationToken(command.username(), command.password()));
 
     User user =
         userRepository
-            .findUserByUsername(request.username())
+            .findUserByUsername(command.username())
             .orElseThrow(AuthenticationFailedException::new);
 
     String jwtToken = jwtService.generateToken(user);
     RefreshTokenSession refreshTokenSession = refreshTokenService.issueRefreshToken(user.getId());
 
-    return new AuthenticationResponse(jwtToken, refreshTokenSession.rawToken());
+    return new TokenPair(jwtToken, refreshTokenSession.rawToken());
   }
 
   /**
@@ -87,13 +85,13 @@ public class AuthenticationService {
    * @param requestRefreshToken the refresh token string
    * @return new JWT access token and new refresh token
    */
-  public AuthenticationResponse refreshToken(String requestRefreshToken) {
+  public TokenPair refreshToken(String requestRefreshToken) {
     RefreshTokenSession refreshTokenSession =
         refreshTokenService.rotateRefreshToken(requestRefreshToken);
     User user = refreshTokenSession.user();
     String jwtToken = jwtService.generateToken(user);
 
-    return new AuthenticationResponse(jwtToken, refreshTokenSession.rawToken());
+    return new TokenPair(jwtToken, refreshTokenSession.rawToken());
   }
 
   /**

@@ -19,6 +19,14 @@ public class TournamentMatchService {
   private final GameRepository gameRepository;
   private final GameCreationService gameCreationService;
 
+  /**
+   * Constructs a new TournamentMatchService with required dependencies.
+   *
+   * @param tournamentRepository the repository for tournament data access
+   * @param matchRepository the repository for match data access
+   * @param gameRepository the repository for game data access
+   * @param gameCreationService the service for handling complex game creation logic
+   */
   public TournamentMatchService(
       TournamentRepository tournamentRepository,
       MatchRepository matchRepository,
