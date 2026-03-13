@@ -90,6 +90,25 @@ public class TournamentMatchService {
   }
 
   /**
+   * Retrieves a match by its ID, validating that it belongs to the specified tournament.
+   *
+   * @param tournamentId the UUID of the tournament
+   * @param matchId the UUID of the match to retrieve
+   * @return the Match entity
+   * @throws TournamentNotFoundException if the tournament cannot be found
+   * @throws MatchNotFoundException if the match cannot be found
+   * @throws InvalidTournamentStateException if the match does not belong to the tournament
+   */
+  @Transactional(readOnly = true)
+  public Match getMatch(UUID tournamentId, UUID matchId) {
+    tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    Match match =
+        matchRepository.findById(matchId).orElseThrow(() -> new MatchNotFoundException(matchId));
+    validateMatchBelongsToTournament(tournamentId, match);
+    return match;
+  }
+
+  /**
    * Processes the result of a completed game, applying the win to the corresponding tournament
    * match. If a team clinches the necessary number of wins for the round's "best of" requirement,
    * the match is completed and the winner is advanced to the next match. If the final match of the

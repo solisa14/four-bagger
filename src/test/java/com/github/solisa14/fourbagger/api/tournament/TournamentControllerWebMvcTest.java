@@ -60,18 +60,6 @@ class TournamentControllerWebMvcTest {
         .andExpect(jsonPath("$.status").value("REGISTRATION"));
   }
 
-  // TODO(human): Write two tests for GET /api/v1/tournaments/{id}:
-  //
-  //   Test 1 — getTournament_whenNotFound_returnsNotFound
-  //     - Stub: when(tournamentService.getTournament(id)).thenThrow(new
-  // TournamentNotFoundException())
-  //     - Assert: status 404, jsonPath("$.message").value("Tournament not found")
-  //
-  //   Test 2 — getTournament_whenFound_returnsOk
-  //     - Build a tournament with TestDataFactory, stub getTournament to return it
-  //     - Assert: status 200, jsonPath("$.title") and jsonPath("$.status") match
-  //
-  // Note: GET requests don't have a body — just .perform(get(...).with(user(principal))).
   @Test
   void getTournament_whenNotFound_returnsNotFound() throws Exception {
     User principal = authenticatedUser();

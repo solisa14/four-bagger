@@ -328,6 +328,39 @@ class TournamentMatchServiceTest {
     verify(tournamentRepository).save(tournament);
   }
 
+  @Test
+  void getMatch_whenFound_returnsMatch() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+
+    Match result = tournamentMatchService.getMatch(tournament.getId(), match.getId());
+
+    assertThat(result).isEqualTo(match);
+  }
+
+  @Test
+  void getMatch_whenTournamentNotFound_throwsTournamentNotFoundException() {
+    UUID tournamentId = UUID.randomUUID();
+    UUID matchId = UUID.randomUUID();
+    when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> tournamentMatchService.getMatch(tournamentId, matchId))
+        .isInstanceOf(TournamentNotFoundException.class);
+  }
+
+  @Test
+  void getMatch_whenMatchNotFound_throwsMatchNotFoundException() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    UUID matchId = UUID.randomUUID();
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findById(matchId)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> tournamentMatchService.getMatch(tournament.getId(), matchId))
+        .isInstanceOf(MatchNotFoundException.class);
+  }
+
   private Tournament tournament(TournamentStatus status) {
     return Tournament.builder()
         .id(UUID.randomUUID())
