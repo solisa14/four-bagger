@@ -5,6 +5,8 @@ import com.github.solisa14.fourbagger.api.auth.RefreshToken;
 import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
 import com.github.solisa14.fourbagger.api.game.Game;
 import com.github.solisa14.fourbagger.api.game.GameStatus;
+import com.github.solisa14.fourbagger.api.tournament.Tournament;
+import com.github.solisa14.fourbagger.api.tournament.TournamentStatus;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.UpdatePasswordRequest;
 import com.github.solisa14.fourbagger.api.user.UpdateProfileRequest;
@@ -67,6 +69,20 @@ public final class TestDataFactory {
         .winByTwo(false)
         .status(status)
         .createdBy(playerOne)
+        .build();
+  }
+
+  public static Tournament tournament(User organizer, String title, String joinCode) {
+    return tournament(null, organizer, title, joinCode);
+  }
+
+  public static Tournament tournament(UUID id, User organizer, String title, String joinCode) {
+    return Tournament.builder()
+        .id(id)
+        .organizer(organizer)
+        .title(title)
+        .joinCode(joinCode)
+        .status(TournamentStatus.REGISTRATION)
         .build();
   }
 }

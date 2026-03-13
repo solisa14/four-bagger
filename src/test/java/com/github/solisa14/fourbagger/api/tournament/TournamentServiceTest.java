@@ -73,6 +73,21 @@ class TournamentServiceTest {
         .build();
   }
 
+  @Test
+  void getTournament_whenExists_returnsTournament() {
+    Tournament tournament = registrationTournament();
+    when(tournamentRepository.findById(any())).thenReturn(Optional.of(tournament));
+    assertThat(tournamentService.getTournament(tournament.getId())).isEqualTo(tournament);
+  }
+
+  @Test
+  void getTournament_whenNotFound_throwsTournamentNotFoundException() {
+    Tournament tournament = registrationTournament();
+    when(tournamentRepository.findById(any())).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> tournamentService.getTournament(tournament.getId()))
+        .isInstanceOf(TournamentNotFoundException.class);
+  }
+
   // --- removeParticipant ---
   @Test
   void removeParticipant_whenTournamentIsInRegistration_removesParticipant() {

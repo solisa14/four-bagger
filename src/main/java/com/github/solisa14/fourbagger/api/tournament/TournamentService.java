@@ -60,6 +60,17 @@ public class TournamentService {
   }
 
   /**
+   * Retrieves a tournament by its ID.
+   *
+   * @param id the UUID of the tournament
+   * @return the tournament
+   * @throws TournamentNotFoundException if no tournament exists with that ID
+   */
+  public Tournament getTournament(UUID id) {
+    return tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
+  }
+
+  /**
    * Creates a new tournament with the given title and a randomly generated join code.
    *
    * @param organizer the user organizing the tournament
