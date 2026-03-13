@@ -1,14 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.github.solisa14.fourbagger.api.game.CreateGameCommand;
-import com.github.solisa14.fourbagger.api.game.Game;
-import com.github.solisa14.fourbagger.api.game.GameCreationService;
-import com.github.solisa14.fourbagger.api.game.GameParticipants;
-import com.github.solisa14.fourbagger.api.game.GameRepository;
-import com.github.solisa14.fourbagger.api.game.GameScoringMode;
-import com.github.solisa14.fourbagger.api.game.GameStatus;
-import com.github.solisa14.fourbagger.api.game.GameType;
-import com.github.solisa14.fourbagger.api.game.InvalidGameStateException;
+import com.github.solisa14.fourbagger.api.game.*;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -119,6 +111,7 @@ public class TournamentMatchService {
    */
   @Transactional
   public void processCompletedGame(UUID gameId) {
+    // Fetch the game and ensure it belongs to a tournament match
     Game game =
         gameRepository
             .findById(gameId)
@@ -126,11 +119,14 @@ public class TournamentMatchService {
     if (game.getTournamentMatchId() == null) {
       throw new InvalidGameStateException("Game is not linked to a tournament match");
     }
+
+    // Validate that the game is actually finished before processing
     if (game.getStatus() != GameStatus.COMPLETED || game.getWinner() == null) {
       throw new InvalidGameStateException(
           "Game must be completed before processing tournament progression");
     }
 
+    // Retrieve the associated match and skip if it's already finished
     Match match =
         matchRepository
             .findById(game.getTournamentMatchId())
@@ -139,6 +135,7 @@ public class TournamentMatchService {
       return;
     }
 
+    // Determine which tournament team won based on the game winner's user ID
     TournamentTeam winningTeam = resolveWinningTeam(match, game);
     if (winningTeam.getId().equals(match.getTeamOne().getId())) {
       match.setTeamOneWins(match.getTeamOneWins() + 1);
@@ -147,12 +144,14 @@ public class TournamentMatchService {
       match.setTeamTwoWins(match.getTeamTwoWins() + 1);
     }
 
+    // Check if the winning team has clinched the match (e.g., won 2 out of 3)
     int winsToClinch = (match.getRound().getBestOf() / 2) + 1;
     if (match.getTeamOneWins() >= winsToClinch || match.getTeamTwoWins() >= winsToClinch) {
       completeMatch(match, winningTeam);
       return;
     }
 
+    // If match is not clinched, create the next game in the series
     CreateGameCommand command =
         buildCreateGameCommand(match, match.getRound().getTournament().getOrganizer());
     gameCreationService.createPendingGame(command);
