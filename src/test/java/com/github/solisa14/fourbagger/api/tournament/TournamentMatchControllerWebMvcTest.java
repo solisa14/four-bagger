@@ -1,7 +1,5 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -13,7 +11,6 @@ import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandle
 import com.github.solisa14.fourbagger.api.game.Game;
 import com.github.solisa14.fourbagger.api.game.GameStatus;
 import com.github.solisa14.fourbagger.api.game.GameType;
-import com.github.solisa14.fourbagger.api.game.InvalidGameStateException;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
@@ -243,55 +240,6 @@ class TournamentMatchControllerWebMvcTest {
                 .with(user(principal)))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message").value("Match does not belong to this tournament"));
-  }
-
-  // ── Process Completed Game ──────────────────────────────────────
-
-  @Test
-  void processCompletedGame_whenValid_returnsNoContent() throws Exception {
-    User principal = authenticatedUser();
-    UUID tournamentId = UUID.randomUUID();
-    UUID matchId = UUID.randomUUID();
-    UUID gameId = UUID.randomUUID();
-
-    doNothing().when(tournamentMatchService).processCompletedGame(gameId);
-
-    mockMvc
-        .perform(
-            post(
-                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/complete-game/{gameId}",
-                    tournamentId,
-                    matchId,
-                    gameId)
-                .with(user(principal)))
-        .andExpect(status().isNoContent());
-  }
-
-  @Test
-  void processCompletedGame_whenGameNotCompleted_returnsBadRequest() throws Exception {
-    User principal = authenticatedUser();
-    UUID tournamentId = UUID.randomUUID();
-    UUID matchId = UUID.randomUUID();
-    UUID gameId = UUID.randomUUID();
-
-    doThrow(
-            new InvalidGameStateException(
-                "Game must be completed before processing tournament progression"))
-        .when(tournamentMatchService)
-        .processCompletedGame(gameId);
-
-    mockMvc
-        .perform(
-            post(
-                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/complete-game/{gameId}",
-                    tournamentId,
-                    matchId,
-                    gameId)
-                .with(user(principal)))
-        .andExpect(status().isBadRequest())
-        .andExpect(
-            jsonPath("$.message")
-                .value("Game must be completed before processing tournament progression"));
   }
 
   // ── Test helpers ────────────────────────────────────────────────

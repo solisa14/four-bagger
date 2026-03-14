@@ -12,15 +12,18 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class GameServiceTest {
 
   @Mock private GameRepository gameRepository;
   @Mock private GameCreationService gameCreationService;
+  @Mock private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks private GameService gameService;
 
@@ -529,5 +532,59 @@ class GameServiceTest {
             new RecordFrameRequest(0, 1, 0, 0, p1Partner.getId(), p2Partner.getId()));
 
     assertThat(secondFrame.getFrameNumber()).isEqualTo(2);
+  }
+
+  // --- event publishing ---
+
+  @Test
+  void recordFrame_whenScoringCompletesGame_publishesGameCompletedEvent() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    UUID matchId = UUID.randomUUID();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .targetScore(21)
+            .playerOneScore(18)
+            .winByTwo(false)
+            .status(GameStatus.IN_PROGRESS)
+            .createdBy(p1)
+            .tournamentMatchId(matchId)
+            .build();
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+    when(gameRepository.save(any())).thenReturn(game);
+
+    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0));
+
+    ArgumentCaptor<GameCompletedEvent> captor = ArgumentCaptor.forClass(GameCompletedEvent.class);
+    verify(eventPublisher).publishEvent(captor.capture());
+    assertThat(captor.getValue().gameId()).isEqualTo(game.getId());
+    assertThat(captor.getValue().tournamentMatchId()).isEqualTo(matchId);
+  }
+
+  @Test
+  void recordFrame_whenFrameDoesNotCompleteGame_doesNotPublishEvent() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .targetScore(21)
+            .playerOneScore(0)
+            .winByTwo(false)
+            .status(GameStatus.IN_PROGRESS)
+            .createdBy(p1)
+            .tournamentMatchId(UUID.randomUUID())
+            .build();
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+    when(gameRepository.save(any())).thenReturn(game);
+
+    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0));
+
+    verify(eventPublisher, never()).publishEvent(any());
   }
 }

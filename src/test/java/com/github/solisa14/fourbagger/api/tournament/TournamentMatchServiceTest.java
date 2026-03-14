@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 
 import com.github.solisa14.fourbagger.api.game.CreateGameCommand;
 import com.github.solisa14.fourbagger.api.game.Game;
+import com.github.solisa14.fourbagger.api.game.GameCompletedEvent;
 import com.github.solisa14.fourbagger.api.game.GameCreationService;
 import com.github.solisa14.fourbagger.api.game.GameRepository;
 import com.github.solisa14.fourbagger.api.game.GameScoringMode;
@@ -405,6 +406,38 @@ class TournamentMatchServiceTest {
         .matchNumber(1)
         .status(MatchStatus.PENDING)
         .build();
+  }
+
+  // --- onGameCompleted listener ---
+
+  @Test
+  void onGameCompleted_whenTournamentMatchIdPresent_triggersMatchProgression() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    match.setStatus(MatchStatus.IN_PROGRESS);
+
+    Game completedGame =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .status(GameStatus.COMPLETED)
+            .winner(match.getTeamOne().getPlayerOne())
+            .tournamentMatchId(match.getId())
+            .build();
+    when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+
+    tournamentMatchService.onGameCompleted(
+        new GameCompletedEvent(completedGame.getId(), match.getId()));
+
+    assertThat(match.getTeamOneWins()).isEqualTo(1);
+    verify(matchRepository, atLeastOnce()).save(any(Match.class));
+  }
+
+  @Test
+  void onGameCompleted_whenTournamentMatchIdIsNull_doesNothing() {
+    tournamentMatchService.onGameCompleted(new GameCompletedEvent(UUID.randomUUID(), null));
+
+    verifyNoInteractions(gameRepository, matchRepository, tournamentRepository);
   }
 
   private User user(String suffix) {

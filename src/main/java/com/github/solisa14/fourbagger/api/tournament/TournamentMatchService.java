@@ -3,6 +3,7 @@ package com.github.solisa14.fourbagger.api.tournament;
 import com.github.solisa14.fourbagger.api.game.*;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -78,7 +79,7 @@ public class TournamentMatchService {
         match.setStatus(MatchStatus.IN_PROGRESS);
         matchRepository.save(match);
       }
-      return existingGames.getFirst();
+      return existingGames.getLast();
     }
 
     CreateGameCommand command = buildCreateGameCommand(match, tournament.getOrganizer());
@@ -258,5 +259,19 @@ public class TournamentMatchService {
       return GameScoringMode.EXACT;
     }
     return GameScoringMode.STANDARD;
+  }
+
+  /**
+   * Listens for {@link GameCompletedEvent} and triggers tournament progression when the completed
+   * game belongs to a tournament match. Standalone (non-tournament) games are ignored.
+   *
+   * @param event the game completion event published by {@link
+   *     com.github.solisa14.fourbagger.api.game.GameService}
+   */
+  @EventListener
+  public void onGameCompleted(GameCompletedEvent event) {
+    if (event.tournamentMatchId() != null) {
+      processCompletedGame(event.gameId());
+    }
   }
 }

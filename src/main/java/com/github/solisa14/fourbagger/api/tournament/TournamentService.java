@@ -8,12 +8,14 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service responsible for managing the lifecycle of a tournament. This includes creation,
  * participant registration, bracket generation, and updating round configuration settings.
  */
 @Service
+@Transactional
 public class TournamentService {
   private static final SecureRandom RANDOM = new SecureRandom();
   private static final int MAX_JOIN_CODE_ATTEMPTS = 5;
@@ -72,6 +74,7 @@ public class TournamentService {
    * @return the tournament
    * @throws TournamentNotFoundException if no tournament exists with that ID
    */
+  @Transactional(readOnly = true)
   public Tournament getTournament(UUID id) {
     return tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
   }

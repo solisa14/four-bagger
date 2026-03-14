@@ -5,6 +5,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ public class GameService {
 
   private final GameRepository gameRepository;
   private final GameCreationService gameCreationService;
+  private final ApplicationEventPublisher eventPublisher;
   private final Map<GameScoringMode, GameScoringPolicy> scoringPolicies =
       new EnumMap<>(GameScoringMode.class);
 
@@ -28,10 +30,15 @@ public class GameService {
    *
    * @param gameRepository the repository for game data access
    * @param gameCreationService the service for handling complex game creation logic
+   * @param eventPublisher the Spring event publisher used to notify listeners of game completion
    */
-  public GameService(GameRepository gameRepository, GameCreationService gameCreationService) {
+  public GameService(
+      GameRepository gameRepository,
+      GameCreationService gameCreationService,
+      ApplicationEventPublisher eventPublisher) {
     this.gameRepository = gameRepository;
     this.gameCreationService = gameCreationService;
+    this.eventPublisher = eventPublisher;
     scoringPolicies.put(GameScoringMode.STANDARD, new StandardGameScoringPolicy());
     scoringPolicies.put(GameScoringMode.EXACT, new ExactGameScoringPolicy());
   }
@@ -122,6 +129,12 @@ public class GameService {
 
     game.getFrames().add(frame);
     gameRepository.save(game);
+
+    if (game.getStatus() == GameStatus.COMPLETED) {
+      eventPublisher.publishEvent(
+          new GameCompletedEvent(game.getId(), game.getTournamentMatchId()));
+    }
+
     return frame;
   }
 

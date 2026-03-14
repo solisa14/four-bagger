@@ -64,19 +64,4 @@ class TournamentMatchController {
     return ResponseEntity.ok(tournamentMapper.toMatchResponse(match));
   }
 
-  /**
-   * Processes a completed game, updating match win counts and potentially advancing the winner to
-   * the next round.
-   *
-   * @param tournamentId the tournament containing the match
-   * @param matchId the match the game belongs to
-   * @param gameId the completed game to process
-   * @return 204 No Content on success
-   */
-  @PostMapping("/{matchId}/complete-game/{gameId}")
-  ResponseEntity<Void> processCompletedGame(
-      @PathVariable UUID tournamentId, @PathVariable UUID matchId, @PathVariable UUID gameId) {
-    tournamentMatchService.processCompletedGame(gameId);
-    return ResponseEntity.noContent().build();
-  }
 }
