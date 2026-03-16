@@ -57,7 +57,8 @@ class TournamentControllerWebMvcTest {
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.title").value("TestTournament"))
         .andExpect(jsonPath("$.joinCode").value("ABC123"))
-        .andExpect(jsonPath("$.status").value("REGISTRATION"));
+        .andExpect(jsonPath("$.status").value("REGISTRATION"))
+        .andExpect(jsonPath("$.rounds").isArray());
   }
 
   @Test
@@ -82,7 +83,8 @@ class TournamentControllerWebMvcTest {
         .andExpect(jsonPath("$.id").value(id.toString()))
         .andExpect(jsonPath("$.joinCode").value("ABC123"))
         .andExpect(jsonPath("$.title").value("TestTournament"))
-        .andExpect(jsonPath("$.status").value("REGISTRATION"));
+        .andExpect(jsonPath("$.status").value("REGISTRATION"))
+        .andExpect(jsonPath("$.rounds").isArray());
   }
 
   @Test

@@ -1,6 +1,8 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.user.User;
+import java.util.Comparator;
+import java.util.List;
 import org.springframework.stereotype.Component;
 
 /** Mapper for tournament-related requests, commands, and responses. */
@@ -24,12 +26,31 @@ public class TournamentMapper {
    * @param tournament the tournament entity
    * @return the tournament response
    */
+  /**
+   * Converts a tournament entity to a tournament response including nested rounds and matches.
+   * Assumes all lazy collections on the tournament have already been initialized.
+   *
+   * @param tournament the tournament entity
+   * @return the tournament response
+   */
   public TournamentResponse toTournamentResponse(Tournament tournament) {
+    List<TournamentRoundResponse> rounds =
+        tournament.getRounds().stream()
+            .sorted(Comparator.comparingInt(TournamentRound::getRoundNumber))
+            .map(this::toRoundResponse)
+            .toList();
     return new TournamentResponse(
         tournament.getId(),
         tournament.getTitle(),
         tournament.getJoinCode(),
-        tournament.getStatus());
+        tournament.getStatus(),
+        rounds);
+  }
+
+  private TournamentRoundResponse toRoundResponse(TournamentRound round) {
+    List<MatchResponse> matches = round.getMatches().stream().map(this::toMatchResponse).toList();
+    return new TournamentRoundResponse(
+        round.getRoundNumber(), round.getBestOf(), round.getScoringMode(), matches);
   }
 
   /**

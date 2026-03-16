@@ -76,7 +76,12 @@ public class TournamentService {
    */
   @Transactional(readOnly = true)
   public Tournament getTournament(UUID id) {
-    return tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
+    Tournament tournament =
+        tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
+    // Initialize lazy bracket collections while the session is still open so the
+    // mapping layer can traverse rounds → matches without a LazyInitializationException.
+    tournament.getRounds().forEach(r -> r.getMatches().size());
+    return tournament;
   }
 
   /**
