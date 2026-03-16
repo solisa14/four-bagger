@@ -1,6 +1,7 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.game.*;
+import com.github.solisa14.fourbagger.api.user.User;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.context.event.EventListener;
@@ -243,8 +244,7 @@ public class TournamentMatchService {
         "Game winner is not a participant in the linked match");
   }
 
-  private CreateGameCommand buildCreateGameCommand(
-      Match match, com.github.solisa14.fourbagger.api.user.User createdBy) {
+  private CreateGameCommand buildCreateGameCommand(Match match, User createdBy) {
     return new CreateGameCommand(
         resolveParticipants(match),
         21,
