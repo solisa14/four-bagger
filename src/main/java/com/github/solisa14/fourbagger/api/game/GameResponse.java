@@ -17,7 +17,6 @@ import java.util.UUID;
  * @param playerOneScore The current score for team one.
  * @param playerTwoScore The current score for team two.
  * @param targetScore The score required to win the game.
- * @param winByTwo Indicates if the game requires a two-point margin to win.
  * @param status The current status of the game.
  * @param winner The player or team that won the game.
  * @param frames The sequence of frames played in the game.
@@ -34,7 +33,6 @@ public record GameResponse(
     int playerOneScore,
     int playerTwoScore,
     int targetScore,
-    boolean winByTwo,
     GameStatus status,
     PlayerInfo winner,
     List<FrameResponse> frames,

@@ -44,7 +44,6 @@ public class GameMapper {
     return new CreateGameCommand(
         participants,
         resolveTargetScore(request),
-        resolveWinByTwo(request),
         resolveScoringMode(request),
         tournamentMatchId,
         currentUser);
@@ -77,10 +76,6 @@ public class GameMapper {
     return request.targetScore() != null ? request.targetScore() : 21;
   }
 
-  private boolean resolveWinByTwo(CreateGameRequest request) {
-    return request.winByTwo() != null && request.winByTwo();
-  }
-
   private GameScoringMode resolveScoringMode(CreateGameRequest request) {
     return request.scoringMode() != null ? request.scoringMode() : GameScoringMode.STANDARD;
   }
@@ -102,7 +97,6 @@ public class GameMapper {
         game.getPlayerOneScore(),
         game.getPlayerTwoScore(),
         game.getTargetScore(),
-        game.isWinByTwo(),
         game.getStatus(),
         game.getWinner() != null ? toPlayerInfo(game.getWinner()) : null,
         game.getFrames().stream().map(this::toFrameResponse).toList(),
@@ -127,7 +121,6 @@ public class GameMapper {
         game.getPlayerOneScore(),
         game.getPlayerTwoScore(),
         game.getTargetScore(),
-        game.isWinByTwo(),
         game.getStatus(),
         game.getWinner() != null ? toPlayerInfo(game.getWinner()) : null,
         game.getCreatedAt(),

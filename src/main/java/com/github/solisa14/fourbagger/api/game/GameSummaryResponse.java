@@ -16,7 +16,6 @@ import java.util.UUID;
  * @param playerOneScore The current score for team one.
  * @param playerTwoScore The current score for team two.
  * @param targetScore The score required to win.
- * @param winByTwo Indicates if the game requires a two-point margin to win.
  * @param status The current status of the game.
  * @param winner The player or team that won.
  * @param createdAt The timestamp when the game was created.
@@ -32,7 +31,6 @@ public record GameSummaryResponse(
     int playerOneScore,
     int playerTwoScore,
     int targetScore,
-    boolean winByTwo,
     GameStatus status,
     PlayerInfo winner,
     Instant createdAt,

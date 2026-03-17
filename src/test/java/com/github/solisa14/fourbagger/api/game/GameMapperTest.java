@@ -26,7 +26,7 @@ class GameMapperTest {
   void toCreateCommand_whenNoOptionalValues_appliesDefaultsInMapper() {
     User currentUser = user("creator");
     User playerTwo = user("opponent");
-    CreateGameRequest request = new CreateGameRequest(playerTwo.getId(), null, null);
+    CreateGameRequest request = new CreateGameRequest(playerTwo.getId(), null);
     when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
 
     CreateGameCommand command = gameMapper.toCreateCommand(currentUser, request, null);
@@ -35,7 +35,6 @@ class GameMapperTest {
     assertThat(command.participants().teamOne().player()).isEqualTo(currentUser);
     assertThat(command.participants().teamTwo().player()).isEqualTo(playerTwo);
     assertThat(command.resolvedTargetScore()).isEqualTo(21);
-    assertThat(command.resolvedWinByTwo()).isFalse();
     assertThat(command.resolvedScoringMode()).isEqualTo(GameScoringMode.STANDARD);
   }
 
@@ -52,8 +51,7 @@ class GameMapperTest {
             playerTwoPartner.getId(),
             null,
             GameScoringMode.EXACT,
-            21,
-            false);
+            21);
     when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
     when(userService.getUser(playerOnePartner.getId())).thenReturn(playerOnePartner);
     when(userService.getUser(playerTwoPartner.getId())).thenReturn(playerTwoPartner);
@@ -71,7 +69,7 @@ class GameMapperTest {
     User currentUser = user("creator");
     User playerTwo = user("opponent");
     CreateGameRequest request =
-        new CreateGameRequest(playerTwo.getId(), null, null, GameType.DOUBLES, null, 21, false);
+        new CreateGameRequest(playerTwo.getId(), null, null, GameType.DOUBLES, null, 21);
     when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
 
     assertThatThrownBy(() -> gameMapper.toCreateCommand(currentUser, request, null))

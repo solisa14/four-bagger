@@ -65,10 +65,6 @@ public class Game {
   @Builder.Default
   private int targetScore = 21;
 
-  @Column(name = "win_by_two", nullable = false)
-  @Builder.Default
-  private boolean winByTwo = false;
-
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 50)
   private GameStatus status;

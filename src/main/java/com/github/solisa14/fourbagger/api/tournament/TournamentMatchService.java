@@ -248,7 +248,6 @@ public class TournamentMatchService {
     return new CreateGameCommand(
         resolveParticipants(match),
         21,
-        false,
         resolveGameScoringMode(match.getRound().getScoringMode()),
         match.getId(),
         createdBy);

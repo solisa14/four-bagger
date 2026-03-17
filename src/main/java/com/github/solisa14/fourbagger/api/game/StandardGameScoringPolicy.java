@@ -2,8 +2,7 @@ package com.github.solisa14.fourbagger.api.game;
 
 /**
  * Implementation of {@link GameScoringPolicy} for the "Standard" scoring mode. In this mode,
- * players can win by reaching or exceeding the target score, optionally requiring a win-by-two
- * margin.
+ * players win by reaching or exceeding the target score.
  */
 class StandardGameScoringPolicy implements GameScoringPolicy {
 
@@ -19,17 +18,11 @@ class StandardGameScoringPolicy implements GameScoringPolicy {
     int playerOneScore = game.getPlayerOneScore();
     int playerTwoScore = game.getPlayerTwoScore();
     int target = game.getTargetScore();
-    boolean winByTwo = game.isWinByTwo();
-
-    boolean playerOneTargetMet =
-        allowGreaterThanTarget ? playerOneScore >= target : playerOneScore == target;
-    boolean playerTwoTargetMet =
-        allowGreaterThanTarget ? playerTwoScore >= target : playerTwoScore == target;
 
     boolean playerOneWins =
-        playerOneTargetMet && (!winByTwo || (playerOneScore - playerTwoScore) >= 2);
+        allowGreaterThanTarget ? playerOneScore >= target : playerOneScore == target;
     boolean playerTwoWins =
-        playerTwoTargetMet && (!winByTwo || (playerTwoScore - playerOneScore) >= 2);
+        allowGreaterThanTarget ? playerTwoScore >= target : playerTwoScore == target;
 
     if (playerOneWins) {
       game.setWinner(game.getPlayerOne());

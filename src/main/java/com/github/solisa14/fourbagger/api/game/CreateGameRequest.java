@@ -14,7 +14,6 @@ import java.util.UUID;
  * @param gameType The type of game (SINGLES or DOUBLES).
  * @param scoringMode The scoring mode (STANDARD or EXACT).
  * @param targetScore The target score to win the game (must be between 11 and 21).
- * @param winByTwo Whether the game requires winning by two points.
  */
 public record CreateGameRequest(
     @NotNull UUID playerTwoId,
@@ -22,8 +21,7 @@ public record CreateGameRequest(
     UUID playerTwoPartnerId,
     GameType gameType,
     GameScoringMode scoringMode,
-    @Min(11) @Max(21) Integer targetScore,
-    Boolean winByTwo) {
+    @Min(11) @Max(21) Integer targetScore) {
 
   /**
    * Constructor for creating a game without explicitly specifying the scoring mode.
@@ -33,17 +31,14 @@ public record CreateGameRequest(
    * @param playerTwoPartnerId The ID of player two's partner.
    * @param gameType The type of game.
    * @param targetScore The target score to win.
-   * @param winByTwo Whether the game requires winning by two points.
    */
   public CreateGameRequest(
       UUID playerTwoId,
       UUID playerOnePartnerId,
       UUID playerTwoPartnerId,
       GameType gameType,
-      Integer targetScore,
-      Boolean winByTwo) {
-    this(
-        playerTwoId, playerOnePartnerId, playerTwoPartnerId, gameType, null, targetScore, winByTwo);
+      Integer targetScore) {
+    this(playerTwoId, playerOnePartnerId, playerTwoPartnerId, gameType, null, targetScore);
   }
 
   /**
@@ -51,9 +46,8 @@ public record CreateGameRequest(
    *
    * @param playerTwoId The ID of the opponent.
    * @param targetScore The target score to win.
-   * @param winByTwo Whether the game requires winning by two points.
    */
-  public CreateGameRequest(UUID playerTwoId, Integer targetScore, Boolean winByTwo) {
-    this(playerTwoId, null, null, null, null, targetScore, winByTwo);
+  public CreateGameRequest(UUID playerTwoId, Integer targetScore) {
+    this(playerTwoId, null, null, null, null, targetScore);
   }
 }

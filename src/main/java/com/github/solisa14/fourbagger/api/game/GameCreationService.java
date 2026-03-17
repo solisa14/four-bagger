@@ -31,7 +31,6 @@ public class GameCreationService {
             .gameType(participants.gameType())
             .scoringMode(command.resolvedScoringMode())
             .targetScore(command.resolvedTargetScore())
-            .winByTwo(command.resolvedWinByTwo())
             .status(GameStatus.PENDING)
             .createdBy(command.createdBy())
             .tournamentMatchId(command.tournamentMatchId())

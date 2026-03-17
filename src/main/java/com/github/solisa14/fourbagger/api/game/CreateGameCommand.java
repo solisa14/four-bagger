@@ -8,8 +8,6 @@ import java.util.UUID;
  *
  * @param participants The participants (players and sides) involved in the game.
  * @param targetScore The target score required to win the game (optional, defaults to 21).
- * @param winByTwo Whether the game requires winning by at least a two-point margin (optional,
- *     defaults to true).
  * @param scoringMode The scoring mode for the game (optional, defaults to STANDARD).
  * @param tournamentMatchId The ID of the tournament match this game belongs to, if applicable.
  * @param createdBy The user who is creating the game.
@@ -17,7 +15,6 @@ import java.util.UUID;
 public record CreateGameCommand(
     GameParticipants participants,
     Integer targetScore,
-    Boolean winByTwo,
     GameScoringMode scoringMode,
     UUID tournamentMatchId,
     User createdBy) {
@@ -43,15 +40,6 @@ public record CreateGameCommand(
    */
   public int resolvedTargetScore() {
     return targetScore != null ? targetScore : 21;
-  }
-
-  /**
-   * Gets the resolved win-by-two setting, defaulting to false if not explicitly true.
-   *
-   * @return true if win-by-two is enabled, false otherwise.
-   */
-  public boolean resolvedWinByTwo() {
-    return winByTwo != null && winByTwo;
   }
 
   /**

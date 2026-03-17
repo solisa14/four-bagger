@@ -56,8 +56,7 @@ class GameControllerWebMvcTest {
   @Test
   void createGame_whenTargetScoreTooLow_returnsBadRequest() throws Exception {
     User principal = authenticatedUser();
-    String body =
-        objectMapper.writeValueAsString(new CreateGameRequest(UUID.randomUUID(), 5, null));
+    String body = objectMapper.writeValueAsString(new CreateGameRequest(UUID.randomUUID(), 5));
 
     mockMvc
         .perform(

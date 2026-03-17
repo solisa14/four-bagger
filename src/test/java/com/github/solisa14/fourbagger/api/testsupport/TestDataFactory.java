@@ -66,7 +66,6 @@ public final class TestDataFactory {
         .playerOne(playerOne)
         .playerTwo(playerTwo)
         .targetScore(21)
-        .winByTwo(false)
         .status(status)
         .createdBy(playerOne)
         .build();

@@ -46,7 +46,6 @@ class GameServiceTest {
         .playerOne(p1)
         .playerTwo(p2)
         .targetScore(21)
-        .winByTwo(false)
         .status(GameStatus.IN_PROGRESS)
         .createdBy(p1)
         .build();
@@ -59,8 +58,7 @@ class GameServiceTest {
     User p1 = playerOne();
     User p2 = playerTwo();
     CreateGameCommand command =
-        new CreateGameCommand(
-            GameParticipants.singles(p1, p2), null, null, null, UUID.randomUUID(), p1);
+        new CreateGameCommand(GameParticipants.singles(p1, p2), null, null, UUID.randomUUID(), p1);
     Game created = Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2).build();
     when(gameCreationService.createPendingGame(command)).thenReturn(created);
 
@@ -225,58 +223,6 @@ class GameServiceTest {
 
     // p1 nets 3 → total 21
     gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0));
-
-    assertThat(game.getStatus()).isEqualTo(GameStatus.COMPLETED);
-    assertThat(game.getWinner()).isEqualTo(p1);
-  }
-
-  @Test
-  void recordFrame_whenWinByTwoEnabledAndLeadIsOne_keepsGameInProgress() {
-    User p1 = playerOne();
-    User p2 = playerTwo();
-    Game game =
-        Game.builder()
-            .id(UUID.randomUUID())
-            .playerOne(p1)
-            .playerTwo(p2)
-            .targetScore(21)
-            .winByTwo(true)
-            .status(GameStatus.IN_PROGRESS)
-            .createdBy(p1)
-            .playerOneScore(20)
-            .playerTwoScore(20)
-            .build();
-    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
-    when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
-
-    // p1 nets 1 → 21 vs 20, lead = 1, not enough with winByTwo
-    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 1, 0, 0));
-
-    assertThat(game.getStatus()).isEqualTo(GameStatus.IN_PROGRESS);
-    assertThat(game.getWinner()).isNull();
-  }
-
-  @Test
-  void recordFrame_whenWinByTwoEnabledAndLeadIsTwo_completesGame() {
-    User p1 = playerOne();
-    User p2 = playerTwo();
-    Game game =
-        Game.builder()
-            .id(UUID.randomUUID())
-            .playerOne(p1)
-            .playerTwo(p2)
-            .targetScore(21)
-            .winByTwo(true)
-            .status(GameStatus.IN_PROGRESS)
-            .createdBy(p1)
-            .playerOneScore(21)
-            .playerTwoScore(20)
-            .build();
-    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
-    when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
-
-    // p1 nets 1 more → 22 vs 20, lead = 2, game over
-    gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 1, 0, 0));
 
     assertThat(game.getStatus()).isEqualTo(GameStatus.COMPLETED);
     assertThat(game.getWinner()).isEqualTo(p1);
@@ -548,7 +494,6 @@ class GameServiceTest {
             .playerTwo(p2)
             .targetScore(21)
             .playerOneScore(18)
-            .winByTwo(false)
             .status(GameStatus.IN_PROGRESS)
             .createdBy(p1)
             .tournamentMatchId(matchId)
@@ -575,7 +520,6 @@ class GameServiceTest {
             .playerTwo(p2)
             .targetScore(21)
             .playerOneScore(0)
-            .winByTwo(false)
             .status(GameStatus.IN_PROGRESS)
             .createdBy(p1)
             .tournamentMatchId(UUID.randomUUID())
