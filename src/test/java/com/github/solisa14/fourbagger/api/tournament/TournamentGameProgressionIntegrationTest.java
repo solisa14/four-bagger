@@ -51,7 +51,8 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                 post("/api/v1/tournaments")
                     .cookie(TestCookieHelper.cookie("accessToken", orgToken))
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(new CreateTournamentRequest("Test"))))
+                    .content(
+                        objectMapper.writeValueAsString(new CreateTournamentRequest("Test", null))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -146,7 +147,8 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                     .cookie(TestCookieHelper.cookie("accessToken", orgToken))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
-                        objectMapper.writeValueAsString(new CreateTournamentRequest("Bo3 Test"))))
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest("Bo3 Test", null))))
             .andExpect(status().isCreated())
             .andReturn();
 

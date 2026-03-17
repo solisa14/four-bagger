@@ -1,5 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.user.User;
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -35,6 +36,11 @@ public class Tournament {
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
   private TournamentStatus status;
+
+  @Column(nullable = false)
+  @Enumerated(EnumType.STRING)
+  @Builder.Default
+  private GameType gameType = GameType.SINGLES;
 
   @Column(nullable = false)
   private String title;

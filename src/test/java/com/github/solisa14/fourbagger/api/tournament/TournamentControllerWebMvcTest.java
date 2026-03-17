@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
+import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
@@ -87,12 +88,54 @@ class TournamentControllerWebMvcTest {
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    objectMapper.writeValueAsString(new CreateTournamentRequest("TestTournament"))))
+                    objectMapper.writeValueAsString(
+                        new CreateTournamentRequest("TestTournament", null))))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.title").value("TestTournament"))
         .andExpect(jsonPath("$.joinCode").value("ABC123"))
         .andExpect(jsonPath("$.status").value("REGISTRATION"))
+        .andExpect(jsonPath("$.gameType").value("SINGLES"))
         .andExpect(jsonPath("$.rounds").isArray());
+  }
+
+  @Test
+  void createTournament_whenDoublesType_returnsCreatedWithDoubles() throws Exception {
+    User principal = authenticatedUser();
+    UUID id = UUID.randomUUID();
+    Tournament tournament =
+        TestDataFactory.tournament(id, principal, "TestTournament", "ABC123", GameType.DOUBLES);
+    when(tournamentService.createTournament(any(CreateTournamentCommand.class)))
+        .thenReturn(tournament);
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments")
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CreateTournamentRequest("TestTournament", GameType.DOUBLES))))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.gameType").value("DOUBLES"));
+  }
+
+  @Test
+  void createTournament_whenNoGameType_defaultsToSingles() throws Exception {
+    User principal = authenticatedUser();
+    Tournament tournament = registrationTournament(UUID.randomUUID(), principal);
+    when(tournamentService.createTournament(any(CreateTournamentCommand.class)))
+        .thenReturn(tournament);
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments")
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        new CreateTournamentRequest("TestTournament", null))))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.gameType").value("SINGLES"));
   }
 
   @Test
@@ -266,6 +309,30 @@ class TournamentControllerWebMvcTest {
         .perform(post("/api/v1/tournaments/{id}/bracket", id).with(user(principal)))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").value("Tournament not found"));
+  }
+
+  @Test
+  void generateBracket_whenDoubles_returnsOkWithDoublesTournament() throws Exception {
+    User principal = authenticatedUser();
+    UUID id = UUID.randomUUID();
+    Tournament tournament =
+        Tournament.builder()
+            .id(id)
+            .organizer(principal)
+            .title("TestTournament")
+            .joinCode("ABC123")
+            .status(TournamentStatus.BRACKET_READY)
+            .gameType(GameType.DOUBLES)
+            .build();
+    doNothing().when(tournamentService).generateBracket(id);
+    when(tournamentService.getTournament(id)).thenReturn(tournament);
+
+    mockMvc
+        .perform(post("/api/v1/tournaments/{id}/bracket", id).with(user(principal)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(id.toString()))
+        .andExpect(jsonPath("$.status").value("BRACKET_READY"))
+        .andExpect(jsonPath("$.gameType").value("DOUBLES"));
   }
 
   // ── Join Tournament ───────────────────────────────────────────

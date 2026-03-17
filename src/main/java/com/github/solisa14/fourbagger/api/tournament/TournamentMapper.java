@@ -17,7 +17,7 @@ public class TournamentMapper {
    * @return the creation command
    */
   public CreateTournamentCommand toCreateCommand(User organizer, CreateTournamentRequest request) {
-    return new CreateTournamentCommand(organizer, request.title());
+    return new CreateTournamentCommand(organizer, request.title(), request.gameType());
   }
 
   /**
@@ -44,6 +44,7 @@ public class TournamentMapper {
         tournament.getTitle(),
         tournament.getJoinCode(),
         tournament.getStatus(),
+        tournament.getGameType(),
         rounds);
   }
 

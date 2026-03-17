@@ -1,5 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.user.User;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -99,6 +100,7 @@ public class TournamentService {
               .organizer(command.organizer())
               .title(command.title())
               .status(TournamentStatus.REGISTRATION)
+              .gameType(command.gameType() != null ? command.gameType() : GameType.SINGLES)
               .joinCode(joinCode)
               .build();
       try {
@@ -143,24 +145,40 @@ public class TournamentService {
           "Cannot generate or reshuffle bracket unless tournament is in REGISTRATION or BRACKET_READY");
     }
 
-    if (tournament.getParticipants().size() <= 2) {
-      throw new InvalidTournamentStateException(
-          "Cannot generate bracket with 2 or fewer participants");
-    }
-
     List<TournamentParticipant> shuffledParticipants =
         new ArrayList<>(tournament.getParticipants());
     Collections.shuffle(shuffledParticipants, RANDOM);
 
     tournament.getTeams().clear();
-    for (int i = 0; i < shuffledParticipants.size(); i++) {
-      TournamentTeam team =
-          TournamentTeam.builder()
-              .tournament(tournament)
-              .playerOne(shuffledParticipants.get(i).getUser())
-              .seed(i + 1)
-              .build();
-      tournament.getTeams().add(team);
+    if (tournament.getGameType() == GameType.DOUBLES) {
+      if (shuffledParticipants.size() < 6 || shuffledParticipants.size() % 2 != 0) {
+        throw new InvalidTournamentStateException(
+            "Doubles tournament requires an even number of participants, minimum 6");
+      }
+      for (int i = 0; i < shuffledParticipants.size(); i += 2) {
+        TournamentTeam team =
+            TournamentTeam.builder()
+                .tournament(tournament)
+                .playerOne(shuffledParticipants.get(i).getUser())
+                .playerTwo(shuffledParticipants.get(i + 1).getUser())
+                .seed((i / 2) + 1)
+                .build();
+        tournament.getTeams().add(team);
+      }
+    } else {
+      if (shuffledParticipants.size() <= 2) {
+        throw new InvalidTournamentStateException(
+            "Cannot generate bracket with 2 or fewer participants");
+      }
+      for (int i = 0; i < shuffledParticipants.size(); i++) {
+        TournamentTeam team =
+            TournamentTeam.builder()
+                .tournament(tournament)
+                .playerOne(shuffledParticipants.get(i).getUser())
+                .seed(i + 1)
+                .build();
+        tournament.getTeams().add(team);
+      }
     }
 
     tournamentBracketService.planBracket(tournament, tournament.getTeams());

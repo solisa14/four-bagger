@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
@@ -55,8 +56,14 @@ class TournamentServiceTest {
   }
 
   private Tournament tournamentWithParticipants(TournamentStatus status, int participantCount) {
+    return tournamentWithParticipants(status, participantCount, GameType.SINGLES);
+  }
+
+  private Tournament tournamentWithParticipants(
+      TournamentStatus status, int participantCount, GameType gameType) {
     Tournament tournament = registrationTournament();
     tournament.setStatus(status);
+    tournament.setGameType(gameType);
     for (int i = 0; i < participantCount; i++) {
       tournament.getParticipants().add(participant(tournament));
     }
@@ -326,6 +333,100 @@ class TournamentServiceTest {
     assertThatThrownBy(() -> tournamentService.generateBracket(tournamentId))
         .isInstanceOf(TournamentNotFoundException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  // --- generateBracket (doubles) ---
+
+  @Test
+  void generateBracket_whenDoubles_pairsParticipantsIntoTeams() {
+    Tournament tournament =
+        tournamentWithParticipants(TournamentStatus.REGISTRATION, 6, GameType.DOUBLES);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    tournamentService.generateBracket(tournament.getId());
+
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
+    assertThat(tournament.getTeams()).hasSize(3);
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
+        .containsExactlyInAnyOrder(1, 2, 3);
+    assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerOne).doesNotContainNull();
+    assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerTwo).doesNotContainNull();
+    assertThat(tournament.getRounds()).hasSize(2);
+  }
+
+  @Test
+  void generateBracket_whenDoubles_withEightParticipants_createsFourTeams() {
+    Tournament tournament =
+        tournamentWithParticipants(TournamentStatus.REGISTRATION, 8, GameType.DOUBLES);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    tournamentService.generateBracket(tournament.getId());
+
+    assertThat(tournament.getTeams()).hasSize(4);
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
+        .containsExactlyInAnyOrder(1, 2, 3, 4);
+    assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerTwo).doesNotContainNull();
+    assertThat(tournament.getRounds()).hasSize(2);
+    assertThat(tournament.getRounds().get(0).getMatches()).hasSize(2);
+    assertThat(tournament.getRounds().get(1).getMatches()).hasSize(1);
+  }
+
+  @Test
+  void generateBracket_whenDoubles_withOddParticipantCount_throwsException() {
+    Tournament tournament =
+        tournamentWithParticipants(TournamentStatus.REGISTRATION, 5, GameType.DOUBLES);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.generateBracket(tournament.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class)
+        .hasMessageContaining("even number of participants");
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void generateBracket_whenDoubles_withFourParticipants_throwsException() {
+    // 4 participants → 2 teams → only 1 match possible, need ≥ 3 teams
+    Tournament tournament =
+        tournamentWithParticipants(TournamentStatus.REGISTRATION, 4, GameType.DOUBLES);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(() -> tournamentService.generateBracket(tournament.getId()))
+        .isInstanceOf(InvalidTournamentStateException.class)
+        .hasMessageContaining("minimum 6");
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
+  void generateBracket_whenDoubles_reshuffleReplacesTeams() {
+    Tournament tournament =
+        tournamentWithParticipants(TournamentStatus.BRACKET_READY, 6, GameType.DOUBLES);
+    // Simulate existing teams from a previous bracket generation
+    tournament
+        .getParticipants()
+        .forEach(
+            p ->
+                tournament
+                    .getTeams()
+                    .add(
+                        TournamentTeam.builder()
+                            .tournament(tournament)
+                            .playerOne(p.getUser())
+                            .seed(99)
+                            .build()));
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    tournamentService.generateBracket(tournament.getId());
+
+    assertThat(tournament.getTeams()).hasSize(3);
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
+        .containsExactlyInAnyOrder(1, 2, 3);
+    assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerTwo).doesNotContainNull();
   }
 
   // --- startTournament ---
@@ -635,7 +736,7 @@ class TournamentServiceTest {
     when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
     Tournament result =
         tournamentService.createTournament(
-            new CreateTournamentCommand(organizer, "Test Tournament"));
+            new CreateTournamentCommand(organizer, "Test Tournament", null));
     assertThat(result.getStatus()).isEqualTo(TournamentStatus.REGISTRATION);
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     assertThat(result.getOrganizer()).isEqualTo(organizer);
@@ -652,7 +753,7 @@ class TournamentServiceTest {
 
     Tournament result =
         tournamentService.createTournament(
-            new CreateTournamentCommand(organizer, "Test Tournament"));
+            new CreateTournamentCommand(organizer, "Test Tournament", null));
 
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     verify(tournamentRepository, times(2)).save(any(Tournament.class));
@@ -668,7 +769,7 @@ class TournamentServiceTest {
     assertThatThrownBy(
             () ->
                 tournamentService.createTournament(
-                    new CreateTournamentCommand(organizer, "Test Tournament")))
+                    new CreateTournamentCommand(organizer, "Test Tournament", null)))
         .isInstanceOf(JoinCodeGenerationException.class);
     verify(tournamentRepository, times(5)).save(any(Tournament.class));
   }

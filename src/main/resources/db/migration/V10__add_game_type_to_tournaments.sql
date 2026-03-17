@@ -1,0 +1,2 @@
+ALTER TABLE tournaments
+    ADD COLUMN game_type VARCHAR(50) NOT NULL DEFAULT 'SINGLES';

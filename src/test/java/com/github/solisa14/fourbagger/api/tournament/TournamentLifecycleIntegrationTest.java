@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
 import java.util.UUID;
@@ -43,7 +44,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new CreateTournamentRequest("Lifecycle Test"))))
+                            new CreateTournamentRequest("Lifecycle Test", null))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.status").value("REGISTRATION"))
             .andReturn();
@@ -146,7 +147,8 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .cookie(TestCookieHelper.cookie("accessToken", orgToken))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
-                        objectMapper.writeValueAsString(new CreateTournamentRequest("Dup Test"))))
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest("Dup Test", null))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -190,7 +192,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new CreateTournamentRequest("Remove Test"))))
+                            new CreateTournamentRequest("Remove Test", null))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -245,6 +247,78 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void doublesTournamentLifecycle_createJoinBracketStartAndVerify() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+
+    // 1. Register organizer + 6 players
+    String orgToken = registerAndGetToken("dlcorg" + suffix);
+    String[] playerTokens = new String[6];
+    for (int i = 0; i < 6; i++) {
+      playerTokens[i] = registerAndGetToken("dlcp" + i + suffix);
+    }
+
+    // 2. Create DOUBLES tournament
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest("Doubles Test", GameType.DOUBLES))))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.gameType").value("DOUBLES"))
+            .andExpect(jsonPath("$.status").value("REGISTRATION"))
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    String tournamentId = tournamentJson.get("id").asText();
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    // 3. Join 6 players
+    for (String playerToken : playerTokens) {
+      mockMvc
+          .perform(
+              post("/api/v1/tournaments/join")
+                  .cookie(TestCookieHelper.cookie("accessToken", playerToken))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(objectMapper.writeValueAsString(new JoinTournamentRequest(joinCode))))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(tournamentId));
+    }
+
+    // 4. Generate bracket — 6 players pair into 3 teams
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("BRACKET_READY"))
+        .andExpect(jsonPath("$.gameType").value("DOUBLES"))
+        .andExpect(jsonPath("$.rounds").isNotEmpty());
+
+    // 5. Start tournament
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/start", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+
+    // 6. Verify bracket structure — 3 teams produce 2 rounds
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+        .andExpect(jsonPath("$.gameType").value("DOUBLES"))
+        .andExpect(jsonPath("$.rounds.length()").value(2))
+        .andExpect(jsonPath("$.rounds[0].matches").isNotEmpty());
+  }
+
+  @Test
   void startTournament_whenNotBracketReady_returnsBadRequest() throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     String orgToken = registerAndGetToken("stnbr" + suffix);
@@ -257,7 +331,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new CreateTournamentRequest("Start Early Test"))))
+                            new CreateTournamentRequest("Start Early Test", null))))
             .andExpect(status().isCreated())
             .andReturn();
 

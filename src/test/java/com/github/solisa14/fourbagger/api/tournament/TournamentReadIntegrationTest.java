@@ -39,7 +39,8 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
                     .cookie(TestCookieHelper.cookie("accessToken", orgToken))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
-                        objectMapper.writeValueAsString(new CreateTournamentRequest("Read Test"))))
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest("Read Test", null))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -82,7 +83,7 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new CreateTournamentRequest("Read Bracket Test"))))
+                            new CreateTournamentRequest("Read Bracket Test", null))))
             .andExpect(status().isCreated())
             .andReturn();
 
