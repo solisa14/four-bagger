@@ -42,8 +42,20 @@ class TournamentMatchServiceTest {
     Match match = match(tournament, false);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentMatchService.startMatch(tournament.getId(), match.getId()))
+    assertThatThrownBy(
+            () -> tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer()))
         .isInstanceOf(InvalidTournamentStateException.class);
+  }
+
+  @Test
+  void startMatch_whenUserIsNotOrganizer_throwsTournamentAccessDeniedException() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(
+            () -> tournamentMatchService.startMatch(tournament.getId(), match.getId(), user("outsider")))
+        .isInstanceOf(TournamentAccessDeniedException.class);
   }
 
   @Test
@@ -57,7 +69,8 @@ class TournamentMatchServiceTest {
     Game created = Game.builder().id(UUID.randomUUID()).status(GameStatus.PENDING).build();
     when(gameCreationService.createPendingGame(any(CreateGameCommand.class))).thenReturn(created);
 
-    Game result = tournamentMatchService.startMatch(tournament.getId(), match.getId());
+    Game result =
+        tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer());
 
     assertThat(result).isEqualTo(created);
     assertThat(match.getStatus()).isEqualTo(MatchStatus.IN_PROGRESS);
@@ -85,7 +98,7 @@ class TournamentMatchServiceTest {
     when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
         .thenReturn(Game.builder().id(UUID.randomUUID()).status(GameStatus.PENDING).build());
 
-    tournamentMatchService.startMatch(tournament.getId(), match.getId());
+    tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer());
 
     ArgumentCaptor<CreateGameCommand> commandCaptor =
         ArgumentCaptor.forClass(CreateGameCommand.class);
@@ -105,7 +118,7 @@ class TournamentMatchServiceTest {
     when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
         .thenReturn(Game.builder().id(UUID.randomUUID()).status(GameStatus.PENDING).build());
 
-    tournamentMatchService.startMatch(tournament.getId(), match.getId());
+    tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer());
 
     ArgumentCaptor<CreateGameCommand> commandCaptor =
         ArgumentCaptor.forClass(CreateGameCommand.class);
@@ -123,7 +136,8 @@ class TournamentMatchServiceTest {
     when(gameRepository.findByTournamentMatchIdOrderByCreatedAtAsc(match.getId()))
         .thenReturn(List.of(existingGame));
 
-    Game result = tournamentMatchService.startMatch(tournament.getId(), match.getId());
+    Game result =
+        tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer());
 
     assertThat(result).isEqualTo(existingGame);
     verify(gameCreationService, never()).createPendingGame(any(CreateGameCommand.class));
@@ -137,7 +151,8 @@ class TournamentMatchServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
 
-    assertThatThrownBy(() -> tournamentMatchService.startMatch(tournament.getId(), match.getId()))
+    assertThatThrownBy(
+            () -> tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer()))
         .isInstanceOf(InvalidTournamentStateException.class);
   }
 
@@ -149,7 +164,8 @@ class TournamentMatchServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
 
-    assertThatThrownBy(() -> tournamentMatchService.startMatch(tournament.getId(), match.getId()))
+    assertThatThrownBy(
+            () -> tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer()))
         .isInstanceOf(InvalidTournamentStateException.class);
   }
 
@@ -163,7 +179,9 @@ class TournamentMatchServiceTest {
     when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
 
     assertThatThrownBy(
-            () -> tournamentMatchService.startMatch(requestedTournament.getId(), match.getId()))
+            () ->
+                tournamentMatchService.startMatch(
+                    requestedTournament.getId(), match.getId(), requestedTournament.getOrganizer()))
         .isInstanceOf(InvalidTournamentStateException.class);
   }
 

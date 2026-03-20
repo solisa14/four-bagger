@@ -71,6 +71,7 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
     registerAndGetToken("readp2" + suffix);
     registerAndGetToken("readp3" + suffix);
 
+    User organizer = userRepository.findUserByUsername("readorg2" + suffix + "user").orElseThrow();
     User player1 = userRepository.findUserByUsername("readp1" + suffix + "user").orElseThrow();
     User player2 = userRepository.findUserByUsername("readp2" + suffix + "user").orElseThrow();
     User player3 = userRepository.findUserByUsername("readp3" + suffix + "user").orElseThrow();
@@ -94,8 +95,8 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
     tournamentService.joinTournament(joinCode, player1);
     tournamentService.joinTournament(joinCode, player2);
     tournamentService.joinTournament(joinCode, player3);
-    tournamentService.generateBracket(tournamentId);
-    tournamentService.startTournament(tournamentId);
+    tournamentService.generateBracket(tournamentId, organizer);
+    tournamentService.startTournament(tournamentId, organizer);
 
     // With 3 participants: 2 rounds (round 1 has 2 matches — 1 bye + 1 real; round 2 has 1 final)
     mockMvc

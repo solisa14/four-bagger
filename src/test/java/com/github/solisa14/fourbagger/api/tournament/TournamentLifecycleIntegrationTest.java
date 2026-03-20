@@ -13,6 +13,7 @@ import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -24,6 +25,9 @@ import org.springframework.test.web.servlet.MvcResult;
 class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
+
+  @Autowired private TournamentRepository tournamentRepository;
+  @Autowired private MatchRepository matchRepository;
 
   @Test
   void fullTournamentLifecycle_createJoinBracketConfigStartAndVerify() throws Exception {
@@ -117,6 +121,104 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
             get("/api/v1/tournaments/{id}", tournamentId)
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void organizerOnlyEndpoints_whenCalledByOutsider_returnForbidden() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken("guardorg" + suffix);
+    String outsiderToken = registerAndGetToken("guardout" + suffix);
+    String p1Token = registerAndGetToken("guardp1" + suffix);
+    String p2Token = registerAndGetToken("guardp2" + suffix);
+    String p3Token = registerAndGetToken("guardp3" + suffix);
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest("Guard Test", null))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(tournamentJson.get("id").asText());
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    for (String playerToken : new String[] {p1Token, p2Token, p3Token}) {
+      mockMvc
+          .perform(
+              post("/api/v1/tournaments/join")
+                  .cookie(TestCookieHelper.cookie("accessToken", playerToken))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(objectMapper.writeValueAsString(new JoinTournamentRequest(joinCode))))
+          .andExpect(status().isOk());
+    }
+
+    UUID participantId =
+        tournamentRepository.findById(tournamentId).orElseThrow().getParticipants().getFirst().getId();
+
+    mockMvc
+        .perform(
+            delete("/api/v1/tournaments/{id}/participants/{participantId}", tournamentId, participantId)
+                .cookie(TestCookieHelper.cookie("accessToken", outsiderToken)))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", outsiderToken)))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk());
+
+    mockMvc
+        .perform(
+            patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", tournamentId, 1)
+                .cookie(TestCookieHelper.cookie("accessToken", outsiderToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3, null))))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/start", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", outsiderToken)))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/start", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk());
+
+    UUID matchId =
+        matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
+                tournamentId)
+            .stream()
+            .filter(match -> !match.isBye())
+            .findFirst()
+            .orElseThrow()
+            .getId();
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{tournamentId}/matches/{matchId}/start", tournamentId, matchId)
+                .cookie(TestCookieHelper.cookie("accessToken", outsiderToken)))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(
+            delete("/api/v1/tournaments/{id}", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", outsiderToken)))
+        .andExpect(status().isForbidden());
   }
 
   @Test

@@ -2,8 +2,10 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.game.Game;
 import com.github.solisa14.fourbagger.api.game.GameResponse;
+import com.github.solisa14.fourbagger.api.user.User;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -45,8 +47,9 @@ class TournamentMatchController {
    */
   @PostMapping("/{matchId}/start")
   ResponseEntity<GameResponse> startMatch(
+      @AuthenticationPrincipal User currentUser,
       @PathVariable UUID tournamentId, @PathVariable UUID matchId) {
-    Game game = tournamentMatchService.startMatch(tournamentId, matchId);
+    Game game = tournamentMatchService.startMatch(tournamentId, matchId, currentUser);
     return ResponseEntity.ok(gameMapper.toGameResponse(game));
   }
 

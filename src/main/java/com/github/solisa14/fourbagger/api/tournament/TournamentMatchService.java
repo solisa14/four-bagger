@@ -51,9 +51,12 @@ public class TournamentMatchService {
    * @throws MatchNotFoundException if the match cannot be found
    */
   @Transactional
-  public Game startMatch(UUID tournamentId, UUID matchId) {
+  public Game startMatch(UUID tournamentId, UUID matchId, User currentUser) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    if (!tournament.getOrganizer().getId().equals(currentUser.getId())) {
+      throw new TournamentAccessDeniedException(tournamentId);
+    }
     if (tournament.getStatus() != TournamentStatus.IN_PROGRESS) {
       throw new InvalidTournamentStateException(
           "Cannot start a match unless the tournament is IN_PROGRESS");

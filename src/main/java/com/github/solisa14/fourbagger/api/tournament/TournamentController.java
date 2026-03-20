@@ -73,8 +73,9 @@ class TournamentController {
    * @return 204 No Content on success
    */
   @DeleteMapping("/{id}")
-  ResponseEntity<Void> deleteTournament(@PathVariable UUID id) {
-    tournamentService.deleteTournament(id);
+  ResponseEntity<Void> deleteTournament(
+      @AuthenticationPrincipal User currentUser, @PathVariable UUID id) {
+    tournamentService.deleteTournament(id, currentUser);
     return ResponseEntity.noContent().build();
   }
 
@@ -85,8 +86,9 @@ class TournamentController {
    * @return the updated tournament response
    */
   @PostMapping("/{id}/start")
-  ResponseEntity<TournamentResponse> startTournament(@PathVariable UUID id) {
-    tournamentService.startTournament(id);
+  ResponseEntity<TournamentResponse> startTournament(
+      @AuthenticationPrincipal User currentUser, @PathVariable UUID id) {
+    tournamentService.startTournament(id, currentUser);
     return ResponseEntity.ok(
         tournamentMapper.toTournamentResponse(tournamentService.getTournament(id)));
   }
@@ -99,8 +101,9 @@ class TournamentController {
    * @return the updated tournament response with bracket structure
    */
   @PostMapping("/{id}/bracket")
-  ResponseEntity<TournamentResponse> generateBracket(@PathVariable UUID id) {
-    tournamentService.generateBracket(id);
+  ResponseEntity<TournamentResponse> generateBracket(
+      @AuthenticationPrincipal User currentUser, @PathVariable UUID id) {
+    tournamentService.generateBracket(id, currentUser);
     return ResponseEntity.ok(
         tournamentMapper.toTournamentResponse(tournamentService.getTournament(id)));
   }
@@ -131,8 +134,11 @@ class TournamentController {
    * @return 204 No Content on success
    */
   @DeleteMapping("/{id}/participants/{participantId}")
-  ResponseEntity<Void> removeParticipant(@PathVariable UUID id, @PathVariable UUID participantId) {
-    tournamentService.removeParticipant(id, participantId);
+  ResponseEntity<Void> removeParticipant(
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable UUID id,
+      @PathVariable UUID participantId) {
+    tournamentService.removeParticipant(id, currentUser, participantId);
     return ResponseEntity.noContent().build();
   }
 
@@ -147,10 +153,12 @@ class TournamentController {
    */
   @PatchMapping("/{id}/rounds/{roundNumber}")
   ResponseEntity<TournamentResponse> updateRoundSettings(
+      @AuthenticationPrincipal User currentUser,
       @PathVariable UUID id,
       @PathVariable int roundNumber,
       @RequestBody UpdateRoundSettingsRequest request) {
-    tournamentService.updateRoundSettings(id, roundNumber, request.bestOf(), request.scoringMode());
+    tournamentService.updateRoundSettings(
+        id, currentUser, roundNumber, request.bestOf(), request.scoringMode());
     return ResponseEntity.ok(
         tournamentMapper.toTournamentResponse(tournamentService.getTournament(id)));
   }

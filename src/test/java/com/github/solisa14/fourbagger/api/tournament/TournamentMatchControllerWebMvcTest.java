@@ -65,7 +65,7 @@ class TournamentMatchControllerWebMvcTest {
             .targetScore(21)
             .build();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId)).thenReturn(game);
+    when(tournamentMatchService.startMatch(tournamentId, matchId, principal)).thenReturn(game);
 
     mockMvc
         .perform(
@@ -85,7 +85,7 @@ class TournamentMatchControllerWebMvcTest {
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId))
+    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
         .thenThrow(new TournamentNotFoundException());
 
     mockMvc
@@ -105,7 +105,7 @@ class TournamentMatchControllerWebMvcTest {
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId))
+    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
         .thenThrow(new MatchNotFoundException(matchId));
 
     mockMvc
@@ -125,7 +125,7 @@ class TournamentMatchControllerWebMvcTest {
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId))
+    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
         .thenThrow(
             new InvalidTournamentStateException(
                 "Cannot start a match unless the tournament is IN_PROGRESS"));
@@ -149,7 +149,7 @@ class TournamentMatchControllerWebMvcTest {
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId))
+    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
         .thenThrow(new InvalidTournamentStateException("Cannot start a bye match"));
 
     mockMvc
@@ -161,6 +161,28 @@ class TournamentMatchControllerWebMvcTest {
                 .with(user(principal)))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message").value("Cannot start a bye match"));
+  }
+
+  @Test
+  void startMatch_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    UUID matchId = UUID.randomUUID();
+
+    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
+        .thenThrow(new TournamentAccessDeniedException(tournamentId));
+
+    mockMvc
+        .perform(
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                    tournamentId,
+                    matchId)
+                .with(user(principal)))
+        .andExpect(status().isForbidden())
+        .andExpect(
+            jsonPath("$.message")
+                .value("You are not allowed to modify tournament: " + tournamentId));
   }
 
   // ── Get Match ───────────────────────────────────────────────────

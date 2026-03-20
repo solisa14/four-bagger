@@ -120,9 +120,16 @@ public class TournamentService {
    * @param id the UUID of the tournament to delete
    * @throws TournamentNotFoundException if the tournament does not exist
    */
-  public void deleteTournament(UUID id) {
-    tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
+  public void deleteTournament(UUID id, User currentUser) {
+    Tournament tournament = tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
+    authorizeOrganizer(currentUser, tournament);
     tournamentRepository.deleteById(id);
+  }
+
+  private void authorizeOrganizer(User currentUser, Tournament tournament) {
+    if (!tournament.getOrganizer().getId().equals(currentUser.getId())) {
+      throw new TournamentAccessDeniedException(tournament.getId());
+    }
   }
 
   /**
@@ -135,9 +142,10 @@ public class TournamentService {
    * @throws InvalidTournamentStateException if the tournament has already started or has too few
    *     participants
    */
-  public void generateBracket(UUID tournamentId) {
+  public void generateBracket(UUID tournamentId, User currentUser) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    authorizeOrganizer(currentUser, tournament);
 
     if (tournament.getStatus() != TournamentStatus.REGISTRATION
         && tournament.getStatus() != TournamentStatus.BRACKET_READY) {
@@ -198,9 +206,14 @@ public class TournamentService {
    * @throws InvalidTournamentStateException if the tournament is not in the BRACKET_READY state
    */
   public void updateRoundSettings(
-      UUID tournamentId, int roundNumber, Integer bestOf, ScoringMode scoringMode) {
+      UUID tournamentId,
+      User currentUser,
+      int roundNumber,
+      Integer bestOf,
+      ScoringMode scoringMode) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    authorizeOrganizer(currentUser, tournament);
 
     if (tournament.getStatus() != TournamentStatus.BRACKET_READY) {
       throw new InvalidTournamentStateException(
@@ -241,9 +254,10 @@ public class TournamentService {
    * @param tournamentId the UUID of the tournament
    * @throws InvalidTournamentStateException if the tournament bracket has not been generated
    */
-  public void startTournament(UUID tournamentId) {
+  public void startTournament(UUID tournamentId, User currentUser) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    authorizeOrganizer(currentUser, tournament);
 
     if (tournament.getStatus() != TournamentStatus.BRACKET_READY) {
       throw new InvalidTournamentStateException(
@@ -273,9 +287,10 @@ public class TournamentService {
    * @throws TournamentParticipantNotFoundException if the participant does not exist in this
    *     tournament
    */
-  public void removeParticipant(UUID tournamentId, UUID participantId) {
+  public void removeParticipant(UUID tournamentId, User currentUser, UUID participantId) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    authorizeOrganizer(currentUser, tournament);
 
     if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
       throw new InvalidTournamentStateException("Cannot remove participants after registration");

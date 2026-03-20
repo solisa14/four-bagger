@@ -31,6 +31,81 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
   @Autowired private UserRepository userRepository;
 
   @Test
+  void tournamentGameMutations_whenOrganizerIsNotPlayer_areStillAllowed() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken("mutorg" + suffix);
+    registerAndGetToken("mutp1" + suffix);
+    registerAndGetToken("mutp2" + suffix);
+    registerAndGetToken("mutp3" + suffix);
+
+    User organizer = userRepository.findUserByUsername("mutorg" + suffix + "user").orElseThrow();
+    User player1 = userRepository.findUserByUsername("mutp1" + suffix + "user").orElseThrow();
+    User player2 = userRepository.findUserByUsername("mutp2" + suffix + "user").orElseThrow();
+    User player3 = userRepository.findUserByUsername("mutp3" + suffix + "user").orElseThrow();
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest("Mutation Test", null))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(tournamentJson.get("id").asText());
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    tournamentService.joinTournament(joinCode, player1);
+    tournamentService.joinTournament(joinCode, player2);
+    tournamentService.joinTournament(joinCode, player3);
+    tournamentService.generateBracket(tournamentId, organizer);
+    tournamentService.startTournament(tournamentId, organizer);
+
+    UUID matchId =
+        matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
+                tournamentId)
+            .stream()
+            .filter(match -> !match.isBye())
+            .findFirst()
+            .orElseThrow()
+            .getId();
+
+    MvcResult startMatchResult =
+        mockMvc
+            .perform(
+                post(
+                        "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                        tournamentId,
+                        matchId)
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    String gameId =
+        objectMapper.readTree(startMatchResult.getResponse().getContentAsString()).get("id").asText();
+
+    mockMvc
+        .perform(
+            post("/api/v1/games/{gameId}/start", gameId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+
+    mockMvc
+        .perform(
+            post("/api/v1/games/{gameId}/frames", gameId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0))))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.playerOneScore").value(3));
+  }
+
+  @Test
   void recordFrame_whenTournamentGameCompletes_matchAutoCompletes() throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     // Organizer creates the tournament; tournament games are created with organizer as createdBy,
@@ -64,8 +139,9 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
     tournamentService.joinTournament(joinCode, player1);
     tournamentService.joinTournament(joinCode, player2);
     tournamentService.joinTournament(joinCode, player3);
-    tournamentService.generateBracket(tournamentId);
-    tournamentService.startTournament(tournamentId);
+    tournamentService.generateBracket(tournamentId, userRepository.findUserByUsername("org" + suffix + "user").orElseThrow());
+    tournamentService.startTournament(
+        tournamentId, userRepository.findUserByUsername("org" + suffix + "user").orElseThrow());
 
     // Navigate to the non-bye round-1 match
     List<Match> matches =
@@ -159,9 +235,15 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
     tournamentService.joinTournament(joinCode, player1);
     tournamentService.joinTournament(joinCode, player2);
     tournamentService.joinTournament(joinCode, player3);
-    tournamentService.generateBracket(tournamentId);
-    tournamentService.updateRoundSettings(tournamentId, 1, 3, ScoringMode.STANDARD);
-    tournamentService.startTournament(tournamentId);
+    tournamentService.generateBracket(tournamentId, userRepository.findUserByUsername("bo3org" + suffix + "user").orElseThrow());
+    tournamentService.updateRoundSettings(
+        tournamentId,
+        userRepository.findUserByUsername("bo3org" + suffix + "user").orElseThrow(),
+        1,
+        3,
+        ScoringMode.STANDARD);
+    tournamentService.startTournament(
+        tournamentId, userRepository.findUserByUsername("bo3org" + suffix + "user").orElseThrow());
 
     List<Match> matches =
         matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
