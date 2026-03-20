@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Integration tests verifying the full tournament lifecycle through HTTP endpoints. Covers create,
@@ -28,6 +29,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired private TournamentRepository tournamentRepository;
   @Autowired private MatchRepository matchRepository;
+  @Autowired private TransactionTemplate transactionTemplate;
 
   @Test
   void fullTournamentLifecycle_createJoinBracketConfigStartAndVerify() throws Exception {
@@ -159,7 +161,14 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
     }
 
     UUID participantId =
-        tournamentRepository.findById(tournamentId).orElseThrow().getParticipants().getFirst().getId();
+        transactionTemplate.execute(
+            status ->
+                tournamentRepository
+                    .findById(tournamentId)
+                    .orElseThrow()
+                    .getParticipants()
+                    .getFirst()
+                    .getId());
 
     mockMvc
         .perform(

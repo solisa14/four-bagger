@@ -187,7 +187,7 @@ class TournamentControllerWebMvcTest {
   void deleteTournament_whenFound_returnsNoContent() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doNothing().when(tournamentService).deleteTournament(id, principal);
+    doNothing().when(tournamentService).deleteTournament(eq(id), any());
 
     mockMvc
         .perform(delete("/api/v1/tournaments/{id}", id).with(user(principal)))
@@ -198,7 +198,9 @@ class TournamentControllerWebMvcTest {
   void deleteTournament_whenNotFound_returnsNotFound() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doThrow(new TournamentNotFoundException()).when(tournamentService).deleteTournament(id, principal);
+    doThrow(new TournamentNotFoundException())
+        .when(tournamentService)
+        .deleteTournament(eq(id), any());
 
     mockMvc
         .perform(delete("/api/v1/tournaments/{id}", id).with(user(principal)))
@@ -212,7 +214,7 @@ class TournamentControllerWebMvcTest {
   void startTournament_whenBracketReady_returnsOkWithTournament() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doNothing().when(tournamentService).startTournament(id, principal);
+    doNothing().when(tournamentService).startTournament(eq(id), any());
     when(tournamentService.getTournament(id)).thenReturn(inProgressTournament(id, principal));
 
     mockMvc
@@ -230,7 +232,7 @@ class TournamentControllerWebMvcTest {
             new InvalidTournamentStateException(
                 "Tournament can only be started when bracket is ready"))
         .when(tournamentService)
-        .startTournament(id, principal);
+        .startTournament(eq(id), any());
 
     mockMvc
         .perform(post("/api/v1/tournaments/{id}/start", id).with(user(principal)))
@@ -243,7 +245,9 @@ class TournamentControllerWebMvcTest {
   void startTournament_whenNotFound_returnsNotFound() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doThrow(new TournamentNotFoundException()).when(tournamentService).startTournament(id, principal);
+    doThrow(new TournamentNotFoundException())
+        .when(tournamentService)
+        .startTournament(eq(id), any());
 
     mockMvc
         .perform(post("/api/v1/tournaments/{id}/start", id).with(user(principal)))
@@ -255,7 +259,9 @@ class TournamentControllerWebMvcTest {
   void startTournament_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doThrow(new TournamentAccessDeniedException(id)).when(tournamentService).startTournament(id, principal);
+    doThrow(new TournamentAccessDeniedException(id))
+        .when(tournamentService)
+        .startTournament(eq(id), any());
 
     mockMvc
         .perform(post("/api/v1/tournaments/{id}/start", id).with(user(principal)))
@@ -269,7 +275,7 @@ class TournamentControllerWebMvcTest {
   void generateBracket_whenRegistration_returnsOkWithTournament() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doNothing().when(tournamentService).generateBracket(id, principal);
+    doNothing().when(tournamentService).generateBracket(eq(id), any());
     when(tournamentService.getTournament(id)).thenReturn(bracketReadyTournament(id, principal));
 
     mockMvc
@@ -287,7 +293,7 @@ class TournamentControllerWebMvcTest {
             new InvalidTournamentStateException(
                 "Cannot generate or reshuffle bracket unless tournament is in REGISTRATION or BRACKET_READY"))
         .when(tournamentService)
-        .generateBracket(id, principal);
+        .generateBracket(eq(id), any());
 
     mockMvc
         .perform(post("/api/v1/tournaments/{id}/bracket", id).with(user(principal)))
@@ -302,7 +308,7 @@ class TournamentControllerWebMvcTest {
             new InvalidTournamentStateException(
                 "Cannot generate bracket with 2 or fewer participants"))
         .when(tournamentService)
-        .generateBracket(id, principal);
+        .generateBracket(eq(id), any());
 
     mockMvc
         .perform(post("/api/v1/tournaments/{id}/bracket", id).with(user(principal)))
@@ -315,7 +321,9 @@ class TournamentControllerWebMvcTest {
   void generateBracket_whenNotFound_returnsNotFound() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doThrow(new TournamentNotFoundException()).when(tournamentService).generateBracket(id, principal);
+    doThrow(new TournamentNotFoundException())
+        .when(tournamentService)
+        .generateBracket(eq(id), any());
 
     mockMvc
         .perform(post("/api/v1/tournaments/{id}/bracket", id).with(user(principal)))
@@ -336,7 +344,7 @@ class TournamentControllerWebMvcTest {
             .status(TournamentStatus.BRACKET_READY)
             .gameType(GameType.DOUBLES)
             .build();
-    doNothing().when(tournamentService).generateBracket(id, principal);
+    doNothing().when(tournamentService).generateBracket(eq(id), any());
     when(tournamentService.getTournament(id)).thenReturn(tournament);
 
     mockMvc
@@ -351,7 +359,9 @@ class TournamentControllerWebMvcTest {
   void generateBracket_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doThrow(new TournamentAccessDeniedException(id)).when(tournamentService).generateBracket(id, principal);
+    doThrow(new TournamentAccessDeniedException(id))
+        .when(tournamentService)
+        .generateBracket(eq(id), any());
 
     mockMvc
         .perform(post("/api/v1/tournaments/{id}/bracket", id).with(user(principal)))
@@ -451,7 +461,9 @@ class TournamentControllerWebMvcTest {
     User principal = authenticatedUser();
     UUID tournamentId = UUID.randomUUID();
     UUID participantId = UUID.randomUUID();
-    doNothing().when(tournamentService).removeParticipant(tournamentId, principal, participantId);
+    doNothing()
+        .when(tournamentService)
+        .removeParticipant(eq(tournamentId), any(), eq(participantId));
 
     mockMvc
         .perform(
@@ -470,7 +482,7 @@ class TournamentControllerWebMvcTest {
     UUID participantId = UUID.randomUUID();
     doThrow(new InvalidTournamentStateException("Cannot remove participants after registration"))
         .when(tournamentService)
-        .removeParticipant(tournamentId, principal, participantId);
+        .removeParticipant(eq(tournamentId), any(), eq(participantId));
 
     mockMvc
         .perform(
@@ -490,7 +502,7 @@ class TournamentControllerWebMvcTest {
     UUID participantId = UUID.randomUUID();
     doThrow(new TournamentParticipantNotFoundException())
         .when(tournamentService)
-        .removeParticipant(tournamentId, principal, participantId);
+        .removeParticipant(eq(tournamentId), any(), eq(participantId));
 
     mockMvc
         .perform(
@@ -510,7 +522,7 @@ class TournamentControllerWebMvcTest {
     UUID participantId = UUID.randomUUID();
     doThrow(new TournamentNotFoundException())
         .when(tournamentService)
-        .removeParticipant(tournamentId, principal, participantId);
+        .removeParticipant(eq(tournamentId), any(), eq(participantId));
 
     mockMvc
         .perform(
@@ -530,7 +542,7 @@ class TournamentControllerWebMvcTest {
     UUID participantId = UUID.randomUUID();
     doThrow(new TournamentAccessDeniedException(tournamentId))
         .when(tournamentService)
-        .removeParticipant(tournamentId, principal, participantId);
+        .removeParticipant(eq(tournamentId), any(), eq(participantId));
 
     mockMvc
         .perform(
@@ -553,7 +565,7 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doNothing()
         .when(tournamentService)
-        .updateRoundSettings(id, principal, 1, 3, ScoringMode.STANDARD);
+        .updateRoundSettings(eq(id), any(), eq(1), eq(3), eq(ScoringMode.STANDARD));
     when(tournamentService.getTournament(id)).thenReturn(bracketReadyTournament(id, principal));
 
     mockMvc
@@ -577,7 +589,7 @@ class TournamentControllerWebMvcTest {
             new InvalidTournamentStateException(
                 "Round settings can only be changed when tournament is BRACKET_READY"))
         .when(tournamentService)
-        .updateRoundSettings(eq(id), eq(principal), eq(1), eq(3), eq(ScoringMode.STANDARD));
+        .updateRoundSettings(eq(id), any(), eq(1), eq(3), eq(ScoringMode.STANDARD));
 
     mockMvc
         .perform(
@@ -599,7 +611,7 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(new InvalidRoundConfigurationException("bestOf must be one of: 1, 3, 5, or 7"))
         .when(tournamentService)
-        .updateRoundSettings(eq(id), eq(principal), eq(1), eq(2), any());
+        .updateRoundSettings(eq(id), any(), eq(1), eq(2), any());
 
     mockMvc
         .perform(
@@ -617,7 +629,7 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(new TournamentRoundNotFoundException())
         .when(tournamentService)
-        .updateRoundSettings(eq(id), eq(principal), eq(99), any(), any());
+        .updateRoundSettings(eq(id), any(), eq(99), any(), any());
 
     mockMvc
         .perform(
@@ -635,7 +647,7 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(new TournamentNotFoundException())
         .when(tournamentService)
-        .updateRoundSettings(eq(id), eq(principal), eq(1), any(), any());
+        .updateRoundSettings(eq(id), any(), eq(1), any(), any());
 
     mockMvc
         .perform(
@@ -653,7 +665,7 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(new InvalidRoundConfigurationException("At least one round setting must be provided"))
         .when(tournamentService)
-        .updateRoundSettings(eq(id), eq(principal), eq(1), eq(null), eq(null));
+        .updateRoundSettings(eq(id), any(), eq(1), eq(null), eq(null));
 
     mockMvc
         .perform(
@@ -672,7 +684,7 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(new TournamentAccessDeniedException(id))
         .when(tournamentService)
-        .updateRoundSettings(eq(id), eq(principal), eq(1), eq(3), eq(ScoringMode.STANDARD));
+        .updateRoundSettings(eq(id), any(), eq(1), eq(3), eq(ScoringMode.STANDARD));
 
     mockMvc
         .perform(

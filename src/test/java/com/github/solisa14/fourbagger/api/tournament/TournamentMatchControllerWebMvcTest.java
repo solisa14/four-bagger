@@ -1,5 +1,7 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -65,7 +67,7 @@ class TournamentMatchControllerWebMvcTest {
             .targetScore(21)
             .build();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId, principal)).thenReturn(game);
+    when(tournamentMatchService.startMatch(eq(tournamentId), eq(matchId), any())).thenReturn(game);
 
     mockMvc
         .perform(
@@ -85,7 +87,7 @@ class TournamentMatchControllerWebMvcTest {
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
+    when(tournamentMatchService.startMatch(eq(tournamentId), eq(matchId), any()))
         .thenThrow(new TournamentNotFoundException());
 
     mockMvc
@@ -105,7 +107,7 @@ class TournamentMatchControllerWebMvcTest {
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
+    when(tournamentMatchService.startMatch(eq(tournamentId), eq(matchId), any()))
         .thenThrow(new MatchNotFoundException(matchId));
 
     mockMvc
@@ -125,7 +127,7 @@ class TournamentMatchControllerWebMvcTest {
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
+    when(tournamentMatchService.startMatch(eq(tournamentId), eq(matchId), any()))
         .thenThrow(
             new InvalidTournamentStateException(
                 "Cannot start a match unless the tournament is IN_PROGRESS"));
@@ -149,7 +151,7 @@ class TournamentMatchControllerWebMvcTest {
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
+    when(tournamentMatchService.startMatch(eq(tournamentId), eq(matchId), any()))
         .thenThrow(new InvalidTournamentStateException("Cannot start a bye match"));
 
     mockMvc
@@ -169,7 +171,7 @@ class TournamentMatchControllerWebMvcTest {
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
 
-    when(tournamentMatchService.startMatch(tournamentId, matchId, principal))
+    when(tournamentMatchService.startMatch(eq(tournamentId), eq(matchId), any()))
         .thenThrow(new TournamentAccessDeniedException(tournamentId));
 
     mockMvc
