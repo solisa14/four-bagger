@@ -1,9 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -172,7 +169,10 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
 
     mockMvc
         .perform(
-            delete("/api/v1/tournaments/{id}/participants/{participantId}", tournamentId, participantId)
+            delete(
+                    "/api/v1/tournaments/{id}/participants/{participantId}",
+                    tournamentId,
+                    participantId)
                 .cookie(TestCookieHelper.cookie("accessToken", outsiderToken)))
         .andExpect(status().isForbidden());
 
@@ -209,8 +209,8 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isOk());
 
     UUID matchId =
-        matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
-                tournamentId)
+        matchRepository
+            .findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(tournamentId)
             .stream()
             .filter(match -> !match.isBye())
             .findFirst()
@@ -219,7 +219,10 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
 
     mockMvc
         .perform(
-            post("/api/v1/tournaments/{tournamentId}/matches/{matchId}/start", tournamentId, matchId)
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                    tournamentId,
+                    matchId)
                 .cookie(TestCookieHelper.cookie("accessToken", outsiderToken)))
         .andExpect(status().isForbidden());
 
