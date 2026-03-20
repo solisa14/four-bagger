@@ -3,17 +3,16 @@ package com.github.solisa14.fourbagger.api.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -24,11 +23,16 @@ class UserServiceTest {
 
   @Mock private UserRepository userRepository;
 
-  @Mock private BCryptPasswordEncoder passwordEncoder;
+  private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
   @Mock private RefreshTokenService refreshTokenService;
 
-  @InjectMocks private UserService userService;
+  private UserService userService;
+
+  @BeforeEach
+  void setUp() {
+    userService = new UserService(userRepository, passwordEncoder, refreshTokenService);
+  }
 
   @Test
   void createUser_whenUsernameExists_throwsUserAlreadyExistsException() {
@@ -57,7 +61,6 @@ class UserServiceTest {
         new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
     when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.<User>empty());
     when(userRepository.findUserByEmail(command.email())).thenReturn(Optional.<User>empty());
-    when(passwordEncoder.encode(command.password())).thenReturn("encoded");
     when(userRepository.save(any(User.class)))
         .thenAnswer(
             invocation -> {
@@ -73,7 +76,8 @@ class UserServiceTest {
     User saved = captor.getValue();
     assertThat(saved.getUsername()).isEqualTo(command.username());
     assertThat(saved.getEmail()).isEqualTo(command.email());
-    assertThat(saved.getPassword()).isEqualTo("encoded");
+    assertThat(saved.getPassword()).isNotEqualTo(command.password());
+    assertThat(passwordEncoder.matches(command.password(), saved.getPassword())).isTrue();
     assertThat(saved.getRole()).isEqualTo(Role.USER);
     assertThat(created.getId()).isNotNull();
   }
@@ -88,7 +92,6 @@ class UserServiceTest {
     when(userRepository.findUserByEmail(command.email()))
         .thenReturn(Optional.<User>empty())
         .thenReturn(Optional.<User>empty());
-    when(passwordEncoder.encode(command.password())).thenReturn("encoded");
     when(userRepository.save(any(User.class)))
         .thenThrow(new DataIntegrityViolationException("uk_users_username"));
 
@@ -122,9 +125,14 @@ class UserServiceTest {
   @Test
   void updatePassword_whenCurrentPasswordIsInvalid_throwsInvalidPasswordException() {
     UUID id = UUID.randomUUID();
-    User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
+    User user =
+        TestDataFactory.user(
+            id,
+            "user1",
+            "user1@example.com",
+            passwordEncoder.encode("current"),
+            Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
-    when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
 
     assertThatThrownBy(
             () -> userService.updatePassword(id, new UpdatePasswordCommand("bad", "NewPassword1!")))
@@ -134,16 +142,17 @@ class UserServiceTest {
   @Test
   void updatePassword_whenCurrentPasswordIsValid_updatesPasswordAndInvalidatesSessions() {
     UUID id = UUID.randomUUID();
-    User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
+    String currentPasswordHash = passwordEncoder.encode("current");
+    User user =
+        TestDataFactory.user(id, "user1", "user1@example.com", currentPasswordHash, Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
-    when(passwordEncoder.matches("current", "encoded")).thenReturn(true);
-    when(passwordEncoder.encode("NewPassword1!")).thenReturn("new-encoded");
     when(userRepository.save(any(User.class)))
         .thenAnswer(invocation -> invocation.getArgument(0, User.class));
 
     userService.updatePassword(id, new UpdatePasswordCommand("current", "NewPassword1!"));
 
-    assertThat(user.getPassword()).isEqualTo("new-encoded");
+    assertThat(user.getPassword()).isNotEqualTo(currentPasswordHash);
+    assertThat(passwordEncoder.matches("NewPassword1!", user.getPassword())).isTrue();
     verify(userRepository).save(user);
     verify(refreshTokenService).deleteByUserId(id);
   }

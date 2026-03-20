@@ -44,6 +44,31 @@ class GameRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
+  void findByPlayer_whenUserIsPartnerInDoubles_returnsMatchingGames() {
+    User p1 = savedUser("partner-a");
+    User p1Partner = savedUser("partner-b");
+    User p2 = savedUser("partner-c");
+    User p2Partner = savedUser("partner-d");
+
+    Game doublesGame =
+        Game.builder()
+            .playerOne(p1)
+            .playerOnePartner(p1Partner)
+            .playerTwo(p2)
+            .playerTwoPartner(p2Partner)
+            .gameType(GameType.DOUBLES)
+            .targetScore(21)
+            .status(GameStatus.IN_PROGRESS)
+            .createdBy(p1)
+            .build();
+
+    gameRepository.saveAndFlush(doublesGame);
+
+    assertThat(gameRepository.findByPlayer(p1Partner)).containsExactly(doublesGame);
+    assertThat(gameRepository.findByPlayer(p2Partner)).containsExactly(doublesGame);
+  }
+
+  @Test
   void findByPlayer_whenUserHasNoGames_returnsEmptyList() {
     User p1 = savedUser("x");
     assertThat(gameRepository.findByPlayer(p1)).isEmpty();

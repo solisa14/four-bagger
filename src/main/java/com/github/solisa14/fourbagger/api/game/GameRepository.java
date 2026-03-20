@@ -19,7 +19,15 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
    * @return List of matching games.
    */
   @Query(
-      "SELECT g FROM Game g WHERE g.playerOne = :user OR g.playerTwo = :user ORDER BY g.createdAt DESC")
+      """
+      SELECT g
+      FROM Game g
+      WHERE g.playerOne = :user
+         OR g.playerTwo = :user
+         OR g.playerOnePartner = :user
+         OR g.playerTwoPartner = :user
+      ORDER BY g.createdAt DESC
+      """)
   List<Game> findByPlayer(User user);
 
   /**

@@ -173,6 +173,10 @@ public class GameService {
     Game game = getGame(gameId);
     authorizeMutation(currentUser, game);
 
+    if (game.getTournamentMatchId() != null) {
+      throw new InvalidGameStateException("Tournament games cannot be cancelled");
+    }
+
     if (game.getStatus() == GameStatus.COMPLETED || game.getStatus() == GameStatus.CANCELLED) {
       throw new InvalidGameStateException("Cannot cancel a game with status: " + game.getStatus());
     }

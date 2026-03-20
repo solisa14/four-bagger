@@ -384,6 +384,19 @@ class GameServiceTest {
   }
 
   @Test
+  void cancelGame_whenGameBelongsToTournament_throwsInvalidGameStateException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    Game game = inProgressGame(p1, p2);
+    game.setTournamentMatchId(UUID.randomUUID());
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    assertThatThrownBy(() -> gameService.cancelGame(p1, game.getId()))
+        .isInstanceOf(InvalidGameStateException.class)
+        .hasMessage("Tournament games cannot be cancelled");
+  }
+
+  @Test
   void cancelGame_whenUserIsNotParticipantOrCreator_throwsGameAccessDeniedException() {
     User p1 = playerOne();
     User p2 = playerTwo();

@@ -7,8 +7,8 @@ import java.lang.reflect.Field;
 /**
  * Validator implementation for {@link AtLeastOneFieldRequired}.
  *
- * <p>Ensures that partial update requests contain at least one non-blank field. This validator uses
- * reflection to check all String fields in the target object.
+ * <p>Ensures that partial update requests contain at least one meaningful field. String fields must
+ * be non-blank, while non-string fields only need to be non-null.
  */
 public class AtLeastOneFieldRequiredValidator
     implements ConstraintValidator<AtLeastOneFieldRequired, Object> {
@@ -16,7 +16,7 @@ public class AtLeastOneFieldRequiredValidator
   /**
    * Implements the validation logic.
    *
-   * <p>Validates that the object contains at least one non-blank string field.
+   * <p>Validates that the object contains at least one populated field.
    *
    * @param obj the object to validate
    * @param context context in which the constraint is evaluated
@@ -37,11 +37,16 @@ public class AtLeastOneFieldRequiredValidator
       } catch (IllegalArgumentException | IllegalAccessException e) {
         continue; // skip this field, check the others
       }
-      if (fieldValue instanceof String) {
-        if (!((String) fieldValue).isBlank()) {
+      if (fieldValue == null) {
+        continue;
+      }
+      if (fieldValue instanceof String stringValue) {
+        if (!stringValue.isBlank()) {
           return true;
         }
+        continue;
       }
+      return true;
     }
     return false;
   }
