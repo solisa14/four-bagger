@@ -1,59 +1,94 @@
 # Four Bagger API
 
-`four-bagger-api` is a Spring Boot backend for user registration, login, JWT-based authentication, profile management,
-and refresh-token session handling.
+Four Bagger API is a Spring Boot backend for organizing cornhole games and single-elimination tournaments. It supports user authentication, standalone singles and doubles games, tournament registration via join codes, bracket generation, round-level rule configuration, and automatic match progression as games are completed.
+
+I built this project because I wanted something my family could actually use during cornhole tournaments at family functions, and I wanted a backend project that pushed me beyond basic CRUD. The goal was to practice backend engineering in a project with real domain rules, real state transitions, and a deployment path I can keep building toward.
+
+## Highlights
+
+- JWT-based authentication with refresh-token rotation and HttpOnly cookies
+- Standalone singles and doubles game support
+- Tournament lifecycle support from registration to bracket generation to live match progression
+- Configurable round rules with `bestOf` series support and multiple scoring modes
+- Event-driven tournament advancement when a game completes
+- Flyway-managed schema changes with Hibernate validation and PostgreSQL persistence
 
 ## Tech Stack
 
 - Java 25
-- Spring Boot 4
+- Spring Boot 4.0.1
 - Spring Web MVC
 - Spring Security
 - Spring Data JPA
 - Flyway
 - PostgreSQL
 - Testcontainers
+- JUnit 5 and Mockito
 
-## Local Setup
+## Architecture
 
-### Java
+The project uses a layered, package-by-feature structure:
 
-This project targets Java 25. Maven must run with a Java 25 JDK or the build will fail before tests start.
+- `auth` handles registration, login, logout, refresh-token rotation, and session persistence
+- `user` handles profile reads and account updates
+- `game` handles standalone game creation, frame recording, scoring, and game state transitions
+- `tournament` handles tournament lifecycle, bracket generation, round configuration, and match progression
+- `security` contains JWT parsing, authentication filters, and Spring Security configuration
+- `common` contains shared exception handling and validation utilities
 
-Check what Maven is using:
+Some of the main engineering decisions in the codebase:
 
-```bash
-java -version
-mvn -version
-```
+- Scoring rules use a strategy-style design through `GameScoringPolicy`, allowing different scoring modes to be selected from `Game.scoringMode`
+- Controllers map request DTOs into command records before business logic runs, which keeps service boundaries explicit and validation closer to the domain
+- Tournament progression is event-driven: completed games publish an event that the tournament match service listens to for advancing winners and managing best-of series
+- Database changes are managed through Flyway migrations, while Hibernate runs in `validate` mode to prevent the schema from drifting away from the entity model
 
-If Maven is not using Java 25, point it to a Java 25 JDK before building:
+## Testing Approach
+
+The project uses a layered test strategy instead of relying on only one kind of test:
+
+- Unit tests for service-level business logic
+- `@WebMvcTest` tests for controller behavior, validation, and HTTP responses
+- `@DataJpaTest` tests for repository behavior against PostgreSQL via Testcontainers
+- `@SpringBootTest` integration tests for full application flows
+
+This lets the project validate domain rules quickly at the unit layer while still exercising the real persistence and API flow where it matters.
+
+## Run Locally
+
+### Prerequisites
+
+- Java 25
+- PostgreSQL running locally for the `dev` profile
+- Docker running for the test suite because repository and integration tests use Testcontainers
+
+### Environment Variables
+
+For local development, the app expects:
+
+- `JWT_SECRET`
+- `DEV_DB_URL`
+- `DEV_DB_USERNAME`
+- `DEV_DB_PASSWORD`
+- `SPRING_PROFILES_ACTIVE=dev`
+
+This repository includes a `.env.dev` file with local development defaults and a `.env.prod` file showing the variables expected for a production deployment. Review the values and replace them with your own where appropriate.
+
+### Start the App
+
+Set Java 25 for Maven:
 
 ```bash
 export JAVA_HOME=$(/usr/libexec/java_home -v 25)
-mvn -version
 ```
 
-Why this matters:
+Load local environment variables:
 
-- `pom.xml` targets Java 25.
-- Java 25 produces class file version `69`.
-- Running Maven with Java 24 or older can fail with a `class file version` mismatch even if the code itself is correct.
-
-### Docker
-
-The test profile uses Testcontainers PostgreSQL:
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:tc:postgresql:14-alpine:///fourbagger
+```bash
+set -a
+source .env.dev
+set +a
 ```
-
-That means integration and JPA tests need a working Docker runtime. Before running the full test suite, start Docker
-Desktop, Colima, OrbStack, or another compatible Docker daemon.
-
-## Common Commands
 
 Compile the project:
 
@@ -61,41 +96,92 @@ Compile the project:
 mvn clean compile
 ```
 
-Run the full test suite:
+Run the API with the `dev` profile:
 
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 25)
-mvn clean test
-```
-
-Run the app locally:
-
-```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 25)
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-## Configuration Notes
+Run the test suite:
 
-- Main configuration lives in `src/main/resources/application.yml`.
-- `application-dev.yml` is intended for local PostgreSQL development.
-- `application-prod.yml` is intended for deployed environments.
-- No default runtime profile is forced in `application.yml`; set `SPRING_PROFILES_ACTIVE` (or
-  `-Dspring-boot.run.profiles=...`) explicitly.
-- Secure auth cookies default to `true` in base config and are only relaxed in local/test profiles.
-- H2 console access is disabled by default and only enabled when `spring.h2.console.enabled=true` (enabled in `dev`
-  profile).
-- Flyway owns schema changes. Hibernate is configured with `ddl-auto: validate`, so entity changes should be accompanied
-  by migrations.
+```bash
+mvn clean test
+```
 
-## Testing Strategy
+## API Snapshot
 
-The project uses a layered test approach:
+All endpoints are served under `/api/v1`.
 
-- Unit tests for service logic
-- `@WebMvcTest` for controller validation and HTTP behavior
-- `@DataJpaTest` for repository behavior
-- `@SpringBootTest` + `MockMvc` for end-to-end flows
+### Representative Endpoints
 
-If a test uses the `test` profile or extends the shared integration/JPA test base classes, expect Docker-backed
-PostgreSQL to be involved.
+| Area | Endpoints |
+| --- | --- |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh-token`, `POST /auth/logout` |
+| User | `GET /user/me`, `PATCH /user/me`, `PUT /user/me/password` |
+| Games | `POST /games`, `POST /games/{gameId}/start`, `POST /games/{gameId}/frames`, `GET /games/{gameId}`, `GET /games/me`, `POST /games/{gameId}/cancel` |
+| Tournaments | `POST /tournaments`, `GET /tournaments/{id}`, `POST /tournaments/join`, `POST /tournaments/{id}/bracket`, `PATCH /tournaments/{id}/rounds/{roundNumber}`, `POST /tournaments/{id}/start`, `DELETE /tournaments/{id}` |
+| Tournament Matches | `POST /tournaments/{tournamentId}/matches/{matchId}/start`, `GET /tournaments/{tournamentId}/matches/{matchId}` |
+
+### Register a User
+
+```bash
+curl -i -c cookies.txt \
+  -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "player_one",
+    "email": "player1@example.com",
+    "password": "StrongPass1!",
+    "firstName": "Player",
+    "lastName": "One"
+  }'
+```
+
+The auth endpoints issue `accessToken` and `refreshToken` as HttpOnly cookies, so using a cookie jar makes it easy to call authenticated routes from the command line.
+
+### Create a Tournament
+
+```bash
+curl -i -b cookies.txt \
+  -X POST http://localhost:8080/api/v1/tournaments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Family Cornhole Classic",
+    "gameType": "DOUBLES"
+  }'
+```
+
+### Generate a Bracket
+
+```bash
+curl -i -b cookies.txt \
+  -X POST http://localhost:8080/api/v1/tournaments/{tournamentId}/bracket
+```
+
+### Start or Inspect a Tournament Match
+
+Start the first game for a match:
+
+```bash
+curl -i -b cookies.txt \
+  -X POST http://localhost:8080/api/v1/tournaments/{tournamentId}/matches/{matchId}/start
+```
+
+Inspect a match after progression begins:
+
+```bash
+curl -s -b cookies.txt \
+  http://localhost:8080/api/v1/tournaments/{tournamentId}/matches/{matchId}
+```
+
+## Project Status
+
+The backend is implemented and locally runnable today. Deployment is the next step, and a companion frontend is planned so the project can be demonstrated through a complete user flow instead of API calls alone.
+
+## Next Steps
+
+Current follow-up work is focused on:
+
+- deploying the backend
+- adding a lightweight frontend for demos and real usage
+- continuing to refine the tournament experience as new use cases come up
