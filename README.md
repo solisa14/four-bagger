@@ -1,6 +1,6 @@
-# Four Bagger API
+# Four Bagger
 
-Four Bagger API is a Spring Boot backend for organizing cornhole games and single-elimination tournaments. It supports
+Four Bagger is a Spring Boot backend for organizing cornhole games and single-elimination tournaments. It supports
 user authentication, standalone singles and doubles games, tournament registration via join codes, bracket generation,
 round-level rule configuration, and automatic match progression as games are completed.
 
