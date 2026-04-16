@@ -1,6 +1,8 @@
 package com.github.solisa14.fourbagger.api.common.exception;
 
 import java.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
   /**
    * Converts application business exceptions into standardized error responses.
@@ -115,6 +119,21 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
       DataIntegrityViolationException ex) {
     return buildResponse(HttpStatus.CONFLICT, "Request conflicts with existing data");
+  }
+
+  /**
+   * Handles any uncaught exception not mapped above.
+   *
+   * <p>Logs the full exception server-side and returns HTTP 500 with a generic message so clients do
+   * not receive Spring Boot's default {@code /error} payload or internal details.
+   *
+   * @param ex the unexpected exception
+   * @return response entity with HTTP 500 and a generic error message
+   */
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception ex) {
+    log.error("Unhandled exception", ex);
+    return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
   }
 
   private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message) {
