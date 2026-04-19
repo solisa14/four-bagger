@@ -66,7 +66,7 @@ public class RefreshTokenService {
             .map(existingToken -> updateRefreshToken(existingToken, tokenHash, expiryDate))
             .orElseGet(() -> buildRefreshToken(user, tokenHash, expiryDate));
 
-    refreshTokenRepository.saveAndFlush(refreshToken);
+    refreshTokenRepository.save(refreshToken);
     return new RefreshTokenSession(user, rawToken);
   }
 
@@ -81,7 +81,7 @@ public class RefreshTokenService {
   public RefreshTokenSession rotateRefreshToken(String token) {
     RefreshToken oldToken =
         refreshTokenRepository
-            .findByTokenHashForUpdate(hashToken(token))
+            .findByTokenHash(hashToken(token))
             .orElseThrow(
                 () -> new TokenRefreshException("Refresh token is not in database"));
 
@@ -89,7 +89,7 @@ public class RefreshTokenService {
 
     String newRawToken = generateRawToken();
     updateRefreshToken(oldToken, hashToken(newRawToken), calculateExpiryDate());
-    refreshTokenRepository.saveAndFlush(oldToken);
+    refreshTokenRepository.save(oldToken);
     return new RefreshTokenSession(oldToken.getUser(), newRawToken);
   }
 

@@ -42,7 +42,7 @@ class RefreshTokenServiceTest {
     User user = TestDataFactory.user(userId, "user1", "user1@example.com", "encoded", Role.USER);
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
     when(refreshTokenRepository.findByUserId(userId)).thenReturn(Optional.empty());
-    when(refreshTokenRepository.saveAndFlush(any(RefreshToken.class)))
+    when(refreshTokenRepository.save(any(RefreshToken.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     Instant now = Instant.now();
@@ -52,7 +52,7 @@ class RefreshTokenServiceTest {
     assertThat(session.rawToken()).isNotBlank();
 
     ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
-    verify(refreshTokenRepository).saveAndFlush(captor.capture());
+    verify(refreshTokenRepository).save(captor.capture());
     RefreshToken savedToken = captor.getValue();
     assertThat(savedToken.getUser()).isEqualTo(user);
     assertThat(savedToken.getTokenHash())
@@ -72,7 +72,7 @@ class RefreshTokenServiceTest {
             .build();
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
     when(refreshTokenRepository.findByUserId(userId)).thenReturn(Optional.of(existing));
-    when(refreshTokenRepository.saveAndFlush(any(RefreshToken.class)))
+    when(refreshTokenRepository.save(any(RefreshToken.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     RefreshTokenSession session = refreshTokenService.issueRefreshToken(userId);
@@ -95,9 +95,9 @@ class RefreshTokenServiceTest {
             .tokenHash(refreshTokenService.hashToken(oldToken))
             .expiryDate(Instant.now().plusSeconds(60))
             .build();
-    when(refreshTokenRepository.findByTokenHashForUpdate(refreshTokenService.hashToken(oldToken)))
+    when(refreshTokenRepository.findByTokenHash(refreshTokenService.hashToken(oldToken)))
         .thenReturn(Optional.of(existing));
-    when(refreshTokenRepository.saveAndFlush(any(RefreshToken.class)))
+    when(refreshTokenRepository.save(any(RefreshToken.class)))
         .thenAnswer(invocation -> invocation.getArgument(0));
 
     RefreshTokenSession rotated = refreshTokenService.rotateRefreshToken(oldToken);
@@ -106,14 +106,13 @@ class RefreshTokenServiceTest {
     assertThat(rotated.rawToken()).isNotBlank();
     assertThat(existing.getTokenHash())
         .isEqualTo(refreshTokenService.hashToken(rotated.rawToken()));
-    verify(refreshTokenRepository).saveAndFlush(existing);
+    verify(refreshTokenRepository).save(existing);
   }
 
   @Test
   void rotateRefreshToken_whenTokenIsUnknown_throwsWithoutEchoingRawToken() {
     String unknownToken = "client-supplied-secret-token-value";
-    when(refreshTokenRepository.findByTokenHashForUpdate(
-            refreshTokenService.hashToken(unknownToken)))
+    when(refreshTokenRepository.findByTokenHash(refreshTokenService.hashToken(unknownToken)))
         .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> refreshTokenService.rotateRefreshToken(unknownToken))
@@ -134,7 +133,7 @@ class RefreshTokenServiceTest {
             .tokenHash(refreshTokenService.hashToken(oldToken))
             .expiryDate(Instant.now().minusSeconds(10))
             .build();
-    when(refreshTokenRepository.findByTokenHashForUpdate(refreshTokenService.hashToken(oldToken)))
+    when(refreshTokenRepository.findByTokenHash(refreshTokenService.hashToken(oldToken)))
         .thenReturn(Optional.of(existing));
 
     assertThatThrownBy(() -> refreshTokenService.rotateRefreshToken(oldToken))
