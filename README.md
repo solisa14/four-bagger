@@ -1,3 +1,4 @@
+![CI](https://github.com/solisa14/four-bagger-api/actions/workflows/ci.yml/badge.svg)
 # Four Bagger
 
 Four Bagger is a Spring Boot backend for organizing cornhole games and single-elimination tournaments. It supports
