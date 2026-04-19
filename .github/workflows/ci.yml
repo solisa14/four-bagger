@@ -21,4 +21,4 @@ jobs:
           cache: maven
 
       - name: Verify + test
-        run: mvn -B -ntp clean test
+        run: mvn -B -ntp clean verify
