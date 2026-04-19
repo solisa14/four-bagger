@@ -99,6 +99,9 @@ public class UserService {
    */
   @Transactional
   public User updateProfile(UUID id, UpdateProfileCommand command) {
+    if (command.firstName() == null && command.lastName() == null) {
+      throw new InvalidProfileUpdateException();
+    }
     User user = getUser(id);
     if (command.firstName() != null) {
       user.setFirstName(command.firstName());

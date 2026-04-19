@@ -1,5 +1,7 @@
 package com.github.solisa14.fourbagger.api.user;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -16,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -34,14 +38,28 @@ class UserControllerWebMvcTest {
     User principal =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
 
-    mockMvc
-        .perform(
-            patch("/api/v1/user/me")
-                .with(user(principal))
-                .contentType("application/json")
-                .content("{}"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message").value("At least one field must be provided"));
+    UsernamePasswordAuthenticationToken authentication =
+        new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+    try {
+      doAnswer(
+              invocation -> {
+                throw new InvalidProfileUpdateException();
+              })
+          .when(userService)
+          .updateProfile(any(), any());
+
+      mockMvc
+          .perform(
+              patch("/api/v1/user/me")
+                  .with(user(principal))
+                  .contentType("application/json")
+                  .content("{}"))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.message").value("At least one field must be provided"));
+    } finally {
+      SecurityContextHolder.clearContext();
+    }
   }
 
   @Test

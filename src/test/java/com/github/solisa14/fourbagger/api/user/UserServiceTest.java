@@ -123,6 +123,16 @@ class UserServiceTest {
   }
 
   @Test
+  void updateProfile_whenBothFieldsNull_throwsInvalidProfileUpdateException() {
+    UUID id = UUID.randomUUID();
+
+    assertThatThrownBy(() -> userService.updateProfile(id, new UpdateProfileCommand(null, null)))
+        .isInstanceOf(InvalidProfileUpdateException.class);
+
+    verify(userRepository, never()).findById(any());
+  }
+
+  @Test
   void updatePassword_whenCurrentPasswordIsInvalid_throwsInvalidPasswordException() {
     UUID id = UUID.randomUUID();
     User user =
