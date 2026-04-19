@@ -92,7 +92,7 @@ public class RefreshTokenService {
         refreshTokenRepository
             .findByTokenHashForUpdate(hashToken(token))
             .orElseThrow(
-                () -> new TokenRefreshException(token, "Refresh token is not in database!"));
+                () -> new TokenRefreshException("Refresh token is not in database"));
 
     verifyExpiration(oldToken);
 

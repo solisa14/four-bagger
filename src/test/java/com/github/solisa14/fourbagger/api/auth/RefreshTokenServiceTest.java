@@ -110,6 +110,20 @@ class RefreshTokenServiceTest {
   }
 
   @Test
+  void rotateRefreshToken_whenTokenIsUnknown_throwsWithoutEchoingRawToken() {
+    String unknownToken = "client-supplied-secret-token-value";
+    when(refreshTokenRepository.findByTokenHashForUpdate(
+            refreshTokenService.hashToken(unknownToken)))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> refreshTokenService.rotateRefreshToken(unknownToken))
+        .isInstanceOf(TokenRefreshException.class)
+        .extracting(Throwable::getMessage)
+        .asString()
+        .doesNotContain(unknownToken);
+  }
+
+  @Test
   void rotateRefreshToken_whenTokenIsExpired_throwsTokenRefreshException() {
     User user =
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "e", Role.USER);
