@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.auth;
 
-import com.github.solisa14.fourbagger.api.user.User;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,14 +25,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
    * @return an Optional containing the token if found
    */
   Optional<RefreshToken> findByUserId(UUID userId);
-
-  /**
-   * Deletes a refresh token associated with a specific user.
-   *
-   * @param user the user whose token should be deleted
-   */
-  @Modifying
-  void deleteByUser(User user);
 
   /**
    * Deletes a refresh token associated with a specific user ID.

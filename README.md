@@ -55,6 +55,8 @@ Some of the main engineering decisions in the codebase:
 
 ## Testing Approach
 
+> **Testing Note:** Always run tests locally using `mvn clean test` (or `mvn clean verify`) rather than just `mvn test`. Running without `clean` can cause phantom ApplicationContext-load failures in WebMvc tests due to stale state in the `target/test-classes` directory.
+
 The project uses a layered test strategy instead of relying on only one kind of test:
 
 - Unit tests for service-level business logic
@@ -75,7 +77,7 @@ Run the application locally (defaults to port `8080` unless overridden in config
 against `http://localhost:8080`.
 
 Running the full integration test suite requires **Docker** (Testcontainers starts PostgreSQL for tests). See
-`./mvnw test` in CI or locally with Docker running.
+`./mvnw clean test` in CI or locally with Docker running.
 
 ## API Snapshot
 

@@ -38,16 +38,6 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void deleteByUser_whenUserHasTokens_removesUserTokens() {
-    User user = userRepository.saveAndFlush(createUser("user3", "user3@example.com"));
-    refreshTokenRepository.saveAndFlush(createToken(user, "hash-3", Instant.now().plusSeconds(60)));
-
-    refreshTokenRepository.deleteByUser(user);
-
-    assertThat(refreshTokenRepository.findByTokenHash("hash-3")).isEmpty();
-  }
-
-  @Test
   void deleteByExpiryDateLessThan_whenTokensAreExpired_removesExpiredTokens() {
     User user = userRepository.saveAndFlush(createUser("user4", "user4@example.com"));
     refreshTokenRepository.saveAndFlush(
