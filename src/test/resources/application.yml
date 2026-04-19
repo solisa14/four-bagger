@@ -24,6 +24,7 @@ app:
     allowed-origins: http://localhost:3000,http://localhost:8080
   security:
     jwt:
+      # test-only, 256-bit placeholder — DO NOT use in prod
       secret-key: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=
       expiration-ms: 3600000
       refresh-token:
