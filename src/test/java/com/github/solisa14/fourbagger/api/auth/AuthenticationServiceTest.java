@@ -35,21 +35,16 @@ class AuthenticationServiceTest {
 
   @Mock private RefreshTokenService refreshTokenService;
 
-  @Mock private AuthMapper authMapper;
-
   @InjectMocks private AuthenticationService authenticationService;
 
   @Test
   void registerUser_whenRequestIsValid_returnsUserDetails() {
     UUID id = UUID.randomUUID();
     User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
-    RegisterUserCommand command =
-        new RegisterUserCommand("user1", "user1@example.com", "Password1!", "Test", "User");
-    CreateUserCommand createCommand =
+    CreateUserCommand command =
         new CreateUserCommand("user1", "user1@example.com", "Password1!", "Test", "User");
 
-    when(authMapper.toCreateUserCommand(command)).thenReturn(createCommand);
-    when(userService.createUser(createCommand)).thenReturn(user);
+    when(userService.createUser(command)).thenReturn(user);
 
     User response = authenticationService.registerUser(command);
 

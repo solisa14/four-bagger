@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
+import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
 import com.github.solisa14.fourbagger.api.user.EmailAlreadyExistsException;
 import com.github.solisa14.fourbagger.api.user.UserAlreadyExistsException;
 
@@ -68,7 +69,7 @@ class AuthenticationControllerWebMvcTest {
   void register_whenDataIntegrityViolationBubblesUp_returnsConflict() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
-    when(authenticationService.registerUser(any(RegisterUserCommand.class)))
+    when(authenticationService.registerUser(any(CreateUserCommand.class)))
         .thenThrow(new DataIntegrityViolationException("uk_users_username"));
 
     mockMvc
@@ -84,7 +85,7 @@ class AuthenticationControllerWebMvcTest {
   void register_whenUsernameAlreadyExists_returnsConflict() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
-    when(authenticationService.registerUser(any(RegisterUserCommand.class)))
+    when(authenticationService.registerUser(any(CreateUserCommand.class)))
         .thenThrow(new UserAlreadyExistsException(request.username()));
 
     mockMvc
@@ -103,7 +104,7 @@ class AuthenticationControllerWebMvcTest {
       throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
-    when(authenticationService.registerUser(any(RegisterUserCommand.class)))
+    when(authenticationService.registerUser(any(CreateUserCommand.class)))
         .thenThrow(new IllegalStateException("generic placeholder message instead of detailed message to client to encapsulate internal details, more secure"));
 
     mockMvc
@@ -120,7 +121,7 @@ class AuthenticationControllerWebMvcTest {
   void register_whenEmailAlreadyExists_returnsConflict() throws Exception {
     RegisterUserRequest request =
         new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
-    when(authenticationService.registerUser(any(RegisterUserCommand.class)))
+    when(authenticationService.registerUser(any(CreateUserCommand.class)))
         .thenThrow(new EmailAlreadyExistsException(request.email()));
 
     mockMvc

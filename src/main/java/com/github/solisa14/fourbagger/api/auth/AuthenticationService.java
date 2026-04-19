@@ -1,6 +1,7 @@
 package com.github.solisa14.fourbagger.api.auth;
 
 import com.github.solisa14.fourbagger.api.security.JwtService;
+import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import com.github.solisa14.fourbagger.api.user.UserService;
@@ -21,7 +22,6 @@ public class AuthenticationService {
   private final AuthenticationManager authenticationManager;
   private final JwtService jwtService;
   private final RefreshTokenService refreshTokenService;
-  private final AuthMapper authMapper;
 
   /**
    * Constructs an AuthenticationService.
@@ -31,21 +31,18 @@ public class AuthenticationService {
    * @param authenticationManager the authentication manager
    * @param jwtService the JWT service
    * @param refreshTokenService the refresh token service
-   * @param authMapper the authentication mapper
    */
   public AuthenticationService(
       UserService userService,
       UserRepository userRepository,
       AuthenticationManager authenticationManager,
       JwtService jwtService,
-      RefreshTokenService refreshTokenService,
-      AuthMapper authMapper) {
+      RefreshTokenService refreshTokenService) {
     this.userService = userService;
     this.userRepository = userRepository;
     this.authenticationManager = authenticationManager;
     this.jwtService = jwtService;
     this.refreshTokenService = refreshTokenService;
-    this.authMapper = authMapper;
   }
 
   /**
@@ -54,8 +51,8 @@ public class AuthenticationService {
    * @param command registration details including credentials and required profile fields
    * @return the created user entity
    */
-  public User registerUser(RegisterUserCommand command) {
-    return userService.createUser(authMapper.toCreateUserCommand(command));
+  public User registerUser(CreateUserCommand command) {
+    return userService.createUser(command);
   }
 
   /**

@@ -12,16 +12,16 @@ import org.springframework.stereotype.Component;
 public class AuthMapper {
 
   /**
-   * Converts a registration request to a registration command.
+   * Converts a registration request to a user creation command.
    *
    * @param request the registration request
-   * @return the registration command, or null if the request is null
+   * @return the user creation command, or null if the request is null
    */
-  public RegisterUserCommand toCommand(RegisterUserRequest request) {
+  public CreateUserCommand toCommand(RegisterUserRequest request) {
     if (request == null) {
       return null;
     }
-    return new RegisterUserCommand(
+    return new CreateUserCommand(
         request.username(),
         request.email(),
         request.password(),
@@ -40,24 +40,6 @@ public class AuthMapper {
       return null;
     }
     return new LoginCommand(request.username(), request.password());
-  }
-
-  /**
-   * Converts a registration command to a user creation command.
-   *
-   * @param command the registration command
-   * @return the user creation command, or null if the command is null
-   */
-  public CreateUserCommand toCreateUserCommand(RegisterUserCommand command) {
-    if (command == null) {
-      return null;
-    }
-    return new CreateUserCommand(
-        command.username(),
-        command.email(),
-        command.password(),
-        command.firstName(),
-        command.lastName());
   }
 
   /**
