@@ -141,7 +141,7 @@ public class RefreshTokenService {
   private User loadUser(UUID userId) {
     return userRepository
         .findById(userId)
-        .orElseThrow(() -> new TokenRefreshException("User not found with id: " + userId));
+        .orElseThrow(() -> new TokenRefreshException("Unable to refresh token"));
   }
 
   private RefreshToken buildRefreshToken(User user, String tokenHash, Instant expiryDate) {
