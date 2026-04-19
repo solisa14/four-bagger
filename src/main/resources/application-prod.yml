@@ -6,9 +6,6 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
-  h2:
-    console:
-      enabled: false
 
 app:
   security:

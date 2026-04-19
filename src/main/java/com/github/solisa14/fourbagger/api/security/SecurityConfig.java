@@ -12,7 +12,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -35,7 +34,6 @@ public class SecurityConfig {
 
   private final UserRepository userRepository;
   private final List<String> allowedOrigins;
-  private final boolean h2ConsoleEnabled;
   private final ApiAuthenticationEntryPoint authenticationEntryPoint;
   private final ApiAccessDeniedHandler accessDeniedHandler;
 
@@ -44,19 +42,16 @@ public class SecurityConfig {
    *
    * @param userRepository the user repository
    * @param allowedOrigins the list of allowed CORS origins
-   * @param h2ConsoleEnabled whether the H2 console should be enabled
    * @param authenticationEntryPoint the entry point for authentication errors
    * @param accessDeniedHandler the handler for access denied errors
    */
   public SecurityConfig(
       UserRepository userRepository,
       @Value("${app.cors.allowed-origins}") List<String> allowedOrigins,
-      @Value("${spring.h2.console.enabled:false}") boolean h2ConsoleEnabled,
       ApiAuthenticationEntryPoint authenticationEntryPoint,
       ApiAccessDeniedHandler accessDeniedHandler) {
     this.userRepository = userRepository;
     this.allowedOrigins = allowedOrigins;
-    this.h2ConsoleEnabled = h2ConsoleEnabled;
     this.authenticationEntryPoint = authenticationEntryPoint;
     this.accessDeniedHandler = accessDeniedHandler;
   }
@@ -80,9 +75,6 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             auth -> {
               auth.requestMatchers("/api/v1/auth/**").permitAll();
-              if (h2ConsoleEnabled) {
-                auth.requestMatchers("/h2-console/**").permitAll();
-              }
               auth.anyRequest().authenticated();
             })
         .sessionManagement(
@@ -95,15 +87,12 @@ public class SecurityConfig {
         .authenticationProvider(authenticationProvider())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .headers(
-            headers -> {
-              if (h2ConsoleEnabled) {
-                headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin);
-              }
-              headers.referrerPolicy(
-                  referrer ->
-                      referrer.policy(
-                          ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
-            });
+            headers ->
+                headers.referrerPolicy(
+                    referrer ->
+                        referrer.policy(
+                            ReferrerPolicyHeaderWriter.ReferrerPolicy
+                                .STRICT_ORIGIN_WHEN_CROSS_ORIGIN)));
 
     return http.build();
   }
