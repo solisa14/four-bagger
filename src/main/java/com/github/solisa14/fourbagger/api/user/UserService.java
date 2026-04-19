@@ -2,7 +2,6 @@ package com.github.solisa14.fourbagger.api.user;
 
 import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,17 +64,7 @@ public class UserService {
             .role(Role.USER)
             .build();
 
-    try {
-      return userRepository.save(createdUser);
-    } catch (DataIntegrityViolationException ex) {
-      if (userRepository.findUserByUsername(command.username()).isPresent()) {
-        throw new UserAlreadyExistsException(command.username());
-      }
-      if (userRepository.findUserByEmail(command.email()).isPresent()) {
-        throw new EmailAlreadyExistsException(command.email());
-      }
-      throw ex;
-    }
+    return userRepository.save(createdUser);
   }
 
   /**

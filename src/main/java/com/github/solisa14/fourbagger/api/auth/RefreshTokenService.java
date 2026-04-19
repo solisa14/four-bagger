@@ -11,7 +11,6 @@ import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,15 +66,7 @@ public class RefreshTokenService {
             .map(existingToken -> updateRefreshToken(existingToken, tokenHash, expiryDate))
             .orElseGet(() -> buildRefreshToken(user, tokenHash, expiryDate));
 
-    try {
-      refreshTokenRepository.saveAndFlush(refreshToken);
-    } catch (DataIntegrityViolationException ex) {
-      RefreshToken existingToken =
-          refreshTokenRepository.findByUserId(userId).orElseThrow(() -> ex);
-      updateRefreshToken(existingToken, tokenHash, expiryDate);
-      refreshTokenRepository.saveAndFlush(existingToken);
-    }
-
+    refreshTokenRepository.saveAndFlush(refreshToken);
     return new RefreshTokenSession(user, rawToken);
   }
 

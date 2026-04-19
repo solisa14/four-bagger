@@ -15,7 +15,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -80,23 +79,6 @@ class UserServiceTest {
     assertThat(passwordEncoder.matches(command.password(), saved.getPassword())).isTrue();
     assertThat(saved.getRole()).isEqualTo(Role.USER);
     assertThat(created.getId()).isNotNull();
-  }
-
-  @Test
-  void createUser_whenInsertRaceTriggersConstraint_throwsUserAlreadyExistsException() {
-    CreateUserCommand command =
-        new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
-    when(userRepository.findUserByUsername(command.username()))
-        .thenReturn(Optional.<User>empty())
-        .thenReturn(Optional.of(new User()));
-    when(userRepository.findUserByEmail(command.email()))
-        .thenReturn(Optional.<User>empty())
-        .thenReturn(Optional.<User>empty());
-    when(userRepository.save(any(User.class)))
-        .thenThrow(new DataIntegrityViolationException("uk_users_username"));
-
-    assertThatThrownBy(() -> userService.createUser(command))
-        .isInstanceOf(UserAlreadyExistsException.class);
   }
 
   @Test
