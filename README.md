@@ -7,7 +7,9 @@ round-level rule configuration, and automatic match progression as games are com
 
 I built this project because I wanted something my family could actually use during cornhole tournaments at family
 functions, and I wanted a backend project that pushed me beyond basic CRUD. The goal was to practice backend engineering
-in a project with real domain rules, real state transitions, and a deployment path I can keep building toward.
+in a project with real domain rules, real state transitions, and a real deployment.
+
+The API is deployed and live at **https://four-bagger-api.azurewebsites.net**.
 
 ## Highlights
 
@@ -17,6 +19,7 @@ in a project with real domain rules, real state transitions, and a deployment pa
 - Configurable round rules with `bestOf` series support and multiple scoring modes
 - Event-driven tournament advancement when a game completes
 - Flyway-managed schema changes with Hibernate validation and PostgreSQL persistence
+- Containerized deployment on Azure App Service with a serverless Neon PostgreSQL backend
 
 ## Tech Stack
 
@@ -26,9 +29,11 @@ in a project with real domain rules, real state transitions, and a deployment pa
 - Spring Security
 - Spring Data JPA
 - Flyway
-- PostgreSQL
+- PostgreSQL (Neon in production)
 - Testcontainers
 - JUnit 5 and Mockito
+- Docker (multi-stage `linux/amd64` build)
+- Azure App Service for Containers + Azure Container Registry
 
 ## Architecture
 
@@ -70,14 +75,44 @@ the [API examples](#api-snapshot) (for example `AuthFlowIntegrationTest`, `GameF
 
 ## Local Development
 
-This backend is currently intended for local development only. It was built and tested with Java 25, PostgreSQL, and
-Testcontainers; deployment packaging is not finalized yet.
+The backend can be run locally against a PostgreSQL database of your choice, or against the deployed instance.
 
 Run the application locally (defaults to port `8080` unless overridden in configuration), then use the examples below
-against `http://localhost:8080`.
+against `http://localhost:8080`. Swap in `https://four-bagger-api.azurewebsites.net` to run them against the deployed
+instance instead.
 
 Running the full integration test suite requires **Docker** (Testcontainers starts PostgreSQL for tests). See
 `./mvnw clean test` in CI or locally with Docker running.
+
+## Deployment
+
+The production instance runs as a Docker container on Azure App Service for Containers (Linux), backed by a Neon
+serverless PostgreSQL database.
+
+Deployment topology:
+
+- **Image build**: multi-stage `Dockerfile` — Maven + Temurin 25 JDK build stage, slim `eclipse-temurin:25-jre` runtime
+  stage, non-root user, targeted at `linux/amd64`
+- **Registry**: Azure Container Registry (`fourbaggeracr.azurecr.io/four-bagger-api:latest`)
+- **Runtime**: Azure App Service (Linux Containers) in the `four-bagger-rg` resource group
+- **Database**: Neon PostgreSQL (`us-east-1` region, free tier), accessed via standard JDBC connection string
+- **Migrations**: Flyway runs from `main()` via a `SpringApplicationBuilder` initializer before any Spring beans are
+  created, so Hibernate schema validation always sees the migrated schema
+- **Secrets**: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, and `ALLOWED_ORIGINS` are supplied as App Service
+  application settings (environment variables) and consumed by `application-prod.yml`
+- **Profile**: the container sets `SPRING_PROFILES_ACTIVE=prod` so `application-prod.yml` takes over
+
+The manual deploy cycle (until CI/CD is wired up) is:
+
+```bash
+docker build --no-cache --platform linux/amd64 \
+  -t fourbaggeracr.azurecr.io/four-bagger-api:latest .
+
+az acr login --name fourbaggeracr
+docker push fourbaggeracr.azurecr.io/four-bagger-api:latest
+
+az webapp restart --resource-group four-bagger-rg --name four-bagger-api
+```
 
 ## API Snapshot
 
@@ -238,14 +273,14 @@ enough accounts before `POST .../bracket`.
 
 ## Project Status
 
-The backend implements the features described above and is developed for local use. Deployment is the next step, and a
-companion frontend is planned so the project can be demonstrated through a complete user flow instead of API calls
-alone.
+The backend implements the features described above and is deployed publicly on Azure App Service against a Neon
+PostgreSQL database. A companion frontend is planned so the project can be demonstrated through a complete user flow
+instead of API calls alone.
 
 ## Next Steps
 
 Current follow-up work is focused on:
 
-- deploying the backend
+- GitHub Actions CI/CD so deploys happen on push to `main` instead of via the manual build/push/restart cycle
 - adding a lightweight frontend for demos and real usage
 - continuing to refine the tournament experience as new use cases come up
