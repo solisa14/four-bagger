@@ -60,8 +60,6 @@ Some of the main engineering decisions in the codebase:
 
 ## Testing Approach
 
-> **Testing Note:** Always run tests locally using `mvn clean test` (or `mvn clean verify`) rather than just `mvn test`. Running without `clean` can cause phantom ApplicationContext-load failures in WebMvc tests due to stale state in the `target/test-classes` directory.
-
 The project uses a layered test strategy instead of relying on only one kind of test:
 
 - Unit tests for service-level business logic
