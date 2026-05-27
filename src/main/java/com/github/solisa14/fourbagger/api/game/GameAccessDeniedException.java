@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
 
@@ -12,7 +11,7 @@ public class GameAccessDeniedException extends BusinessException {
    *
    * @param gameId The ID of the protected game.
    */
-  public GameAccessDeniedException(UUID gameId) {
-    super("You are not allowed to modify game: " + gameId, HttpStatus.FORBIDDEN);
+  public GameAccessDeniedException() {
+    super("You are not allowed to access this game", HttpStatus.FORBIDDEN);
   }
 }

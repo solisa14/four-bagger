@@ -80,7 +80,8 @@ class GameControllerWebMvcTest {
     void getGame_whenGameNotFound_returnsNotFound() throws Exception {
         User principal = authenticatedUser();
         UUID gameId = UUID.randomUUID();
-        when(gameService.getGame(gameId)).thenThrow(new GameNotFoundException(gameId));
+        when(gameService.getGameForUser(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId)))
+                .thenThrow(new GameNotFoundException(gameId));
 
         mockMvc.perform(get("/api/v1/games/{gameId}", gameId).with(user(principal)))
                 .andExpect(status().isNotFound())
@@ -108,10 +109,10 @@ class GameControllerWebMvcTest {
         User principal = authenticatedUser();
         UUID gameId = UUID.randomUUID();
         when(gameService.cancelGame(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId)))
-                .thenThrow(new GameAccessDeniedException(gameId));
+                .thenThrow(new GameAccessDeniedException());
 
         mockMvc.perform(post("/api/v1/games/{gameId}/cancel", gameId).with(user(principal)))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.message")
-                        .value("You are not allowed to modify game: " + gameId));
+                        .value("You are not allowed to access this game"));
     }
 }

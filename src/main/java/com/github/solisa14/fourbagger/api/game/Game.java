@@ -109,4 +109,5 @@ public class Game {
   @UpdateTimestamp
   @Column(name = "updated_at")
   private Instant updatedAt;
+
 }

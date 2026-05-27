@@ -129,6 +129,15 @@ public class GameService {
     return frame;
   }
 
+  public Game getGameForUser(User currentUser, UUID gameId) {
+    Game game = getGame(gameId);
+    if (canAccessGame(currentUser, game)) {
+      return game;
+    } else {
+      throw new GameAccessDeniedException();
+    }
+  }
+
   /**
    * Retrieves a game by its ID.
    *
@@ -188,20 +197,25 @@ public class GameService {
   }
 
   private void authorizeMutation(User currentUser, Game game) {
+    boolean isAuthorizedParticipant = canAccessGame(currentUser, game);
+    if (!isAuthorizedParticipant) {
+      throw new GameAccessDeniedException();
+    }
+  }
+
+  private boolean canAccessGame(User currentUser, Game game) {
+    if (currentUser == null) {
+      return false;
+    }
+
     UUID currentUserId = currentUser.getId();
-    boolean isAuthorizedParticipant = game.getPlayerOne().getId().equals(currentUserId)
+    return game.getCreatedBy().getId().equals(currentUserId)
+        || game.getPlayerOne().getId().equals(currentUserId)
         || game.getPlayerTwo().getId().equals(currentUserId)
         || (game.getPlayerOnePartner() != null
             && game.getPlayerOnePartner().getId().equals(currentUserId))
         || (game.getPlayerTwoPartner() != null
             && game.getPlayerTwoPartner().getId().equals(currentUserId));
-
-    boolean isGameCreator =
-        game.getCreatedBy() != null && game.getCreatedBy().getId().equals(currentUserId);
-
-    if (!isAuthorizedParticipant && !isGameCreator) {
-      throw new GameAccessDeniedException(game.getId());
-    }
   }
 
   private void applyScoringPolicy(Game game, int playerOneFramePoints, int playerTwoFramePoints) {

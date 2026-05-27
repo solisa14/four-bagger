@@ -324,6 +324,41 @@ class GameServiceTest {
     assertThatThrownBy(() -> gameService.getGame(id)).isInstanceOf(GameNotFoundException.class);
   }
 
+  @Test
+  void getGameForUser_whenUserCanAccessGame_returnsGame() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    Game game = inProgressGame(p1, p2);
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    Game result = gameService.getGameForUser(p1, game.getId());
+
+    assertThat(result).isEqualTo(game);
+  }
+
+  @Test
+  void getGameForUser_whenUserIsNotParticipantOrCreator_throwsGameAccessDeniedException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    User outsider = otherUser();
+    Game game = inProgressGame(p1, p2);
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    assertThatThrownBy(() -> gameService.getGameForUser(outsider, game.getId()))
+        .isInstanceOf(GameAccessDeniedException.class);
+  }
+
+  @Test
+  void getGameForUser_whenUserIsMissing_throwsGameAccessDeniedException() {
+    User p1 = playerOne();
+    User p2 = playerTwo();
+    Game game = inProgressGame(p1, p2);
+    when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
+
+    assertThatThrownBy(() -> gameService.getGameForUser(null, game.getId()))
+        .isInstanceOf(GameAccessDeniedException.class);
+  }
+
   // --- cancelGame ---
 
   @Test
