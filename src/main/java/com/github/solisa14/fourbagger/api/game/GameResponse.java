@@ -23,20 +23,9 @@ import java.util.UUID;
  * @param createdAt The timestamp when the game was created.
  * @param updatedAt The timestamp when the game was last updated.
  */
-public record GameResponse(
-    UUID id,
-    GameType gameType,
-    PlayerInfo playerOne,
-    PlayerInfo playerOnePartner,
-    PlayerInfo playerTwo,
-    PlayerInfo playerTwoPartner,
-    int playerOneScore,
-    int playerTwoScore,
-    int targetScore,
-    GameStatus status,
-    PlayerInfo winner,
-    List<FrameResponse> frames,
-    Instant createdAt,
-    Instant updatedAt) {
+public record GameResponse(UUID id, GameType gameType, PlayerInfo playerOne,
+        PlayerInfo playerOnePartner, PlayerInfo playerTwo, PlayerInfo playerTwoPartner,
+        int playerOneScore, int playerTwoScore, int targetScore, GameStatus status,
+        PlayerInfo winner, List<FrameResponse> frames, Instant createdAt, Instant updatedAt) {
 
 }

@@ -1,9 +1,9 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.github.solisa14.fourbagger.api.user.User;
 import java.util.Comparator;
 import java.util.List;
 import org.springframework.stereotype.Component;
+import com.github.solisa14.fourbagger.api.user.User;
 
 /** Mapper for tournament-related requests, commands, and responses. */
 @Component
@@ -34,24 +34,17 @@ public class TournamentMapper {
    * @return the tournament response
    */
   public TournamentResponse toTournamentResponse(Tournament tournament) {
-    List<TournamentRoundResponse> rounds =
-        tournament.getRounds().stream()
-            .sorted(Comparator.comparingInt(TournamentRound::getRoundNumber))
-            .map(this::toRoundResponse)
-            .toList();
-    return new TournamentResponse(
-        tournament.getId(),
-        tournament.getTitle(),
-        tournament.getJoinCode(),
-        tournament.getStatus(),
-        tournament.getGameType(),
-        rounds);
+    List<TournamentRoundResponse> rounds = tournament.getRounds().stream()
+        .sorted(Comparator.comparingInt(TournamentRound::getRoundNumber)).map(this::toRoundResponse)
+        .toList();
+    return new TournamentResponse(tournament.getId(), tournament.getTitle(),
+        tournament.getJoinCode(), tournament.getStatus(), tournament.getGameType(), rounds);
   }
 
   private TournamentRoundResponse toRoundResponse(TournamentRound round) {
     List<MatchResponse> matches = round.getMatches().stream().map(this::toMatchResponse).toList();
-    return new TournamentRoundResponse(
-        round.getRoundNumber(), round.getBestOf(), round.getScoringMode(), matches);
+    return new TournamentRoundResponse(round.getRoundNumber(), round.getBestOf(),
+        round.getScoringMode(), matches);
   }
 
   /**
@@ -61,15 +54,10 @@ public class TournamentMapper {
    * @return the match response
    */
   public MatchResponse toMatchResponse(Match match) {
-    return new MatchResponse(
-        match.getId(),
-        match.getMatchNumber(),
-        match.getStatus(),
-        match.isBye(),
-        match.getTeamOne() != null ? toTeamSummary(match.getTeamOne()) : null,
+    return new MatchResponse(match.getId(), match.getMatchNumber(), match.getStatus(),
+        match.isBye(), match.getTeamOne() != null ? toTeamSummary(match.getTeamOne()) : null,
         match.getTeamTwo() != null ? toTeamSummary(match.getTeamTwo()) : null,
-        match.getTeamOneWins(),
-        match.getTeamTwoWins(),
+        match.getTeamOneWins(), match.getTeamTwoWins(),
         match.getWinner() != null ? toTeamSummary(match.getWinner()) : null);
   }
 
@@ -80,10 +68,7 @@ public class TournamentMapper {
    * @return the team summary DTO
    */
   public MatchResponse.TeamSummary toTeamSummary(TournamentTeam team) {
-    return new MatchResponse.TeamSummary(
-        team.getId(),
-        team.getPlayerOne().getUsername(),
-        team.getPlayerTwo() != null ? team.getPlayerTwo().getUsername() : null,
-        team.getSeed());
+    return new MatchResponse.TeamSummary(team.getId(), team.getPlayerOne().getUsername(),
+        team.getPlayerTwo() != null ? team.getPlayerTwo().getUsername() : null, team.getSeed());
   }
 }

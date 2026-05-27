@@ -1,11 +1,26 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
-import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Represents a single contest between two teams within a tournament round. A match may consist of
@@ -18,13 +33,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Setter
 @Builder
 @Entity
-@Table(
-    name = "tournament_matches",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_tournament_matches_round_match_number",
-          columnNames = {"round_id", "match_number"})
-    })
+@Table(name = "tournament_matches",
+    uniqueConstraints = {@UniqueConstraint(name = "uk_tournament_matches_round_match_number",
+        columnNames = {"round_id", "match_number"})})
 public class Match {
 
   @Id

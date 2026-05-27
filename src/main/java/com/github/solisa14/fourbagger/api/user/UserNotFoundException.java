@@ -1,8 +1,8 @@
 package com.github.solisa14.fourbagger.api.user;
 
-import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
 
 /** Exception thrown when a requested user cannot be found in the system. */
 public class UserNotFoundException extends BusinessException {

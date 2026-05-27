@@ -9,4 +9,5 @@ import java.util.UUID;
  * @param gameId the ID of the completed game
  * @param tournamentMatchId the tournament match this game belongs to, or null for standalone games
  */
-public record GameCompletedEvent(UUID gameId, UUID tournamentMatchId) {}
+public record GameCompletedEvent(UUID gameId, UUID tournamentMatchId) {
+}

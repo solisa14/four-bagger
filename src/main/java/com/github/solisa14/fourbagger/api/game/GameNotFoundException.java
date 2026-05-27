@@ -1,8 +1,8 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
 
 /** Exception thrown when a requested game cannot be found by its ID. */
 public class GameNotFoundException extends BusinessException {

@@ -7,4 +7,5 @@ import jakarta.validation.constraints.NotBlank;
  *
  * @param joinCode the 6-character tournament join code
  */
-public record JoinTournamentRequest(@NotBlank String joinCode) {}
+public record JoinTournamentRequest(@NotBlank String joinCode) {
+}

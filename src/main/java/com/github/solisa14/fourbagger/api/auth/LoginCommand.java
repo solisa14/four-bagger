@@ -6,4 +6,5 @@ package com.github.solisa14.fourbagger.api.auth;
  * @param username the user's username
  * @param password the user's password
  */
-public record LoginCommand(String username, String password) {}
+public record LoginCommand(String username, String password) {
+}

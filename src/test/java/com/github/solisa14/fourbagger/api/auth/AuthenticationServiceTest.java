@@ -5,13 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
-import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
-import com.github.solisa14.fourbagger.api.user.Role;
-import com.github.solisa14.fourbagger.api.user.User;
-import com.github.solisa14.fourbagger.api.user.UserRepository;
-import com.github.solisa14.fourbagger.api.user.UserService;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -21,21 +14,33 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
+import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
+import com.github.solisa14.fourbagger.api.user.Role;
+import com.github.solisa14.fourbagger.api.user.User;
+import com.github.solisa14.fourbagger.api.user.UserRepository;
+import com.github.solisa14.fourbagger.api.user.UserService;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticationServiceTest {
 
-  @Mock private UserService userService;
+  @Mock
+  private UserService userService;
 
-  @Mock private UserRepository userRepository;
+  @Mock
+  private UserRepository userRepository;
 
-  @Mock private AuthenticationManager authenticationManager;
+  @Mock
+  private AuthenticationManager authenticationManager;
 
-  @Mock private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
+  @Mock
+  private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
 
-  @Mock private RefreshTokenService refreshTokenService;
+  @Mock
+  private RefreshTokenService refreshTokenService;
 
-  @InjectMocks private AuthenticationService authenticationService;
+  @InjectMocks
+  private AuthenticationService authenticationService;
 
   @Test
   void registerUser_whenRequestIsValid_returnsUserDetails() {

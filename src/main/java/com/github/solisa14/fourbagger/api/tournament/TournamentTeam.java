@@ -1,9 +1,21 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.github.solisa14.fourbagger.api.user.User;
-import jakarta.persistence.*;
 import java.util.UUID;
-import lombok.*;
+import com.github.solisa14.fourbagger.api.user.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Represents a competing entity within a tournament. A team can consist of a single player (for
@@ -39,5 +51,6 @@ public class TournamentTeam {
   private User playerTwo;
 
   /** The seed number assigned to the team during bracket generation. */
-  @Column private Integer seed;
+  @Column
+  private Integer seed;
 }

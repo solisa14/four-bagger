@@ -1,9 +1,9 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import com.github.solisa14.fourbagger.api.user.User;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import com.github.solisa14.fourbagger.api.user.User;
 
 /**
  * Encapsulates the participants in a game, ensuring valid team configurations based on the game
@@ -45,8 +45,8 @@ public record GameParticipants(GameType gameType, GameSide teamOne, GameSide tea
    * @return A valid participants configuration for singles.
    */
   public static GameParticipants singles(User playerOne, User playerTwo) {
-    return new GameParticipants(
-        GameType.SINGLES, GameSide.singles(playerOne), GameSide.singles(playerTwo));
+    return new GameParticipants(GameType.SINGLES, GameSide.singles(playerOne),
+        GameSide.singles(playerTwo));
   }
 
   /**
@@ -58,11 +58,9 @@ public record GameParticipants(GameType gameType, GameSide teamOne, GameSide tea
    * @param playerTwoPartner Partner for player two on team two.
    * @return A valid participants configuration for doubles.
    */
-  public static GameParticipants doubles(
-      User playerOne, User playerOnePartner, User playerTwo, User playerTwoPartner) {
-    return new GameParticipants(
-        GameType.DOUBLES,
-        GameSide.doubles(playerOne, playerOnePartner),
+  public static GameParticipants doubles(User playerOne, User playerOnePartner, User playerTwo,
+      User playerTwoPartner) {
+    return new GameParticipants(GameType.DOUBLES, GameSide.doubles(playerOne, playerOnePartner),
         GameSide.doubles(playerTwo, playerTwoPartner));
   }
 

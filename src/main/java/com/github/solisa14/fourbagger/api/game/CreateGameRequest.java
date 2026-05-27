@@ -1,9 +1,9 @@
 package com.github.solisa14.fourbagger.api.game;
 
+import java.util.UUID;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import java.util.UUID;
 
 /**
  * Request payload for creating a new game.
@@ -15,12 +15,8 @@ import java.util.UUID;
  * @param scoringMode The scoring mode (STANDARD or EXACT).
  * @param targetScore The target score to win the game (must be between 11 and 21).
  */
-public record CreateGameRequest(
-    @NotNull UUID playerTwoId,
-    UUID playerOnePartnerId,
-    UUID playerTwoPartnerId,
-    GameType gameType,
-    GameScoringMode scoringMode,
+public record CreateGameRequest(@NotNull UUID playerTwoId, UUID playerOnePartnerId,
+    UUID playerTwoPartnerId, GameType gameType, GameScoringMode scoringMode,
     @Min(11) @Max(21) Integer targetScore) {
 
   /**
@@ -32,12 +28,8 @@ public record CreateGameRequest(
    * @param gameType The type of game.
    * @param targetScore The target score to win.
    */
-  public CreateGameRequest(
-      UUID playerTwoId,
-      UUID playerOnePartnerId,
-      UUID playerTwoPartnerId,
-      GameType gameType,
-      Integer targetScore) {
+  public CreateGameRequest(UUID playerTwoId, UUID playerOnePartnerId, UUID playerTwoPartnerId,
+      GameType gameType, Integer targetScore) {
     this(playerTwoId, playerOnePartnerId, playerTwoPartnerId, gameType, null, targetScore);
   }
 

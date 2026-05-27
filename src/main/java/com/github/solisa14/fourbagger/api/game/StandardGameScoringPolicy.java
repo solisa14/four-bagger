@@ -12,7 +12,7 @@ class StandardGameScoringPolicy implements GameScoringPolicy {
    *
    * @param game The game to check and potentially update.
    * @param allowGreaterThanTarget If true, a score greater than or equal to the target is a win. If
-   *     false, the score must be exactly the target.
+   *        false, the score must be exactly the target.
    */
   static void setWinnerIfSatisfied(Game game, boolean allowGreaterThanTarget) {
     int playerOneScore = game.getPlayerOneScore();

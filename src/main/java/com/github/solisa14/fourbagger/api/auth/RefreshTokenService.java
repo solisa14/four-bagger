@@ -1,8 +1,5 @@
 package com.github.solisa14.fourbagger.api.auth;
 
-import com.github.solisa14.fourbagger.api.common.exception.TokenRefreshException;
-import com.github.solisa14.fourbagger.api.user.User;
-import com.github.solisa14.fourbagger.api.user.UserRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,6 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.github.solisa14.fourbagger.api.common.exception.TokenRefreshException;
+import com.github.solisa14.fourbagger.api.user.User;
+import com.github.solisa14.fourbagger.api.user.UserRepository;
 
 /** Service for managing refresh tokens, including creation, rotation, and deletion. */
 @Service
@@ -31,8 +31,8 @@ public class RefreshTokenService {
    * @param refreshTokenRepository the repository for refresh tokens
    * @param userRepository the repository for users
    */
-  public RefreshTokenService(
-      RefreshTokenRepository refreshTokenRepository, UserRepository userRepository) {
+  public RefreshTokenService(RefreshTokenRepository refreshTokenRepository,
+      UserRepository userRepository) {
     this.refreshTokenRepository = refreshTokenRepository;
     this.userRepository = userRepository;
   }
@@ -60,11 +60,9 @@ public class RefreshTokenService {
     String tokenHash = hashToken(rawToken);
     Instant expiryDate = calculateExpiryDate();
 
-    RefreshToken refreshToken =
-        refreshTokenRepository
-            .findByUserId(userId)
-            .map(existingToken -> updateRefreshToken(existingToken, tokenHash, expiryDate))
-            .orElseGet(() -> buildRefreshToken(user, tokenHash, expiryDate));
+    RefreshToken refreshToken = refreshTokenRepository.findByUserId(userId)
+        .map(existingToken -> updateRefreshToken(existingToken, tokenHash, expiryDate))
+        .orElseGet(() -> buildRefreshToken(user, tokenHash, expiryDate));
 
     refreshTokenRepository.save(refreshToken);
     return new RefreshTokenSession(user, rawToken);
@@ -79,11 +77,8 @@ public class RefreshTokenService {
    */
   @Transactional
   public RefreshTokenSession rotateRefreshToken(String token) {
-    RefreshToken oldToken =
-        refreshTokenRepository
-            .findByTokenHash(hashToken(token))
-            .orElseThrow(
-                () -> new TokenRefreshException("Refresh token is not in database"));
+    RefreshToken oldToken = refreshTokenRepository.findByTokenHash(hashToken(token))
+        .orElseThrow(() -> new TokenRefreshException("Refresh token is not in database"));
 
     verifyExpiration(oldToken);
 
@@ -139,8 +134,7 @@ public class RefreshTokenService {
   }
 
   private User loadUser(UUID userId) {
-    return userRepository
-        .findById(userId)
+    return userRepository.findById(userId)
         .orElseThrow(() -> new TokenRefreshException("Unable to refresh token"));
   }
 
@@ -148,8 +142,8 @@ public class RefreshTokenService {
     return RefreshToken.builder().user(user).tokenHash(tokenHash).expiryDate(expiryDate).build();
   }
 
-  private RefreshToken updateRefreshToken(
-      RefreshToken refreshToken, String tokenHash, Instant expiryDate) {
+  private RefreshToken updateRefreshToken(RefreshToken refreshToken, String tokenHash,
+      Instant expiryDate) {
     refreshToken.setTokenHash(tokenHash);
     refreshToken.setExpiryDate(expiryDate);
     return refreshToken;

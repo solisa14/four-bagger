@@ -1,7 +1,7 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import com.github.solisa14.fourbagger.api.user.User;
 import java.util.Objects;
+import com.github.solisa14.fourbagger.api.user.User;
 
 /**
  * Represents one side (team) in a game, which can consist of a single player or two partners.
@@ -39,7 +39,7 @@ public record GameSide(User player, User partner) {
    * @param partner The partner player.
    * @return A new {@link GameSide} representing a doubles team.
    * @throws InvalidGameConfigurationException if partner is null or if player and partner are the
-   *     same user.
+   *         same user.
    */
   public static GameSide doubles(User player, User partner) {
     if (partner == null) {

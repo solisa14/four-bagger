@@ -6,4 +6,5 @@ package com.github.solisa14.fourbagger.api.user;
  * @param firstName the updated first name
  * @param lastName the updated last name
  */
-public record UpdateProfileCommand(String firstName, String lastName) {}
+public record UpdateProfileCommand(String firstName, String lastName) {
+}

@@ -1,14 +1,8 @@
 package com.github.solisa14.fourbagger.api.security;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,12 +12,19 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Filter that validates JWT tokens on incoming HTTP requests.
  *
- * <p>Intercepts requests, extracts the JWT from the "accessToken" cookie, validates it, and sets
- * the user authentication in the Spring Security context if the token is valid.
+ * <p>
+ * Intercepts requests, extracts the JWT from the "accessToken" cookie, validates it, and sets the
+ * user authentication in the Spring Security context if the token is valid.
  */
 @Component
 @Slf4j
@@ -44,10 +45,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   }
 
   @Override
-  protected void doFilterInternal(
-      @NonNull HttpServletRequest request,
-      @NonNull HttpServletResponse response,
-      @NonNull FilterChain filterChain)
+  protected void doFilterInternal(@NonNull HttpServletRequest request,
+      @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
       throws ServletException, IOException {
 
     final String jwt;
@@ -55,10 +54,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     Optional<Cookie> jwtCookie = Optional.empty();
     if (request.getCookies() != null) {
-      jwtCookie =
-          Arrays.stream(request.getCookies())
-              .filter(cookie -> "accessToken".equals(cookie.getName()))
-              .findFirst();
+      jwtCookie = Arrays.stream(request.getCookies())
+          .filter(cookie -> "accessToken".equals(cookie.getName())).findFirst();
     }
 
     if (jwtCookie.isEmpty()) {

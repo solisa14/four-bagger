@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import com.github.solisa14.fourbagger.api.user.User;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -8,13 +7,14 @@ import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.github.solisa14.fourbagger.api.user.User;
 
 /**
  * Core service containing business logic for game management. Handles creating games, recording
  * frames, and applying scoring rules.
  *
- * <p>Coordinates between the repository and scoring policies to manage the full lifecycle of a
- * game.
+ * <p>
+ * Coordinates between the repository and scoring policies to manage the full lifecycle of a game.
  */
 @Service
 public class GameService {
@@ -32,9 +32,7 @@ public class GameService {
    * @param gameCreationService the service for handling complex game creation logic
    * @param eventPublisher the Spring event publisher used to notify listeners of game completion
    */
-  public GameService(
-      GameRepository gameRepository,
-      GameCreationService gameCreationService,
+  public GameService(GameRepository gameRepository, GameCreationService gameCreationService,
       ApplicationEventPublisher eventPublisher) {
     this.gameRepository = gameRepository;
     this.gameCreationService = gameCreationService;
@@ -115,24 +113,17 @@ public class GameService {
     }
     applyScoringPolicy(game, p1Points, p2Points);
 
-    Frame frame =
-        Frame.builder()
-            .game(game)
-            .frameNumber(frameNumber)
-            .playerOneBagsIn(request.p1BagsIn())
-            .playerOneBagsOn(request.p1BagsOn())
-            .playerTwoBagsIn(request.p2BagsIn())
-            .playerTwoBagsOn(request.p2BagsOn())
-            .playerOneFramePoints(p1Points)
-            .playerTwoFramePoints(p2Points)
-            .build();
+    Frame frame = Frame.builder().game(game).frameNumber(frameNumber)
+        .playerOneBagsIn(request.p1BagsIn()).playerOneBagsOn(request.p1BagsOn())
+        .playerTwoBagsIn(request.p2BagsIn()).playerTwoBagsOn(request.p2BagsOn())
+        .playerOneFramePoints(p1Points).playerTwoFramePoints(p2Points).build();
 
     game.getFrames().add(frame);
     gameRepository.save(game);
 
     if (game.getStatus() == GameStatus.COMPLETED) {
-      eventPublisher.publishEvent(
-          new GameCompletedEvent(game.getId(), game.getTournamentMatchId()));
+      eventPublisher
+          .publishEvent(new GameCompletedEvent(game.getId(), game.getTournamentMatchId()));
     }
 
     return frame;
@@ -187,32 +178,23 @@ public class GameService {
 
   private void validateBagCounts(RecordFrameRequest request) {
     if (request.p1BagsIn() + request.p1BagsOn() > 4) {
-      throw new InvalidFrameException(
-          "Player one's bags in ("
-              + request.p1BagsIn()
-              + ") + bags on ("
-              + request.p1BagsOn()
-              + ") cannot exceed 4");
+      throw new InvalidFrameException("Player one's bags in (" + request.p1BagsIn()
+          + ") + bags on (" + request.p1BagsOn() + ") cannot exceed 4");
     }
     if (request.p2BagsIn() + request.p2BagsOn() > 4) {
-      throw new InvalidFrameException(
-          "Player two's bags in ("
-              + request.p2BagsIn()
-              + ") + bags on ("
-              + request.p2BagsOn()
-              + ") cannot exceed 4");
+      throw new InvalidFrameException("Player two's bags in (" + request.p2BagsIn()
+          + ") + bags on (" + request.p2BagsOn() + ") cannot exceed 4");
     }
   }
 
   private void authorizeMutation(User currentUser, Game game) {
     UUID currentUserId = currentUser.getId();
-    boolean isAuthorizedParticipant =
-        game.getPlayerOne().getId().equals(currentUserId)
-            || game.getPlayerTwo().getId().equals(currentUserId)
-            || (game.getPlayerOnePartner() != null
-                && game.getPlayerOnePartner().getId().equals(currentUserId))
-            || (game.getPlayerTwoPartner() != null
-                && game.getPlayerTwoPartner().getId().equals(currentUserId));
+    boolean isAuthorizedParticipant = game.getPlayerOne().getId().equals(currentUserId)
+        || game.getPlayerTwo().getId().equals(currentUserId)
+        || (game.getPlayerOnePartner() != null
+            && game.getPlayerOnePartner().getId().equals(currentUserId))
+        || (game.getPlayerTwoPartner() != null
+            && game.getPlayerTwoPartner().getId().equals(currentUserId));
 
     boolean isGameCreator =
         game.getCreatedBy() != null && game.getCreatedBy().getId().equals(currentUserId);
@@ -252,10 +234,8 @@ public class GameService {
 
     if (!expectedPlayerOneThrower.equals(request.playerOneThrowerId())
         || !expectedPlayerTwoThrower.equals(request.playerTwoThrowerId())) {
-      throw new InvalidFrameException(
-          "Invalid throwing pair for frame "
-              + frameNumber
-              + "; doubles pairs must alternate by frame");
+      throw new InvalidFrameException("Invalid throwing pair for frame " + frameNumber
+          + "; doubles pairs must alternate by frame");
     }
   }
 }

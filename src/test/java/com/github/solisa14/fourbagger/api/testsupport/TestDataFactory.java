@@ -1,5 +1,7 @@
 package com.github.solisa14.fourbagger.api.testsupport;
 
+import java.time.Instant;
+import java.util.UUID;
 import com.github.solisa14.fourbagger.api.auth.LoginRequest;
 import com.github.solisa14.fourbagger.api.auth.RefreshToken;
 import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
@@ -12,8 +14,6 @@ import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.UpdatePasswordRequest;
 import com.github.solisa14.fourbagger.api.user.UpdateProfileRequest;
 import com.github.solisa14.fourbagger.api.user.User;
-import java.time.Instant;
-import java.util.UUID;
 
 public final class TestDataFactory {
 
@@ -28,10 +28,10 @@ public final class TestDataFactory {
     return registerUserRequest("user" + suffix, "user" + suffix + "@example.com", DEFAULT_PASSWORD);
   }
 
-  public static RegisterUserRequest registerUserRequest(
-      String username, String email, String password) {
-    return new RegisterUserRequest(
-        username, email, password, DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME);
+  public static RegisterUserRequest registerUserRequest(String username, String email,
+      String password) {
+    return new RegisterUserRequest(username, email, password, DEFAULT_FIRST_NAME,
+        DEFAULT_LAST_NAME);
   }
 
   public static LoginRequest loginRequest(String username, String password) {
@@ -47,15 +47,8 @@ public final class TestDataFactory {
   }
 
   public static User user(UUID id, String username, String email, String password, Role role) {
-    return User.builder()
-        .id(id)
-        .username(username)
-        .email(email)
-        .password(password)
-        .firstName(DEFAULT_FIRST_NAME)
-        .lastName(DEFAULT_LAST_NAME)
-        .role(role)
-        .build();
+    return User.builder().id(id).username(username).email(email).password(password)
+        .firstName(DEFAULT_FIRST_NAME).lastName(DEFAULT_LAST_NAME).role(role).build();
   }
 
   public static RefreshToken refreshToken(User user, Instant expiryDate, String token) {
@@ -63,13 +56,8 @@ public final class TestDataFactory {
   }
 
   public static Game game(User playerOne, User playerTwo, GameStatus status) {
-    return Game.builder()
-        .playerOne(playerOne)
-        .playerTwo(playerTwo)
-        .targetScore(21)
-        .status(status)
-        .createdBy(playerOne)
-        .build();
+    return Game.builder().playerOne(playerOne).playerTwo(playerTwo).targetScore(21).status(status)
+        .createdBy(playerOne).build();
   }
 
   public static Tournament tournament(User organizer, String title, String joinCode) {
@@ -80,15 +68,9 @@ public final class TestDataFactory {
     return tournament(id, organizer, title, joinCode, GameType.SINGLES);
   }
 
-  public static Tournament tournament(
-      UUID id, User organizer, String title, String joinCode, GameType gameType) {
-    return Tournament.builder()
-        .id(id)
-        .organizer(organizer)
-        .title(title)
-        .joinCode(joinCode)
-        .status(TournamentStatus.REGISTRATION)
-        .gameType(gameType)
-        .build();
+  public static Tournament tournament(UUID id, User organizer, String title, String joinCode,
+      GameType gameType) {
+    return Tournament.builder().id(id).organizer(organizer).title(title).joinCode(joinCode)
+        .status(TournamentStatus.REGISTRATION).gameType(gameType).build();
   }
 }

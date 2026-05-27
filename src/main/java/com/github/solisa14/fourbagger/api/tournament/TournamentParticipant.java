@@ -1,9 +1,21 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.github.solisa14.fourbagger.api.user.User;
-import jakarta.persistence.*;
 import java.util.UUID;
-import lombok.*;
+import com.github.solisa14.fourbagger.api.user.User;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Represents a user who has registered to participate in a specific tournament. In a singles
@@ -16,13 +28,9 @@ import lombok.*;
 @Setter
 @Builder
 @Entity
-@Table(
-    name = "tournament_participants",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_tournament_participants_tournament_user",
-          columnNames = {"tournament_id", "user_id"})
-    })
+@Table(name = "tournament_participants",
+    uniqueConstraints = {@UniqueConstraint(name = "uk_tournament_participants_tournament_user",
+        columnNames = {"tournament_id", "user_id"})})
 public class TournamentParticipant {
 
   @Id

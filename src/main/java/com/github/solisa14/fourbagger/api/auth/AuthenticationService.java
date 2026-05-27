@@ -1,18 +1,19 @@
 package com.github.solisa14.fourbagger.api.auth;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.stereotype.Service;
 import com.github.solisa14.fourbagger.api.security.JwtService;
 import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import com.github.solisa14.fourbagger.api.user.UserService;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.stereotype.Service;
 
 /**
  * Orchestrates user authentication workflows including registration and login.
  *
- * <p>Coordinates between user creation, credential verification, and token generation.
+ * <p>
+ * Coordinates between user creation, credential verification, and token generation.
  */
 @Service
 public class AuthenticationService {
@@ -32,11 +33,8 @@ public class AuthenticationService {
    * @param jwtService the JWT service
    * @param refreshTokenService the refresh token service
    */
-  public AuthenticationService(
-      UserService userService,
-      UserRepository userRepository,
-      AuthenticationManager authenticationManager,
-      JwtService jwtService,
+  public AuthenticationService(UserService userService, UserRepository userRepository,
+      AuthenticationManager authenticationManager, JwtService jwtService,
       RefreshTokenService refreshTokenService) {
     this.userService = userService;
     this.userRepository = userRepository;
@@ -65,10 +63,8 @@ public class AuthenticationService {
     authenticationManager.authenticate(
         new UsernamePasswordAuthenticationToken(command.username(), command.password()));
 
-    User user =
-        userRepository
-            .findUserByUsername(command.username())
-            .orElseThrow(AuthenticationFailedException::new);
+    User user = userRepository.findUserByUsername(command.username())
+        .orElseThrow(AuthenticationFailedException::new);
 
     String jwtToken = jwtService.generateToken(user);
     RefreshTokenSession refreshTokenSession = refreshTokenService.issueRefreshToken(user.getId());

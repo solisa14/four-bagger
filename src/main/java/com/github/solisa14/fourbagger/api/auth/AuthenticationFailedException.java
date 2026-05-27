@@ -1,7 +1,7 @@
 package com.github.solisa14.fourbagger.api.auth;
 
-import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
 import org.springframework.http.HttpStatus;
+import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
 
 /** Indicates that authentication failed due to invalid credentials or a missing account. */
 public class AuthenticationFailedException extends BusinessException {

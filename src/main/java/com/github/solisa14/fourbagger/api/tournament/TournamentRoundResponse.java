@@ -11,5 +11,6 @@ import java.util.List;
  * @param scoringMode the scoring rules applied to all games played in this round
  * @param matches the matches in this round, ordered by match number
  */
-public record TournamentRoundResponse(
-    int roundNumber, int bestOf, ScoringMode scoringMode, List<MatchResponse> matches) {}
+public record TournamentRoundResponse(int roundNumber, int bestOf, ScoringMode scoringMode,
+        List<MatchResponse> matches) {
+}

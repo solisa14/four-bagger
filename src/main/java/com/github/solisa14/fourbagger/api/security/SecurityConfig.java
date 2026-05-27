@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.security;
 
-import com.github.solisa14.fourbagger.api.user.UserRepository;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -22,11 +21,13 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import com.github.solisa14.fourbagger.api.user.UserRepository;
 
 /**
  * Provides Spring beans for application security components.
  *
- * <p>Configures the security filter chain, authentication providers, and password encoding.
+ * <p>
+ * Configures the security filter chain, authentication providers, and password encoding.
  */
 @Configuration
 @EnableWebSecurity
@@ -45,8 +46,7 @@ public class SecurityConfig {
    * @param authenticationEntryPoint the entry point for authentication errors
    * @param accessDeniedHandler the handler for access denied errors
    */
-  public SecurityConfig(
-      UserRepository userRepository,
+  public SecurityConfig(UserRepository userRepository,
       @Value("${app.cors.allowed-origins}") List<String> allowedOrigins,
       ApiAuthenticationEntryPoint authenticationEntryPoint,
       ApiAccessDeniedHandler accessDeniedHandler) {
@@ -59,7 +59,8 @@ public class SecurityConfig {
   /**
    * Configures the security filter chain.
    *
-   * <p>Disables CSRF (stateless API), configures CORS, sets public endpoints, and adds the JWT
+   * <p>
+   * Disables CSRF (stateless API), configures CORS, sets public endpoints, and adds the JWT
    * authentication filter.
    *
    * @param http the HttpSecurity object to configure
@@ -68,31 +69,23 @@ public class SecurityConfig {
    * @throws Exception if an error occurs during configuration
    */
   @Bean
-  public SecurityFilterChain securityFilterChain(
-      HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+  public SecurityFilterChain securityFilterChain(HttpSecurity http,
+      JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .authorizeHttpRequests(
-            auth -> {
-              auth.requestMatchers("/api/v1/auth/**").permitAll();
-              auth.anyRequest().authenticated();
-            })
+        .authorizeHttpRequests(auth -> {
+          auth.requestMatchers("/api/v1/auth/**").permitAll();
+          auth.anyRequest().authenticated();
+        })
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .exceptionHandling(
-            exceptions ->
-                exceptions
-                    .authenticationEntryPoint(authenticationEntryPoint)
-                    .accessDeniedHandler(accessDeniedHandler))
+            exceptions -> exceptions.authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler))
         .authenticationProvider(authenticationProvider())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-        .headers(
-            headers ->
-                headers.referrerPolicy(
-                    referrer ->
-                        referrer.policy(
-                            ReferrerPolicyHeaderWriter.ReferrerPolicy
-                                .STRICT_ORIGIN_WHEN_CROSS_ORIGIN)));
+        .headers(headers -> headers.referrerPolicy(referrer -> referrer
+            .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)));
 
     return http.build();
   }
@@ -114,10 +107,8 @@ public class SecurityConfig {
    */
   @Bean
   public UserDetailsService userDetailsService() {
-    return username ->
-        userRepository
-            .findUserByUsername(username)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    return username -> userRepository.findUserByUsername(username)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
   }
 
   /**

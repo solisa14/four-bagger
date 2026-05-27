@@ -3,10 +3,9 @@ package com.github.solisa14.fourbagger.api.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-
-import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
-import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,15 +15,19 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-  @Mock private UserRepository userRepository;
+  @Mock
+  private UserRepository userRepository;
 
   private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-  @Mock private RefreshTokenService refreshTokenService;
+  @Mock
+  private RefreshTokenService refreshTokenService;
 
   private UserService userService;
 
@@ -60,13 +63,11 @@ class UserServiceTest {
         new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
     when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.<User>empty());
     when(userRepository.findUserByEmail(command.email())).thenReturn(Optional.<User>empty());
-    when(userRepository.save(any(User.class)))
-        .thenAnswer(
-            invocation -> {
-              User user = invocation.getArgument(0, User.class);
-              user.setId(UUID.randomUUID());
-              return user;
-            });
+    when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+      User user = invocation.getArgument(0, User.class);
+      user.setId(UUID.randomUUID());
+      return user;
+    });
 
     User created = userService.createUser(command);
 
@@ -117,18 +118,13 @@ class UserServiceTest {
   @Test
   void updatePassword_whenCurrentPasswordIsInvalid_throwsInvalidPasswordException() {
     UUID id = UUID.randomUUID();
-    User user =
-        TestDataFactory.user(
-            id,
-            "user1",
-            "user1@example.com",
-            passwordEncoder.encode("current"),
-            Role.USER);
+    User user = TestDataFactory.user(id, "user1", "user1@example.com",
+        passwordEncoder.encode("current"), Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
 
     assertThatThrownBy(
-            () -> userService.updatePassword(id, new UpdatePasswordCommand("bad", "NewPassword1!")))
-        .isInstanceOf(InvalidPasswordException.class);
+        () -> userService.updatePassword(id, new UpdatePasswordCommand("bad", "NewPassword1!")))
+            .isInstanceOf(InvalidPasswordException.class);
   }
 
   @Test

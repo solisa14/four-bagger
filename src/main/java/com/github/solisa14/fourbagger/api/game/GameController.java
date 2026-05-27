@@ -1,19 +1,25 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import com.github.solisa14.fourbagger.api.user.User;
-import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import com.github.solisa14.fourbagger.api.user.User;
+import jakarta.validation.Valid;
 
 /**
  * REST controller for managing game resources.
  *
- * <p>Provides endpoints for creating, starting, recording frames, and retrieving game details.
+ * <p>
+ * Provides endpoints for creating, starting, recording frames, and retrieving game details.
  */
 @RestController
 @RequestMapping("/api/v1/games")
@@ -41,15 +47,12 @@ public class GameController {
    * @return A response containing the newly created game details.
    */
   @PostMapping
-  public ResponseEntity<GameResponse> createGame(
-      @AuthenticationPrincipal User currentUser, @Valid @RequestBody CreateGameRequest request) {
+  public ResponseEntity<GameResponse> createGame(@AuthenticationPrincipal User currentUser,
+      @Valid @RequestBody CreateGameRequest request) {
     CreateGameCommand command = gameMapper.toCreateCommand(currentUser, request, null);
     Game game = gameService.createGame(command);
-    URI location =
-        ServletUriComponentsBuilder.fromCurrentRequest()
-            .path("/{id}")
-            .buildAndExpand(game.getId())
-            .toUri();
+    URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
+        .buildAndExpand(game.getId()).toUri();
     return ResponseEntity.created(location).body(gameMapper.toGameResponse(game));
   }
 
@@ -61,8 +64,8 @@ public class GameController {
    * @return A response containing the updated game details.
    */
   @PostMapping("/{gameId}/start")
-  public ResponseEntity<GameResponse> startGame(
-      @AuthenticationPrincipal User currentUser, @PathVariable UUID gameId) {
+  public ResponseEntity<GameResponse> startGame(@AuthenticationPrincipal User currentUser,
+      @PathVariable UUID gameId) {
     Game game = gameService.startGame(currentUser, gameId);
     return ResponseEntity.ok(gameMapper.toGameResponse(game));
   }
@@ -76,10 +79,8 @@ public class GameController {
    * @return A response containing the updated game details.
    */
   @PostMapping("/{gameId}/frames")
-  public ResponseEntity<GameResponse> recordFrame(
-      @AuthenticationPrincipal User currentUser,
-      @PathVariable UUID gameId,
-      @Valid @RequestBody RecordFrameRequest request) {
+  public ResponseEntity<GameResponse> recordFrame(@AuthenticationPrincipal User currentUser,
+      @PathVariable UUID gameId, @Valid @RequestBody RecordFrameRequest request) {
     gameService.recordFrame(currentUser, gameId, request);
     Game game = gameService.getGame(gameId);
     return ResponseEntity.status(201).body(gameMapper.toGameResponse(game));
@@ -106,10 +107,8 @@ public class GameController {
   @GetMapping("/me")
   public ResponseEntity<List<GameSummaryResponse>> listMyGames(
       @AuthenticationPrincipal User currentUser) {
-    List<GameSummaryResponse> games =
-        gameService.listUserGames(currentUser).stream()
-            .map(gameMapper::toGameSummaryResponse)
-            .toList();
+    List<GameSummaryResponse> games = gameService.listUserGames(currentUser).stream()
+        .map(gameMapper::toGameSummaryResponse).toList();
     return ResponseEntity.ok(games);
   }
 
@@ -121,8 +120,8 @@ public class GameController {
    * @return A response containing the cancelled game details.
    */
   @PostMapping("/{gameId}/cancel")
-  public ResponseEntity<GameResponse> cancelGame(
-      @AuthenticationPrincipal User currentUser, @PathVariable UUID gameId) {
+  public ResponseEntity<GameResponse> cancelGame(@AuthenticationPrincipal User currentUser,
+      @PathVariable UUID gameId) {
     Game game = gameService.cancelGame(currentUser, gameId);
     return ResponseEntity.ok(gameMapper.toGameResponse(game));
   }

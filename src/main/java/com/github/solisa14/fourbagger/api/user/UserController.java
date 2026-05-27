@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.user;
 
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,11 +8,13 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 
 /**
  * REST controller for user account management endpoints.
  *
- * <p>Provides HTTP endpoints for user profile operations and account management. Profile updates
+ * <p>
+ * Provides HTTP endpoints for user profile operations and account management. Profile updates
  * require both first and last names.
  */
 @RestController
@@ -54,8 +55,8 @@ public class UserController {
    * @return a ResponseEntity containing the updated user profile data
    */
   @PatchMapping("/me")
-  public ResponseEntity<UserResponse> updateProfile(
-      @AuthenticationPrincipal User currentUser, @Valid @RequestBody UpdateProfileRequest request) {
+  public ResponseEntity<UserResponse> updateProfile(@AuthenticationPrincipal User currentUser,
+      @Valid @RequestBody UpdateProfileRequest request) {
     UpdateProfileCommand command = userMapper.toCommand(request);
     User updatedUser = userService.updateProfile(currentUser.getId(), command);
     return ResponseEntity.ok(userMapper.toResponse(updatedUser));
@@ -69,8 +70,7 @@ public class UserController {
    * @return an empty ResponseEntity upon successful update
    */
   @PutMapping("/me/password")
-  public ResponseEntity<Void> updatePassword(
-      @AuthenticationPrincipal User currentUser,
+  public ResponseEntity<Void> updatePassword(@AuthenticationPrincipal User currentUser,
       @Valid @RequestBody UpdatePasswordRequest request) {
     UpdatePasswordCommand command = userMapper.toCommand(request);
     userService.updatePassword(currentUser.getId(), command);

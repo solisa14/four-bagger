@@ -1,22 +1,27 @@
 package com.github.solisa14.fourbagger.api.security;
 
-import com.github.solisa14.fourbagger.api.user.User;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import com.github.solisa14.fourbagger.api.user.User;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 
 /**
  * Service for generating, validating, and extracting information from JSON Web Tokens (JWT).
  *
- * <p>Uses HMAC-SHA256 signing to issue tokens. The secret key and expiration time are managed via
+ * <p>
+ * Uses HMAC-SHA256 signing to issue tokens. The secret key and expiration time are managed via
  * application configuration.
  */
 @Service
@@ -31,8 +36,7 @@ public class JwtService {
    * @param secretKey the secret key used for signing JWTs
    * @param jwtExpiration the expiration time for JWTs in milliseconds
    */
-  public JwtService(
-      @Value("${app.security.jwt.secret-key}") String secretKey,
+  public JwtService(@Value("${app.security.jwt.secret-key}") String secretKey,
       @Value("${app.security.jwt.expiration-ms}") long jwtExpiration) {
     this.secretKey = secretKey;
     this.jwtExpiration = jwtExpiration;
@@ -51,11 +55,8 @@ public class JwtService {
       claims.put("role", ((User) userDetails).getRole().name());
     } else {
       var authority = userDetails.getAuthorities().stream().findFirst();
-      authority.ifPresent(
-          grantedAuthority ->
-              claims.put(
-                  "role",
-                  Objects.requireNonNull(grantedAuthority.getAuthority()).replace("ROLE_", "")));
+      authority.ifPresent(grantedAuthority -> claims.put("role",
+          Objects.requireNonNull(grantedAuthority.getAuthority()).replace("ROLE_", "")));
     }
     return buildToken(claims, userDetails, jwtExpiration);
   }
@@ -100,15 +101,12 @@ public class JwtService {
     return claimsResolver.apply(claims);
   }
 
-  private String buildToken(
-      Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
-    return Jwts.builder()
-        .claims(extraClaims)
-        .subject(userDetails.getUsername())
+  private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails,
+      long expiration) {
+    return Jwts.builder().claims(extraClaims).subject(userDetails.getUsername())
         .issuedAt(new Date(System.currentTimeMillis()))
         .expiration(new Date(System.currentTimeMillis() + expiration))
-        .signWith(getSignInKey(), Jwts.SIG.HS256)
-        .compact();
+        .signWith(getSignInKey(), Jwts.SIG.HS256).compact();
   }
 
   private boolean isTokenExpired(String token) {

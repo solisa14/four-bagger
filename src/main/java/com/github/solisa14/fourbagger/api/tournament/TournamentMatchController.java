@@ -1,12 +1,16 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.github.solisa14.fourbagger.api.game.Game;
-import com.github.solisa14.fourbagger.api.game.GameResponse;
-import com.github.solisa14.fourbagger.api.user.User;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import com.github.solisa14.fourbagger.api.game.Game;
+import com.github.solisa14.fourbagger.api.game.GameResponse;
+import com.github.solisa14.fourbagger.api.user.User;
 
 /**
  * REST controller for tournament match operations. Provides endpoints to start matches, retrieve
@@ -26,10 +30,9 @@ class TournamentMatchController {
    * @param tournamentMatchService the service for match-related business logic
    * @param gameMapper the game mapper for conversion between game DTOs and domain objects
    * @param tournamentMapper the tournament mapper for conversion between tournament DTOs and domain
-   *     objects
+   *        objects
    */
-  TournamentMatchController(
-      TournamentMatchService tournamentMatchService,
+  TournamentMatchController(TournamentMatchService tournamentMatchService,
       com.github.solisa14.fourbagger.api.game.GameMapper gameMapper,
       TournamentMapper tournamentMapper) {
     this.tournamentMatchService = tournamentMatchService;
@@ -46,8 +49,7 @@ class TournamentMatchController {
    * @return the created or existing game for this match
    */
   @PostMapping("/{matchId}/start")
-  ResponseEntity<GameResponse> startMatch(
-      @AuthenticationPrincipal User currentUser,
+  ResponseEntity<GameResponse> startMatch(@AuthenticationPrincipal User currentUser,
       @PathVariable UUID tournamentId, @PathVariable UUID matchId) {
     Game game = tournamentMatchService.startMatch(tournamentId, matchId, currentUser);
     return ResponseEntity.ok(gameMapper.toGameResponse(game));
@@ -61,8 +63,8 @@ class TournamentMatchController {
    * @return the match details
    */
   @GetMapping("/{matchId}")
-  ResponseEntity<MatchResponse> getMatch(
-      @PathVariable UUID tournamentId, @PathVariable UUID matchId) {
+  ResponseEntity<MatchResponse> getMatch(@PathVariable UUID tournamentId,
+      @PathVariable UUID matchId) {
     Match match = tournamentMatchService.getMatch(tournamentId, matchId);
     return ResponseEntity.ok(tournamentMapper.toMatchResponse(match));
   }

@@ -1,15 +1,27 @@
 package com.github.solisa14.fourbagger.api.auth;
 
-import com.github.solisa14.fourbagger.api.user.User;
-import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
-import lombok.*;
+import com.github.solisa14.fourbagger.api.user.User;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Entity representing a refresh token used to obtain new access tokens.
  *
- * <p>Stores a one-way hash of the token, expiration time, and the associated user. Only one active
+ * <p>
+ * Stores a one-way hash of the token, expiration time, and the associated user. Only one active
  * refresh session is allowed per user.
  */
 @Entity

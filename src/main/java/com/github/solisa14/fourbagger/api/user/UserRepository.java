@@ -8,7 +8,8 @@ import org.springframework.stereotype.Repository;
 /**
  * Spring Data JPA repository for User entity database operations.
  *
- * <p>Provides standard CRUD operations through JpaRepository and custom queries for username-based
+ * <p>
+ * Provides standard CRUD operations through JpaRepository and custom queries for username-based
  * lookups used during authentication and registration.
  */
 @Repository
@@ -16,7 +17,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
   /**
    * Queries the database for a user with the given username.
    *
-   * <p>Used for username uniqueness validation during registration and credential lookup during
+   * <p>
+   * Used for username uniqueness validation during registration and credential lookup during
    * authentication. Username comparisons are case-sensitive.
    *
    * @param username the exact username to search for
@@ -27,7 +29,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
   /**
    * Queries the database for a user with the given email.
    *
-   * <p>Used for email uniqueness validation during registration.
+   * <p>
+   * Used for email uniqueness validation during registration.
    *
    * @param email the exact email to search for
    * @return Optional containing the user if found, empty if no match exists

@@ -39,12 +39,8 @@ public class TournamentBracketService {
       int matchesThisRound = bracketSize / (1 << (roundIndex + 1));
       List<Match> roundMatches = new ArrayList<>(matchesThisRound);
       for (int matchIndex = 0; matchIndex < matchesThisRound; matchIndex++) {
-        Match match =
-            Match.builder()
-                .round(round)
-                .matchNumber(matchIndex + 1)
-                .status(MatchStatus.PENDING)
-                .build();
+        Match match = Match.builder().round(round).matchNumber(matchIndex + 1)
+            .status(MatchStatus.PENDING).build();
         roundMatches.add(match);
       }
       round.getMatches().addAll(roundMatches);
@@ -58,21 +54,15 @@ public class TournamentBracketService {
   }
 
   private void ensureRoundCount(Tournament tournament, int roundCount) {
-    Map<Integer, TournamentRound> roundsByNumber =
-        tournament.getRounds().stream()
-            .collect(Collectors.toMap(TournamentRound::getRoundNumber, Function.identity()));
+    Map<Integer, TournamentRound> roundsByNumber = tournament.getRounds().stream()
+        .collect(Collectors.toMap(TournamentRound::getRoundNumber, Function.identity()));
 
     for (int roundNumber = 1; roundNumber <= roundCount; roundNumber++) {
       if (roundsByNumber.containsKey(roundNumber)) {
         continue;
       }
-      TournamentRound newRound =
-          TournamentRound.builder()
-              .tournament(tournament)
-              .roundNumber(roundNumber)
-              .bestOf(1)
-              .scoringMode(ScoringMode.STANDARD)
-              .build();
+      TournamentRound newRound = TournamentRound.builder().tournament(tournament)
+          .roundNumber(roundNumber).bestOf(1).scoringMode(ScoringMode.STANDARD).build();
       tournament.getRounds().add(newRound);
     }
     tournament.getRounds().removeIf(round -> round.getRoundNumber() > roundCount);
@@ -80,8 +70,7 @@ public class TournamentBracketService {
 
   private List<TournamentRound> sortedRounds(Tournament tournament) {
     return tournament.getRounds().stream()
-        .sorted(Comparator.comparing(TournamentRound::getRoundNumber))
-        .toList();
+        .sorted(Comparator.comparing(TournamentRound::getRoundNumber)).toList();
   }
 
   private void wireNextMatches(List<List<Match>> matchesByRound) {
@@ -97,8 +86,8 @@ public class TournamentBracketService {
     }
   }
 
-  private void seedFirstRound(
-      List<Match> firstRoundMatches, List<TournamentTeam> seededTeams, int bracketSize) {
+  private void seedFirstRound(List<Match> firstRoundMatches, List<TournamentTeam> seededTeams,
+      int bracketSize) {
     TournamentTeam[] bracketSlots = new TournamentTeam[bracketSize];
     for (TournamentTeam team : seededTeams) {
       int seed = team.getSeed() != null ? team.getSeed() : 0;
@@ -117,8 +106,8 @@ public class TournamentBracketService {
     }
   }
 
-  private void configureSeededMatch(
-      Match match, TournamentTeam seedTop, TournamentTeam seedBottom) {
+  private void configureSeededMatch(Match match, TournamentTeam seedTop,
+      TournamentTeam seedBottom) {
     match.setTeamOneWins(0);
     match.setTeamTwoWins(0);
     match.setWinner(null);
@@ -167,13 +156,9 @@ public class TournamentBracketService {
       return;
     }
 
-    List<Integer> byeSeeds =
-        byeMatches.stream()
-            .map(Match::getWinner)
-            .filter(team -> team != null && team.getSeed() != null)
-            .map(TournamentTeam::getSeed)
-            .sorted()
-            .toList();
+    List<Integer> byeSeeds = byeMatches.stream().map(Match::getWinner)
+        .filter(team -> team != null && team.getSeed() != null).map(TournamentTeam::getSeed)
+        .sorted().toList();
     List<Integer> expectedSeeds = IntStream.rangeClosed(1, expectedByeCount).boxed().toList();
     if (!byeSeeds.equals(expectedSeeds)) {
       throw new InvalidTournamentStateException("Byes must be assigned to top seeds");

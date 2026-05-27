@@ -1,8 +1,8 @@
 package com.github.solisa14.fourbagger.api.auth;
 
+import org.springframework.stereotype.Component;
 import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
 import com.github.solisa14.fourbagger.api.user.User;
-import org.springframework.stereotype.Component;
 
 /**
  * Mapper for authentication-related requests and commands. Provides conversions between requests,
@@ -21,12 +21,8 @@ public class AuthMapper {
     if (request == null) {
       return null;
     }
-    return new CreateUserCommand(
-        request.username(),
-        request.email(),
-        request.password(),
-        request.firstName(),
-        request.lastName());
+    return new CreateUserCommand(request.username(), request.email(), request.password(),
+        request.firstName(), request.lastName());
   }
 
   /**
@@ -52,7 +48,7 @@ public class AuthMapper {
     if (user == null) {
       return null;
     }
-    return new RegisterUserResponse(
-        user.getId(), user.getUsername(), user.getEmail(), user.getRole());
+    return new RegisterUserResponse(user.getId(), user.getUsername(), user.getEmail(),
+        user.getRole());
   }
 }

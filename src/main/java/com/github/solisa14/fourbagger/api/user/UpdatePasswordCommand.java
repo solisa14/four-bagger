@@ -6,4 +6,5 @@ package com.github.solisa14.fourbagger.api.user;
  * @param currentPassword the user's current password for verification
  * @param newPassword the new password to set
  */
-public record UpdatePasswordCommand(String currentPassword, String newPassword) {}
+public record UpdatePasswordCommand(String currentPassword, String newPassword) {
+}

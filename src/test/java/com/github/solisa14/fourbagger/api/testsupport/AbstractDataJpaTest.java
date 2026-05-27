@@ -7,4 +7,5 @@ import org.springframework.test.context.ActiveProfiles;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-public abstract class AbstractDataJpaTest {}
+public abstract class AbstractDataJpaTest {
+}
