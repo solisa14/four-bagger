@@ -87,6 +87,14 @@ class TournamentServiceTest {
         .isInstanceOf(TournamentNotFoundException.class);
   }
 
+  @Test
+  void getTournamentForUser_whenUserIsNotParticipantOrOrganizer_throwsTournamentAccessDeniedException() {
+    Tournament tournament = registrationTournament();
+    when(tournamentRepository.findById(any())).thenReturn(Optional.of(tournament));
+    assertThatThrownBy(() -> tournamentService.getTournamentForUser(tournament.getId(), player()))
+      .isInstanceOf(TournamentAccessDeniedException.class);
+  }
+
   // --- removeParticipant ---
   @Test
   void removeParticipant_whenTournamentIsInRegistration_removesParticipant() {

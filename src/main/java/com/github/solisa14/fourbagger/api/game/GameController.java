@@ -82,7 +82,7 @@ public class GameController {
   public ResponseEntity<GameResponse> recordFrame(@AuthenticationPrincipal User currentUser,
       @PathVariable UUID gameId, @Valid @RequestBody RecordFrameRequest request) {
     gameService.recordFrame(currentUser, gameId, request);
-    Game game = gameService.getGame(gameId);
+    Game game = gameService.getGameForUser(currentUser, gameId);
     return ResponseEntity.status(201).body(gameMapper.toGameResponse(game));
   }
 

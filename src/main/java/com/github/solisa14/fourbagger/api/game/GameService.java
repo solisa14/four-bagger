@@ -47,7 +47,6 @@ public class GameService {
    * @param command The command to create the game.
    * @return The created game.
    */
-  @Transactional
   public Game createGame(CreateGameCommand command) {
     return gameCreationService.createPendingGame(command);
   }
@@ -72,7 +71,9 @@ public class GameService {
     }
 
     game.setStatus(GameStatus.IN_PROGRESS);
-    return gameRepository.save(game);
+    Game savedGame = gameRepository.save(game);
+    initializeGameDetails(savedGame);
+    return savedGame;
   }
 
   /**
@@ -129,13 +130,14 @@ public class GameService {
     return frame;
   }
 
+  @Transactional(readOnly = true)
   public Game getGameForUser(User currentUser, UUID gameId) {
     Game game = getGame(gameId);
-    if (canAccessGame(currentUser, game)) {
-      return game;
-    } else {
+    if (!canAccessGame(currentUser, game)) {
       throw new GameAccessDeniedException();
     }
+    initializeGameDetails(game);
+    return game;
   }
 
   /**
@@ -155,8 +157,11 @@ public class GameService {
    * @param user The user.
    * @return List of games where the user is a player.
    */
+  @Transactional(readOnly = true)
   public List<Game> listUserGames(User user) {
-    return gameRepository.findByPlayer(user);
+    List<Game> games = gameRepository.findByPlayer(user);
+    games.forEach(this::initializeGameSummary);
+    return games;
   }
 
   /**
@@ -182,7 +187,28 @@ public class GameService {
     }
 
     game.setStatus(GameStatus.CANCELLED);
-    return gameRepository.save(game);
+    Game savedGame = gameRepository.save(game);
+    initializeGameDetails(savedGame);
+    return savedGame;
+  }
+
+  private void initializeGameDetails(Game game) {
+    initializeGameSummary(game);
+    game.getFrames().size(); // force initialization of frames 
+  }
+
+  private void initializeGameSummary(Game game) {
+    game.getPlayerOne().getUsername();
+    game.getPlayerTwo().getUsername();
+    if (game.getPlayerOnePartner() != null) {
+      game.getPlayerOnePartner().getUsername();
+    }
+    if (game.getPlayerTwoPartner() != null) {
+      game.getPlayerTwoPartner().getUsername();
+    }
+    if (game.getWinner() != null) {
+      game.getWinner().getUsername();
+    }
   }
 
   private void validateBagCounts(RecordFrameRequest request) {

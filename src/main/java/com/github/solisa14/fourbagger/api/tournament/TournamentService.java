@@ -77,9 +77,18 @@ public class TournamentService {
   public Tournament getTournament(UUID id) {
     Tournament tournament =
         tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
-    // Initialize lazy bracket collections while the session is still open so the
-    // mapping layer can traverse rounds → matches without a LazyInitializationException.
-    tournament.getRounds().forEach(r -> r.getMatches().size());
+    initializeTournamentDetails(tournament);
+    return tournament;
+  }
+
+  @Transactional(readOnly = true)
+  public Tournament getTournamentForUser(UUID id, User currentUser) {
+    Tournament tournament =
+        tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
+    if (!canAccessTournament(currentUser, tournament)) {
+      throw new TournamentAccessDeniedException(tournament.getId());
+    }
+    initializeTournamentDetails(tournament);
     return tournament;
   }
 
@@ -125,6 +134,21 @@ public class TournamentService {
     if (!tournament.getOrganizer().getId().equals(currentUser.getId())) {
       throw new TournamentAccessDeniedException(tournament.getId());
     }
+  }
+
+  private boolean canAccessTournament(User currentUser, Tournament tournament) {
+    if (currentUser == null) {
+      return false;
+    }
+
+    UUID currentUserId = currentUser.getId();
+    return tournament.getOrganizer().getId().equals(currentUserId)
+        || tournament.getParticipants().stream()
+            .anyMatch(participant -> participant.getUser().getId().equals(currentUserId));
+  }
+
+  private void initializeTournamentDetails(Tournament tournament) {
+    tournament.getRounds().forEach(round -> round.getMatches().size());
   }
 
   /**

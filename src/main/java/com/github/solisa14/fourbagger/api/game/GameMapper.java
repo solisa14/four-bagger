@@ -84,13 +84,20 @@ public class GameMapper {
    * @return the detailed game response
    */
   public GameResponse toGameResponse(Game game) {
-    return new GameResponse(game.getId(), game.getGameType(), toPlayerInfo(game.getPlayerOne()),
+    return new GameResponse(
+        game.getId(),
+        game.getGameType(),
+        toPlayerInfo(game.getPlayerOne()),
         game.getPlayerOnePartner() != null ? toPlayerInfo(game.getPlayerOnePartner()) : null,
         toPlayerInfo(game.getPlayerTwo()),
         game.getPlayerTwoPartner() != null ? toPlayerInfo(game.getPlayerTwoPartner()) : null,
-        game.getPlayerOneScore(), game.getPlayerTwoScore(), game.getTargetScore(), game.getStatus(),
+        game.getPlayerOneScore(),
+        game.getPlayerTwoScore(),
+        game.getTargetScore(),
+        game.getStatus(),
         game.getWinner() != null ? toPlayerInfo(game.getWinner()) : null,
-        game.getFrames().stream().map(this::toFrameResponse).toList(), game.getCreatedAt(),
+        game.getFrames().stream().map(this::toFrameResponse).toList(),
+        game.getCreatedAt(),
         game.getUpdatedAt());
   }
 
