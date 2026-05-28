@@ -9,8 +9,6 @@ I built this project because I wanted something my family could actually use dur
 functions, and I wanted a backend project that pushed me beyond basic CRUD. The goal was to practice backend engineering
 in a project with real domain rules, real state transitions, and a real deployment.
 
-The API is deployed and live at **https://four-bagger-api.azurewebsites.net**.
-
 ## Highlights
 
 - JWT-based authentication with refresh-token rotation and HttpOnly cookies
