@@ -9,5 +9,4 @@ import jakarta.validation.constraints.NotBlank;
  * @param title the tournament title
  * @param gameType the type of tournament — {@code SINGLES} (default) or {@code DOUBLES}
  */
-public record CreateTournamentRequest(@NotBlank String title, GameType gameType) {
-}
+public record CreateTournamentRequest(@NotBlank String title, GameType gameType) {}

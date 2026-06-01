@@ -1,7 +1,7 @@
 package com.github.solisa14.fourbagger.api.testsupport;
 
-import java.util.List;
 import jakarta.servlet.http.Cookie;
+import java.util.List;
 
 public final class TestCookieHelper {
 

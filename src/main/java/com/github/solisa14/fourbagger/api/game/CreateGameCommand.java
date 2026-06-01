@@ -1,7 +1,7 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import java.util.UUID;
 import com.github.solisa14.fourbagger.api.user.User;
+import java.util.UUID;
 
 /**
  * Command record containing the necessary information to create a new game.
@@ -12,8 +12,12 @@ import com.github.solisa14.fourbagger.api.user.User;
  * @param tournamentMatchId The ID of the tournament match this game belongs to, if applicable.
  * @param createdBy The user who is creating the game.
  */
-public record CreateGameCommand(GameParticipants participants, Integer targetScore,
-    GameScoringMode scoringMode, UUID tournamentMatchId, User createdBy) {
+public record CreateGameCommand(
+    GameParticipants participants,
+    Integer targetScore,
+    GameScoringMode scoringMode,
+    UUID tournamentMatchId,
+    User createdBy) {
 
   /**
    * Constructs a new {@link CreateGameCommand} and validates the required fields.

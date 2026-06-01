@@ -1,14 +1,13 @@
 package com.github.solisa14.fourbagger.api.common.exception;
 
-import org.springframework.http.HttpStatus;
 import lombok.Getter;
+import org.springframework.http.HttpStatus;
 
 /**
  * Base exception for application business logic errors that map to HTTP responses.
  *
- * <p>
- * Extends RuntimeException to avoid forced exception handling while carrying HTTP status codes for
- * the GlobalExceptionHandler to convert into appropriate REST responses.
+ * <p>Extends RuntimeException to avoid forced exception handling while carrying HTTP status codes
+ * for the GlobalExceptionHandler to convert into appropriate REST responses.
  */
 @Getter
 public class BusinessException extends RuntimeException {

@@ -5,6 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.github.solisa14.fourbagger.api.common.exception.TokenRefreshException;
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
+import com.github.solisa14.fourbagger.api.user.Role;
+import com.github.solisa14.fourbagger.api.user.User;
+import com.github.solisa14.fourbagger.api.user.UserRepository;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -15,20 +21,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import com.github.solisa14.fourbagger.api.common.exception.TokenRefreshException;
-import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
-import com.github.solisa14.fourbagger.api.user.Role;
-import com.github.solisa14.fourbagger.api.user.User;
-import com.github.solisa14.fourbagger.api.user.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 class RefreshTokenServiceTest {
 
-  @Mock
-  private RefreshTokenRepository refreshTokenRepository;
+  @Mock private RefreshTokenRepository refreshTokenRepository;
 
-  @Mock
-  private UserRepository userRepository;
+  @Mock private UserRepository userRepository;
 
   private RefreshTokenService refreshTokenService;
 
@@ -66,8 +65,12 @@ class RefreshTokenServiceTest {
   void issueRefreshToken_whenUserHasExistingToken_replacesSession() {
     UUID userId = UUID.randomUUID();
     User user = TestDataFactory.user(userId, "user1", "user1@example.com", "encoded", Role.USER);
-    RefreshToken existing = RefreshToken.builder().user(user).tokenHash("existing-hash")
-        .expiryDate(Instant.now().plusSeconds(30)).build();
+    RefreshToken existing =
+        RefreshToken.builder()
+            .user(user)
+            .tokenHash("existing-hash")
+            .expiryDate(Instant.now().plusSeconds(30))
+            .build();
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
     when(refreshTokenRepository.findByUserId(userId)).thenReturn(Optional.of(existing));
     when(refreshTokenRepository.save(any(RefreshToken.class)))
@@ -88,8 +91,11 @@ class RefreshTokenServiceTest {
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "e", Role.USER);
     String oldToken = "old-token";
     RefreshToken existing =
-        RefreshToken.builder().user(user).tokenHash(refreshTokenService.hashToken(oldToken))
-            .expiryDate(Instant.now().plusSeconds(60)).build();
+        RefreshToken.builder()
+            .user(user)
+            .tokenHash(refreshTokenService.hashToken(oldToken))
+            .expiryDate(Instant.now().plusSeconds(60))
+            .build();
     when(refreshTokenRepository.findByTokenHash(refreshTokenService.hashToken(oldToken)))
         .thenReturn(Optional.of(existing));
     when(refreshTokenRepository.save(any(RefreshToken.class)))
@@ -111,7 +117,9 @@ class RefreshTokenServiceTest {
         .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> refreshTokenService.rotateRefreshToken(unknownToken))
-        .isInstanceOf(TokenRefreshException.class).extracting(Throwable::getMessage).asString()
+        .isInstanceOf(TokenRefreshException.class)
+        .extracting(Throwable::getMessage)
+        .asString()
         .doesNotContain(unknownToken);
   }
 
@@ -121,8 +129,11 @@ class RefreshTokenServiceTest {
         TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "e", Role.USER);
     String oldToken = "old-token";
     RefreshToken existing =
-        RefreshToken.builder().user(user).tokenHash(refreshTokenService.hashToken(oldToken))
-            .expiryDate(Instant.now().minusSeconds(10)).build();
+        RefreshToken.builder()
+            .user(user)
+            .tokenHash(refreshTokenService.hashToken(oldToken))
+            .expiryDate(Instant.now().minusSeconds(10))
+            .build();
     when(refreshTokenRepository.findByTokenHash(refreshTokenService.hashToken(oldToken)))
         .thenReturn(Optional.of(existing));
 

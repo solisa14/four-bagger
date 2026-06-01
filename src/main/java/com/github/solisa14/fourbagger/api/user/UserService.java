@@ -1,16 +1,15 @@
 package com.github.solisa14.fourbagger.api.user;
 
+import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
 import java.util.UUID;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
 
 /**
  * Manages user account creation and persistence operations.
  *
- * <p>
- * Handles user validation, password encryption, and database persistence. Ensures username
+ * <p>Handles user validation, password encryption, and database persistence. Ensures username
  * uniqueness and assigns default role to new accounts.
  */
 @Service
@@ -27,7 +26,9 @@ public class UserService {
    * @param passwordEncoder the encoder used for hashing passwords
    * @param refreshTokenService the service for managing refresh tokens
    */
-  public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder,
+  public UserService(
+      UserRepository userRepository,
+      BCryptPasswordEncoder passwordEncoder,
       RefreshTokenService refreshTokenService) {
     this.passwordEncoder = passwordEncoder;
     this.userRepository = userRepository;
@@ -37,9 +38,8 @@ public class UserService {
   /**
    * Creates and persists a new user account with an encrypted password.
    *
-   * <p>
-   * Validates username and email uniqueness, encrypts the password using BCrypt, assigns the USER
-   * role, and saves to the database with auto-generated timestamps.
+   * <p>Validates username and email uniqueness, encrypts the password using BCrypt, assigns the
+   * USER role, and saves to the database with auto-generated timestamps.
    *
    * @param command user creation command including credentials and required profile fields
    * @return the persisted user entity with generated ID and timestamps
@@ -54,9 +54,15 @@ public class UserService {
     if (userRepository.findUserByEmail(command.email()).isPresent()) {
       throw new EmailAlreadyExistsException(command.email());
     }
-    User createdUser = User.builder().username(command.username()).email(command.email())
-        .password(passwordEncoder.encode(command.password())).firstName(command.firstName())
-        .lastName(command.lastName()).role(Role.USER).build();
+    User createdUser =
+        User.builder()
+            .username(command.username())
+            .email(command.email())
+            .password(passwordEncoder.encode(command.password()))
+            .firstName(command.firstName())
+            .lastName(command.lastName())
+            .role(Role.USER)
+            .build();
 
     return userRepository.save(createdUser);
   }
@@ -101,7 +107,7 @@ public class UserService {
    * @param id the UUID of the user changing their password
    * @param command the password update command containing current and new passwords
    * @throws InvalidPasswordException if the provided current password does not match the stored
-   *         hash
+   *     hash
    * @throws UserNotFoundException if no user is found with the provided ID
    */
   @Transactional

@@ -1,15 +1,5 @@
 package com.github.solisa14.fourbagger.api.user;
 
-import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.jspecify.annotations.NonNull;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,17 +8,26 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.jspecify.annotations.NonNull;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 /**
  * JPA entity representing a user account with Spring Security integration.
  *
- * <p>
- * Stores user credentials, profile information, and role-based access control. Implements Spring
+ * <p>Stores user credentials, profile information, and role-based access control. Implements Spring
  * Security's UserDetails interface to enable authentication and authorization.
  */
 @Entity
@@ -73,8 +72,7 @@ public class User implements UserDetails {
   /**
    * Returns the user's granted authorities based on their assigned role.
    *
-   * <p>
-   * Converts the user's role into a Spring Security GrantedAuthority with "ROLE_" prefix for
+   * <p>Converts the user's role into a Spring Security GrantedAuthority with "ROLE_" prefix for
    * standard role-based authorization checks.
    */
   @Override

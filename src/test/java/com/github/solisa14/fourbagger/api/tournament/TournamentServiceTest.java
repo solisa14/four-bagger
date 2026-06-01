@@ -7,6 +7,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.github.solisa14.fourbagger.api.game.GameType;
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
+import com.github.solisa14.fourbagger.api.user.Role;
+import com.github.solisa14.fourbagger.api.user.User;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,19 +20,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
-import com.github.solisa14.fourbagger.api.game.GameType;
-import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
-import com.github.solisa14.fourbagger.api.user.Role;
-import com.github.solisa14.fourbagger.api.user.User;
 
 @ExtendWith(MockitoExtension.class)
 class TournamentServiceTest {
 
-  @Mock
-  private TournamentRepository tournamentRepository;
-
   private final TournamentBracketService tournamentBracketService = new TournamentBracketService();
-
+  @Mock private TournamentRepository tournamentRepository;
   private TournamentService tournamentService;
 
   @BeforeEach
@@ -36,31 +34,39 @@ class TournamentServiceTest {
   }
 
   private User organizer() {
-    return TestDataFactory.user(UUID.randomUUID(), "organizer", "org@example.com", "encoded",
-        Role.USER);
+    return TestDataFactory.user(
+        UUID.randomUUID(), "organizer", "org@example.com", "encoded", Role.USER);
   }
 
   private User player() {
-    return TestDataFactory.user(UUID.randomUUID(), "player", "player@example.com", "encoded",
-        Role.USER);
+    return TestDataFactory.user(
+        UUID.randomUUID(), "player", "player@example.com", "encoded", Role.USER);
   }
 
   private Tournament registrationTournament() {
-    return Tournament.builder().id(UUID.randomUUID()).organizer(organizer())
-        .title("Test Tournament").status(TournamentStatus.REGISTRATION).joinCode("ABC123").build();
+    return Tournament.builder()
+        .id(UUID.randomUUID())
+        .organizer(organizer())
+        .title("Test Tournament")
+        .status(TournamentStatus.REGISTRATION)
+        .joinCode("ABC123")
+        .build();
   }
 
   private TournamentParticipant participant(Tournament tournament) {
-    return TournamentParticipant.builder().id(UUID.randomUUID()).tournament(tournament)
-        .user(player()).build();
+    return TournamentParticipant.builder()
+        .id(UUID.randomUUID())
+        .tournament(tournament)
+        .user(player())
+        .build();
   }
 
   private Tournament tournamentWithParticipants(TournamentStatus status, int participantCount) {
     return tournamentWithParticipants(status, participantCount, GameType.SINGLES);
   }
 
-  private Tournament tournamentWithParticipants(TournamentStatus status, int participantCount,
-      GameType gameType) {
+  private Tournament tournamentWithParticipants(
+      TournamentStatus status, int participantCount, GameType gameType) {
     Tournament tournament = registrationTournament();
     tournament.setStatus(status);
     tournament.setGameType(gameType);
@@ -71,8 +77,13 @@ class TournamentServiceTest {
   }
 
   private TournamentRound round(Tournament tournament, int roundNumber) {
-    return TournamentRound.builder().id(UUID.randomUUID()).tournament(tournament)
-        .roundNumber(roundNumber).bestOf(1).scoringMode(ScoringMode.STANDARD).build();
+    return TournamentRound.builder()
+        .id(UUID.randomUUID())
+        .tournament(tournament)
+        .roundNumber(roundNumber)
+        .bestOf(1)
+        .scoringMode(ScoringMode.STANDARD)
+        .build();
   }
 
   @Test
@@ -91,23 +102,28 @@ class TournamentServiceTest {
   }
 
   @Test
-  void getTournamentForUser_whenUserIsNotParticipantOrOrganizer_throwsTournamentAccessDeniedException() {
+  void
+      getTournamentForUser_whenUserIsNotParticipantOrOrganizer_throwsTournamentAccessDeniedException() {
     Tournament tournament = registrationTournament();
     when(tournamentRepository.findById(any())).thenReturn(Optional.of(tournament));
     assertThatThrownBy(() -> tournamentService.getTournamentForUser(tournament.getId(), player()))
-      .isInstanceOf(TournamentAccessDeniedException.class);
+        .isInstanceOf(TournamentAccessDeniedException.class);
   }
 
   // --- removeParticipant ---
   @Test
   void removeParticipant_whenTournamentIsInRegistration_removesParticipant() {
     Tournament tournament = registrationTournament();
-    TournamentParticipant participant = TournamentParticipant.builder().id(UUID.randomUUID())
-        .tournament(tournament).user(player()).build();
+    TournamentParticipant participant =
+        TournamentParticipant.builder()
+            .id(UUID.randomUUID())
+            .tournament(tournament)
+            .user(player())
+            .build();
     tournament.getParticipants().add(participant);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    tournamentService.removeParticipant(tournament.getId(), tournament.getOrganizer(),
-        participant.getId());
+    tournamentService.removeParticipant(
+        tournament.getId(), tournament.getOrganizer(), participant.getId());
     assertThat(tournament.getParticipants()).isEmpty();
     verify(tournamentRepository).save(tournament);
   }
@@ -115,16 +131,24 @@ class TournamentServiceTest {
   @Test
   void removeParticipant_whenTournamentHasMultipleParticipants_removesOnlyTargetParticipant() {
     Tournament tournament = registrationTournament();
-    TournamentParticipant participantOne = TournamentParticipant.builder().id(UUID.randomUUID())
-        .tournament(tournament).user(player()).build();
-    TournamentParticipant participantTwo = TournamentParticipant.builder().id(UUID.randomUUID())
-        .tournament(tournament).user(player()).build();
+    TournamentParticipant participantOne =
+        TournamentParticipant.builder()
+            .id(UUID.randomUUID())
+            .tournament(tournament)
+            .user(player())
+            .build();
+    TournamentParticipant participantTwo =
+        TournamentParticipant.builder()
+            .id(UUID.randomUUID())
+            .tournament(tournament)
+            .user(player())
+            .build();
     tournament.getParticipants().add(participantOne);
     tournament.getParticipants().add(participantTwo);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    tournamentService.removeParticipant(tournament.getId(), tournament.getOrganizer(),
-        participantOne.getId());
+    tournamentService.removeParticipant(
+        tournament.getId(), tournament.getOrganizer(), participantOne.getId());
 
     assertThat(tournament.getParticipants()).containsExactly(participantTwo);
     verify(tournamentRepository).save(tournament);
@@ -136,9 +160,11 @@ class TournamentServiceTest {
     tournament.setStatus(TournamentStatus.IN_PROGRESS);
     UUID participantId = UUID.randomUUID();
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    assertThatThrownBy(() -> tournamentService.removeParticipant(tournament.getId(),
-        tournament.getOrganizer(), participantId))
-            .isInstanceOf(InvalidTournamentStateException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.removeParticipant(
+                    tournament.getId(), tournament.getOrganizer(), participantId))
+        .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -149,9 +175,11 @@ class TournamentServiceTest {
     UUID participantId = UUID.randomUUID();
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentService.removeParticipant(tournament.getId(),
-        tournament.getOrganizer(), participantId))
-            .isInstanceOf(InvalidTournamentStateException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.removeParticipant(
+                    tournament.getId(), tournament.getOrganizer(), participantId))
+        .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -159,9 +187,11 @@ class TournamentServiceTest {
   void removeParticipant_whenParticipantDoesNotExist_throwsNotFoundException() {
     Tournament tournament = registrationTournament();
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    assertThatThrownBy(() -> tournamentService.removeParticipant(tournament.getId(),
-        tournament.getOrganizer(), UUID.randomUUID()))
-            .isInstanceOf(TournamentParticipantNotFoundException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.removeParticipant(
+                    tournament.getId(), tournament.getOrganizer(), UUID.randomUUID()))
+        .isInstanceOf(TournamentParticipantNotFoundException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -171,8 +201,8 @@ class TournamentServiceTest {
     UUID participantId = UUID.randomUUID();
     when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
     assertThatThrownBy(
-        () -> tournamentService.removeParticipant(tournamentId, organizer(), participantId))
-            .isInstanceOf(TournamentNotFoundException.class);
+            () -> tournamentService.removeParticipant(tournamentId, organizer(), participantId))
+        .isInstanceOf(TournamentNotFoundException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -183,8 +213,11 @@ class TournamentServiceTest {
     tournament.getParticipants().add(participant);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentService.removeParticipant(tournament.getId(), player(),
-        participant.getId())).isInstanceOf(TournamentAccessDeniedException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.removeParticipant(
+                    tournament.getId(), player(), participant.getId()))
+        .isInstanceOf(TournamentAccessDeniedException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -200,14 +233,17 @@ class TournamentServiceTest {
 
     assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
     assertThat(tournament.getTeams()).hasSize(4);
-    assertThat(tournament.getTeams()).extracting(TournamentTeam::getSeed)
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3, 4);
     assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerTwo).containsOnlyNulls();
     assertThat(tournament.getRounds()).hasSize(2);
-    assertThat(tournament.getRounds()).extracting(TournamentRound::getRoundNumber)
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getRoundNumber)
         .containsExactly(1, 2);
     assertThat(tournament.getRounds()).extracting(TournamentRound::getBestOf).containsOnly(1);
-    assertThat(tournament.getRounds()).extracting(TournamentRound::getScoringMode)
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getScoringMode)
         .containsOnly(ScoringMode.STANDARD);
     assertThat(tournament.getRounds().get(0).getMatches()).hasSize(2);
     assertThat(tournament.getRounds().get(1).getMatches()).hasSize(1);
@@ -219,8 +255,17 @@ class TournamentServiceTest {
   @Test
   void generateBracket_whenTournamentIsAlreadyBracketReady_reshufflesAndReassignsSeeds() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
-    tournament.getParticipants().forEach(p -> tournament.getTeams()
-        .add(TournamentTeam.builder().tournament(tournament).playerOne(p.getUser()).build()));
+    tournament
+        .getParticipants()
+        .forEach(
+            p ->
+                tournament
+                    .getTeams()
+                    .add(
+                        TournamentTeam.builder()
+                            .tournament(tournament)
+                            .playerOne(p.getUser())
+                            .build()));
     tournament.getTeams().get(0).setSeed(10);
     tournament.getTeams().get(1).setSeed(20);
     tournament.getTeams().get(2).setSeed(30);
@@ -239,11 +284,13 @@ class TournamentServiceTest {
     tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer());
 
     assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
-    assertThat(tournament.getTeams()).extracting(TournamentTeam::getSeed)
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3, 4);
     assertThat(tournament.getRounds()).hasSize(2);
     assertThat(tournament.getRounds()).extracting(TournamentRound::getBestOf).containsExactly(3, 5);
-    assertThat(tournament.getRounds()).extracting(TournamentRound::getScoringMode)
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getScoringMode)
         .containsExactly(ScoringMode.EXACT, ScoringMode.STANDARD);
     assertThat(tournament.getRounds().get(0).getMatches()).hasSize(2);
     assertThat(tournament.getRounds().get(1).getMatches()).hasSize(1);
@@ -256,8 +303,8 @@ class TournamentServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
-        () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
-            .isInstanceOf(InvalidTournamentStateException.class);
+            () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
+        .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -267,8 +314,8 @@ class TournamentServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
-        () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
-            .isInstanceOf(InvalidTournamentStateException.class);
+            () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
+        .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -278,8 +325,8 @@ class TournamentServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
-        () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
-            .isInstanceOf(InvalidTournamentStateException.class);
+            () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
+        .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -292,7 +339,8 @@ class TournamentServiceTest {
     tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer());
 
     assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
-    assertThat(tournament.getTeams()).extracting(TournamentTeam::getSeed)
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3);
     assertThat(tournament.getRounds()).hasSize(2);
     assertThat(tournament.getRounds().get(0).getMatches()).hasSize(2);
@@ -313,8 +361,12 @@ class TournamentServiceTest {
     assertThat(tournament.getRounds()).hasSize(3);
     assertThat(tournament.getRounds().get(0).getMatches()).hasSize(4);
     assertThat(tournament.getRounds().get(0).getMatches()).filteredOn(Match::isBye).hasSize(2);
-    assertThat(tournament.getRounds().get(0).getMatches().stream().filter(Match::isBye)
-        .map(m -> m.getWinner().getSeed()).toList()).containsExactlyInAnyOrder(1, 2);
+    assertThat(
+            tournament.getRounds().get(0).getMatches().stream()
+                .filter(Match::isBye)
+                .map(m -> m.getWinner().getSeed())
+                .toList())
+        .containsExactlyInAnyOrder(1, 2);
   }
 
   @Test
@@ -351,7 +403,8 @@ class TournamentServiceTest {
 
     assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
     assertThat(tournament.getTeams()).hasSize(3);
-    assertThat(tournament.getTeams()).extracting(TournamentTeam::getSeed)
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3);
     assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerOne).doesNotContainNull();
     assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerTwo).doesNotContainNull();
@@ -368,7 +421,8 @@ class TournamentServiceTest {
     tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer());
 
     assertThat(tournament.getTeams()).hasSize(4);
-    assertThat(tournament.getTeams()).extracting(TournamentTeam::getSeed)
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3, 4);
     assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerTwo).doesNotContainNull();
     assertThat(tournament.getRounds()).hasSize(2);
@@ -383,9 +437,9 @@ class TournamentServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
-        () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
-            .isInstanceOf(InvalidTournamentStateException.class)
-            .hasMessageContaining("even number of participants");
+            () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
+        .isInstanceOf(InvalidTournamentStateException.class)
+        .hasMessageContaining("even number of participants");
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -397,8 +451,9 @@ class TournamentServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
-        () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
-            .isInstanceOf(InvalidTournamentStateException.class).hasMessageContaining("minimum 6");
+            () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
+        .isInstanceOf(InvalidTournamentStateException.class)
+        .hasMessageContaining("minimum 6");
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -407,15 +462,26 @@ class TournamentServiceTest {
     Tournament tournament =
         tournamentWithParticipants(TournamentStatus.BRACKET_READY, 6, GameType.DOUBLES);
     // Simulate existing teams from a previous bracket generation
-    tournament.getParticipants().forEach(p -> tournament.getTeams().add(
-        TournamentTeam.builder().tournament(tournament).playerOne(p.getUser()).seed(99).build()));
+    tournament
+        .getParticipants()
+        .forEach(
+            p ->
+                tournament
+                    .getTeams()
+                    .add(
+                        TournamentTeam.builder()
+                            .tournament(tournament)
+                            .playerOne(p.getUser())
+                            .seed(99)
+                            .build()));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
 
     tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer());
 
     assertThat(tournament.getTeams()).hasSize(3);
-    assertThat(tournament.getTeams()).extracting(TournamentTeam::getSeed)
+    assertThat(tournament.getTeams())
+        .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3);
     assertThat(tournament.getTeams()).extracting(TournamentTeam::getPlayerTwo).doesNotContainNull();
   }
@@ -449,8 +515,8 @@ class TournamentServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
-        () -> tournamentService.startTournament(tournament.getId(), tournament.getOrganizer()))
-            .isInstanceOf(InvalidTournamentStateException.class);
+            () -> tournamentService.startTournament(tournament.getId(), tournament.getOrganizer()))
+        .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -460,8 +526,8 @@ class TournamentServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
-        () -> tournamentService.startTournament(tournament.getId(), tournament.getOrganizer()))
-            .isInstanceOf(InvalidTournamentStateException.class);
+            () -> tournamentService.startTournament(tournament.getId(), tournament.getOrganizer()))
+        .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -471,8 +537,8 @@ class TournamentServiceTest {
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
-        () -> tournamentService.startTournament(tournament.getId(), tournament.getOrganizer()))
-            .isInstanceOf(InvalidTournamentStateException.class);
+            () -> tournamentService.startTournament(tournament.getId(), tournament.getOrganizer()))
+        .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -494,8 +560,8 @@ class TournamentServiceTest {
     tournament.getRounds().add(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    tournamentService.updateRoundSettings(tournament.getId(), tournament.getOrganizer(), 1, 3,
-        ScoringMode.EXACT);
+    tournamentService.updateRoundSettings(
+        tournament.getId(), tournament.getOrganizer(), 1, 3, ScoringMode.EXACT);
 
     TournamentRound updatedRound = tournament.getRounds().get(0);
     assertThat(updatedRound.getBestOf()).isEqualTo(3);
@@ -511,8 +577,8 @@ class TournamentServiceTest {
     tournament.getRounds().add(tournamentRound);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    tournamentService.updateRoundSettings(tournament.getId(), tournament.getOrganizer(), 1, 5,
-        null);
+    tournamentService.updateRoundSettings(
+        tournament.getId(), tournament.getOrganizer(), 1, 5, null);
 
     assertThat(tournamentRound.getBestOf()).isEqualTo(5);
     assertThat(tournamentRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
@@ -527,8 +593,8 @@ class TournamentServiceTest {
     tournament.getRounds().add(tournamentRound);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    tournamentService.updateRoundSettings(tournament.getId(), tournament.getOrganizer(), 1, null,
-        ScoringMode.EXACT);
+    tournamentService.updateRoundSettings(
+        tournament.getId(), tournament.getOrganizer(), 1, null, ScoringMode.EXACT);
 
     assertThat(tournamentRound.getBestOf()).isEqualTo(7);
     assertThat(tournamentRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
@@ -541,9 +607,11 @@ class TournamentServiceTest {
     tournament.getRounds().add(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentService.updateRoundSettings(tournament.getId(),
-        tournament.getOrganizer(), 1, 3, ScoringMode.EXACT))
-            .isInstanceOf(InvalidTournamentStateException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), tournament.getOrganizer(), 1, 3, ScoringMode.EXACT))
+        .isInstanceOf(InvalidTournamentStateException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -553,8 +621,11 @@ class TournamentServiceTest {
     tournament.getRounds().add(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentService.updateRoundSettings(tournament.getId(), player(), 1,
-        3, ScoringMode.EXACT)).isInstanceOf(TournamentAccessDeniedException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), player(), 1, 3, ScoringMode.EXACT))
+        .isInstanceOf(TournamentAccessDeniedException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -563,8 +634,11 @@ class TournamentServiceTest {
     UUID tournamentId = UUID.randomUUID();
     when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> tournamentService.updateRoundSettings(tournamentId, organizer(), 1, 3,
-        ScoringMode.EXACT)).isInstanceOf(TournamentNotFoundException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournamentId, organizer(), 1, 3, ScoringMode.EXACT))
+        .isInstanceOf(TournamentNotFoundException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -574,22 +648,27 @@ class TournamentServiceTest {
     tournament.getRounds().add(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentService.updateRoundSettings(tournament.getId(),
-        tournament.getOrganizer(), 0, 3, ScoringMode.STANDARD))
-            .isInstanceOf(InvalidRoundConfigurationException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), tournament.getOrganizer(), 0, 3, ScoringMode.STANDARD))
+        .isInstanceOf(InvalidRoundConfigurationException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
   @Test
-  void updateRoundSettings_whenRoundNumberExceedsBracketRounds_throwsTournamentRoundNotFoundException() {
+  void
+      updateRoundSettings_whenRoundNumberExceedsBracketRounds_throwsTournamentRoundNotFoundException() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
     tournament.getRounds().add(round(tournament, 1));
     tournament.getRounds().add(round(tournament, 2));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentService.updateRoundSettings(tournament.getId(),
-        tournament.getOrganizer(), 3, 3, ScoringMode.STANDARD))
-            .isInstanceOf(TournamentRoundNotFoundException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), tournament.getOrganizer(), 3, 3, ScoringMode.STANDARD))
+        .isInstanceOf(TournamentRoundNotFoundException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -599,9 +678,11 @@ class TournamentServiceTest {
     tournament.getRounds().add(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentService.updateRoundSettings(tournament.getId(),
-        tournament.getOrganizer(), 2, 3, ScoringMode.STANDARD))
-            .isInstanceOf(TournamentRoundNotFoundException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), tournament.getOrganizer(), 2, 3, ScoringMode.STANDARD))
+        .isInstanceOf(TournamentRoundNotFoundException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -611,9 +692,11 @@ class TournamentServiceTest {
     tournament.getRounds().add(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentService.updateRoundSettings(tournament.getId(),
-        tournament.getOrganizer(), 1, 2, ScoringMode.STANDARD))
-            .isInstanceOf(InvalidRoundConfigurationException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), tournament.getOrganizer(), 1, 2, ScoringMode.STANDARD))
+        .isInstanceOf(InvalidRoundConfigurationException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -623,9 +706,11 @@ class TournamentServiceTest {
     tournament.getRounds().add(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
-    assertThatThrownBy(() -> tournamentService.updateRoundSettings(tournament.getId(),
-        tournament.getOrganizer(), 1, null, null))
-            .isInstanceOf(InvalidRoundConfigurationException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.updateRoundSettings(
+                    tournament.getId(), tournament.getOrganizer(), 1, null, null))
+        .isInstanceOf(InvalidRoundConfigurationException.class);
     verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
@@ -724,8 +809,12 @@ class TournamentServiceTest {
   void joinTournament_whenUserAlreadyJoined_throwsConflictException() {
     User existingUser = player();
     Tournament tournament = registrationTournament();
-    TournamentParticipant existingParticipant = TournamentParticipant.builder()
-        .id(UUID.randomUUID()).tournament(tournament).user(existingUser).build();
+    TournamentParticipant existingParticipant =
+        TournamentParticipant.builder()
+            .id(UUID.randomUUID())
+            .tournament(tournament)
+            .user(existingUser)
+            .build();
     tournament.getParticipants().add(existingParticipant);
     when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
 
@@ -748,8 +837,9 @@ class TournamentServiceTest {
   void createTournament_initializeTournamentWithCorrectDefaults() {
     User organizer = organizer();
     when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
-    Tournament result = tournamentService
-        .createTournament(new CreateTournamentCommand(organizer, "Test Tournament", null));
+    Tournament result =
+        tournamentService.createTournament(
+            new CreateTournamentCommand(organizer, "Test Tournament", null));
     assertThat(result.getStatus()).isEqualTo(TournamentStatus.REGISTRATION);
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     assertThat(result.getOrganizer()).isEqualTo(organizer);
@@ -764,8 +854,9 @@ class TournamentServiceTest {
             new DataIntegrityViolationException("duplicate key value violates unique constraint"))
         .thenAnswer(inv -> inv.getArgument(0));
 
-    Tournament result = tournamentService
-        .createTournament(new CreateTournamentCommand(organizer, "Test Tournament", null));
+    Tournament result =
+        tournamentService.createTournament(
+            new CreateTournamentCommand(organizer, "Test Tournament", null));
 
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     verify(tournamentRepository, times(2)).save(any(Tournament.class));
@@ -774,12 +865,15 @@ class TournamentServiceTest {
   @Test
   void createTournament_whenJoinCodeCollisionPersists_throwsJoinCodeGenerationException() {
     User organizer = organizer();
-    when(tournamentRepository.save(any(Tournament.class))).thenThrow(
-        new DataIntegrityViolationException("duplicate key value violates unique constraint"));
+    when(tournamentRepository.save(any(Tournament.class)))
+        .thenThrow(
+            new DataIntegrityViolationException("duplicate key value violates unique constraint"));
 
-    assertThatThrownBy(() -> tournamentService
-        .createTournament(new CreateTournamentCommand(organizer, "Test Tournament", null)))
-            .isInstanceOf(JoinCodeGenerationException.class);
+    assertThatThrownBy(
+            () ->
+                tournamentService.createTournament(
+                    new CreateTournamentCommand(organizer, "Test Tournament", null)))
+        .isInstanceOf(JoinCodeGenerationException.class);
     verify(tournamentRepository, times(5)).save(any(Tournament.class));
   }
 }

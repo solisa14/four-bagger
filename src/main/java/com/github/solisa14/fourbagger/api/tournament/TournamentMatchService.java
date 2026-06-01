@@ -1,10 +1,5 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import java.util.List;
-import java.util.UUID;
-import org.springframework.context.event.EventListener;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.github.solisa14.fourbagger.api.game.CreateGameCommand;
 import com.github.solisa14.fourbagger.api.game.Game;
 import com.github.solisa14.fourbagger.api.game.GameCompletedEvent;
@@ -16,6 +11,11 @@ import com.github.solisa14.fourbagger.api.game.GameStatus;
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.game.InvalidGameStateException;
 import com.github.solisa14.fourbagger.api.user.User;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service responsible for managing the execution and progression of tournament matches. Handles
@@ -38,8 +38,10 @@ public class TournamentMatchService {
    * @param gameRepository the repository for game data access
    * @param gameCreationService the service for handling complex game creation logic
    */
-  public TournamentMatchService(TournamentRepository tournamentRepository,
-      MatchRepository matchRepository, GameRepository gameRepository,
+  public TournamentMatchService(
+      TournamentRepository tournamentRepository,
+      MatchRepository matchRepository,
+      GameRepository gameRepository,
       GameCreationService gameCreationService) {
     this.tournamentRepository = tournamentRepository;
     this.matchRepository = matchRepository;
@@ -132,8 +134,10 @@ public class TournamentMatchService {
   @Transactional
   public void processCompletedGame(UUID gameId) {
     // Fetch the game and ensure it belongs to a tournament match
-    Game game = gameRepository.findById(gameId)
-        .orElseThrow(() -> new InvalidGameStateException("Game not found"));
+    Game game =
+        gameRepository
+            .findById(gameId)
+            .orElseThrow(() -> new InvalidGameStateException("Game not found"));
     if (game.getTournamentMatchId() == null) {
       throw new InvalidGameStateException("Game is not linked to a tournament match");
     }
@@ -145,8 +149,10 @@ public class TournamentMatchService {
     }
 
     // Retrieve the associated match and skip if it's already finished
-    Match match = matchRepository.findById(game.getTournamentMatchId())
-        .orElseThrow(() -> new MatchNotFoundException(game.getTournamentMatchId()));
+    Match match =
+        matchRepository
+            .findById(game.getTournamentMatchId())
+            .orElseThrow(() -> new MatchNotFoundException(game.getTournamentMatchId()));
     if (match.getStatus() == MatchStatus.COMPLETED) {
       return;
     }
@@ -212,8 +218,11 @@ public class TournamentMatchService {
 
     GameType gameType = resolveGameType(teamOne, teamTwo);
     if (gameType == GameType.DOUBLES) {
-      return GameParticipants.doubles(teamOne.getPlayerOne(), teamOne.getPlayerTwo(),
-          teamTwo.getPlayerOne(), teamTwo.getPlayerTwo());
+      return GameParticipants.doubles(
+          teamOne.getPlayerOne(),
+          teamOne.getPlayerTwo(),
+          teamTwo.getPlayerOne(),
+          teamTwo.getPlayerTwo());
     }
     return GameParticipants.singles(teamOne.getPlayerOne(), teamTwo.getPlayerOne());
   }
@@ -231,12 +240,16 @@ public class TournamentMatchService {
     UUID winnerId = game.getWinner().getId();
     TournamentTeam teamOne = match.getTeamOne();
     TournamentTeam teamTwo = match.getTeamTwo();
-    if (teamOne != null && (teamOne.getPlayerOne().getId().equals(winnerId)
-        || (teamOne.getPlayerTwo() != null && teamOne.getPlayerTwo().getId().equals(winnerId)))) {
+    if (teamOne != null
+        && (teamOne.getPlayerOne().getId().equals(winnerId)
+            || (teamOne.getPlayerTwo() != null
+                && teamOne.getPlayerTwo().getId().equals(winnerId)))) {
       return teamOne;
     }
-    if (teamTwo != null && (teamTwo.getPlayerOne().getId().equals(winnerId)
-        || (teamTwo.getPlayerTwo() != null && teamTwo.getPlayerTwo().getId().equals(winnerId)))) {
+    if (teamTwo != null
+        && (teamTwo.getPlayerOne().getId().equals(winnerId)
+            || (teamTwo.getPlayerTwo() != null
+                && teamTwo.getPlayerTwo().getId().equals(winnerId)))) {
       return teamTwo;
     }
     throw new InvalidTournamentStateException(
@@ -244,8 +257,12 @@ public class TournamentMatchService {
   }
 
   private CreateGameCommand buildCreateGameCommand(Match match, User createdBy) {
-    return new CreateGameCommand(resolveParticipants(match), 21,
-        resolveGameScoringMode(match.getRound().getScoringMode()), match.getId(), createdBy);
+    return new CreateGameCommand(
+        resolveParticipants(match),
+        21,
+        resolveGameScoringMode(match.getRound().getScoringMode()),
+        match.getId(),
+        createdBy);
   }
 
   private GameScoringMode resolveGameScoringMode(ScoringMode scoringMode) {
@@ -259,8 +276,8 @@ public class TournamentMatchService {
    * Listens for {@link GameCompletedEvent} and triggers tournament progression when the completed
    * game belongs to a tournament match. Standalone (non-tournament) games are ignored.
    *
-   * @param event the game completion event published by
-   *        {@link com.github.solisa14.fourbagger.api.game.GameService}
+   * @param event the game completion event published by {@link
+   *     com.github.solisa14.fourbagger.api.game.GameService}
    */
   @EventListener
   public void onGameCompleted(GameCompletedEvent event) {

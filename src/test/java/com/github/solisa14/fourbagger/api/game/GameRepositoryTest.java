@@ -1,25 +1,25 @@
 package com.github.solisa14.fourbagger.api.game;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import java.util.List;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import com.github.solisa14.fourbagger.api.testsupport.AbstractDataJpaTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 class GameRepositoryTest extends AbstractDataJpaTest {
 
-  @Autowired
-  private GameRepository gameRepository;
-  @Autowired
-  private UserRepository userRepository;
+  @Autowired private GameRepository gameRepository;
+  @Autowired private UserRepository userRepository;
 
   private User savedUser(String suffix) {
-    return userRepository.saveAndFlush(TestDataFactory.user(null, "user" + suffix,
-        "user" + suffix + "@example.com", "encoded", Role.USER));
+    return userRepository.saveAndFlush(
+        TestDataFactory.user(
+            null, "user" + suffix, "user" + suffix + "@example.com", "encoded", Role.USER));
   }
 
   @Test
@@ -50,9 +50,17 @@ class GameRepositoryTest extends AbstractDataJpaTest {
     User p2 = savedUser("partner-c");
     User p2Partner = savedUser("partner-d");
 
-    Game doublesGame = Game.builder().playerOne(p1).playerOnePartner(p1Partner).playerTwo(p2)
-        .playerTwoPartner(p2Partner).gameType(GameType.DOUBLES).targetScore(21)
-        .status(GameStatus.IN_PROGRESS).createdBy(p1).build();
+    Game doublesGame =
+        Game.builder()
+            .playerOne(p1)
+            .playerOnePartner(p1Partner)
+            .playerTwo(p2)
+            .playerTwoPartner(p2Partner)
+            .gameType(GameType.DOUBLES)
+            .targetScore(21)
+            .status(GameStatus.IN_PROGRESS)
+            .createdBy(p1)
+            .build();
 
     gameRepository.saveAndFlush(doublesGame);
 
@@ -72,8 +80,13 @@ class GameRepositoryTest extends AbstractDataJpaTest {
     User p2 = savedUser("e");
 
     Game game = TestDataFactory.game(p1, p2, GameStatus.IN_PROGRESS);
-    Frame frame = Frame.builder().game(game).frameNumber(1).playerOneBagsIn(1)
-        .playerOneFramePoints(3).build();
+    Frame frame =
+        Frame.builder()
+            .game(game)
+            .frameNumber(1)
+            .playerOneBagsIn(1)
+            .playerOneFramePoints(3)
+            .build();
     game.getFrames().add(frame);
 
     Game saved = gameRepository.saveAndFlush(game);

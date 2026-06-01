@@ -6,6 +6,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
+import com.github.solisa14.fourbagger.api.user.Role;
+import com.github.solisa14.fourbagger.api.user.User;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -15,22 +19,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
-import com.github.solisa14.fourbagger.api.user.Role;
-import com.github.solisa14.fourbagger.api.user.User;
 
 @ExtendWith(MockitoExtension.class)
 class GameServiceTest {
 
-  @Mock
-  private GameRepository gameRepository;
-  @Mock
-  private GameCreationService gameCreationService;
-  @Mock
-  private ApplicationEventPublisher eventPublisher;
+  @Mock private GameRepository gameRepository;
+  @Mock private GameCreationService gameCreationService;
+  @Mock private ApplicationEventPublisher eventPublisher;
 
-  @InjectMocks
-  private GameService gameService;
+  @InjectMocks private GameService gameService;
 
   private User playerOne() {
     return TestDataFactory.user(UUID.randomUUID(), "p1", "p1@example.com", "encoded", Role.USER);
@@ -41,13 +38,19 @@ class GameServiceTest {
   }
 
   private User otherUser() {
-    return TestDataFactory.user(UUID.randomUUID(), "other", "other@example.com", "encoded",
-        Role.USER);
+    return TestDataFactory.user(
+        UUID.randomUUID(), "other", "other@example.com", "encoded", Role.USER);
   }
 
   private Game inProgressGame(User p1, User p2) {
-    return Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2).targetScore(21)
-        .status(GameStatus.IN_PROGRESS).createdBy(p1).build();
+    return Game.builder()
+        .id(UUID.randomUUID())
+        .playerOne(p1)
+        .playerTwo(p2)
+        .targetScore(21)
+        .status(GameStatus.IN_PROGRESS)
+        .createdBy(p1)
+        .build();
   }
 
   // --- createGame ---
@@ -73,8 +76,14 @@ class GameServiceTest {
   void startGame_whenGameIsPending_setsStatusToInProgress() {
     User p1 = playerOne();
     User p2 = playerTwo();
-    Game game = Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2)
-        .status(GameStatus.PENDING).createdBy(p1).build();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .status(GameStatus.PENDING)
+            .createdBy(p1)
+            .build();
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -99,8 +108,14 @@ class GameServiceTest {
     User p1 = playerOne();
     User p2 = playerTwo();
     User outsider = otherUser();
-    Game game = Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2)
-        .status(GameStatus.PENDING).createdBy(p1).build();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .status(GameStatus.PENDING)
+            .createdBy(p1)
+            .build();
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(() -> gameService.startGame(outsider, game.getId()))
@@ -259,8 +274,8 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-        () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(3, 2, 0, 0)))
-            .isInstanceOf(InvalidFrameException.class);
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(3, 2, 0, 0)))
+        .isInstanceOf(InvalidFrameException.class);
   }
 
   @Test
@@ -271,34 +286,46 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-        () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 0, 2, 3)))
-            .isInstanceOf(InvalidFrameException.class);
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 0, 2, 3)))
+        .isInstanceOf(InvalidFrameException.class);
   }
 
   @Test
   void recordFrame_whenGameIsPending_throwsInvalidGameStateException() {
     User p1 = playerOne();
     User p2 = playerTwo();
-    Game game = Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2)
-        .status(GameStatus.PENDING).createdBy(p1).build();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .status(GameStatus.PENDING)
+            .createdBy(p1)
+            .build();
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-        () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 0, 0, 0)))
-            .isInstanceOf(InvalidGameStateException.class);
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 0, 0, 0)))
+        .isInstanceOf(InvalidGameStateException.class);
   }
 
   @Test
   void recordFrame_whenGameCompleted_throwsInvalidGameStateException() {
     User p1 = playerOne();
     User p2 = playerTwo();
-    Game game = Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2)
-        .status(GameStatus.COMPLETED).createdBy(p1).build();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .status(GameStatus.COMPLETED)
+            .createdBy(p1)
+            .build();
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-        () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 0, 0, 0)))
-            .isInstanceOf(InvalidGameStateException.class);
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(0, 0, 0, 0)))
+        .isInstanceOf(InvalidGameStateException.class);
   }
 
   @Test
@@ -310,8 +337,9 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-        () -> gameService.recordFrame(outsider, game.getId(), new RecordFrameRequest(1, 0, 0, 0)))
-            .isInstanceOf(GameAccessDeniedException.class);
+            () ->
+                gameService.recordFrame(outsider, game.getId(), new RecordFrameRequest(1, 0, 0, 0)))
+        .isInstanceOf(GameAccessDeniedException.class);
   }
 
   // --- getGame ---
@@ -378,8 +406,14 @@ class GameServiceTest {
   void cancelGame_whenGameAlreadyCompleted_throwsInvalidGameStateException() {
     User p1 = playerOne();
     User p2 = playerTwo();
-    Game game = Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2)
-        .status(GameStatus.COMPLETED).createdBy(p1).build();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .status(GameStatus.COMPLETED)
+            .createdBy(p1)
+            .build();
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(() -> gameService.cancelGame(p1, game.getId()))
@@ -428,8 +462,8 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
-        () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0)))
-            .isInstanceOf(InvalidFrameException.class);
+            () -> gameService.recordFrame(p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0)))
+        .isInstanceOf(InvalidFrameException.class);
   }
 
   @Test
@@ -468,19 +502,30 @@ class GameServiceTest {
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    Frame firstFrame = gameService.recordFrame(p1, game.getId(),
-        new RecordFrameRequest(1, 0, 0, 0, p1.getId(), p2.getId()));
+    Frame firstFrame =
+        gameService.recordFrame(
+            p1, game.getId(), new RecordFrameRequest(1, 0, 0, 0, p1.getId(), p2.getId()));
 
     assertThat(firstFrame.getFrameNumber()).isEqualTo(1);
     assertThat(game.getFrames()).hasSize(1);
 
-    Frame existing = Frame.builder().game(game).frameNumber(1).playerOneBagsIn(1).playerTwoBagsIn(0)
-        .playerOneFramePoints(3).playerTwoFramePoints(0).build();
+    Frame existing =
+        Frame.builder()
+            .game(game)
+            .frameNumber(1)
+            .playerOneBagsIn(1)
+            .playerTwoBagsIn(0)
+            .playerOneFramePoints(3)
+            .playerTwoFramePoints(0)
+            .build();
     game.getFrames().clear();
     game.getFrames().add(existing);
 
-    Frame secondFrame = gameService.recordFrame(p1, game.getId(),
-        new RecordFrameRequest(0, 1, 0, 0, p1Partner.getId(), p2Partner.getId()));
+    Frame secondFrame =
+        gameService.recordFrame(
+            p1,
+            game.getId(),
+            new RecordFrameRequest(0, 1, 0, 0, p1Partner.getId(), p2Partner.getId()));
 
     assertThat(secondFrame.getFrameNumber()).isEqualTo(2);
   }
@@ -492,9 +537,17 @@ class GameServiceTest {
     User p1 = playerOne();
     User p2 = playerTwo();
     UUID matchId = UUID.randomUUID();
-    Game game = Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2).targetScore(21)
-        .playerOneScore(18).status(GameStatus.IN_PROGRESS).createdBy(p1).tournamentMatchId(matchId)
-        .build();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .targetScore(21)
+            .playerOneScore(18)
+            .status(GameStatus.IN_PROGRESS)
+            .createdBy(p1)
+            .tournamentMatchId(matchId)
+            .build();
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any())).thenReturn(game);
 
@@ -510,9 +563,17 @@ class GameServiceTest {
   void recordFrame_whenFrameDoesNotCompleteGame_doesNotPublishEvent() {
     User p1 = playerOne();
     User p2 = playerTwo();
-    Game game = Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2).targetScore(21)
-        .playerOneScore(0).status(GameStatus.IN_PROGRESS).createdBy(p1)
-        .tournamentMatchId(UUID.randomUUID()).build();
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(p1)
+            .playerTwo(p2)
+            .targetScore(21)
+            .playerOneScore(0)
+            .status(GameStatus.IN_PROGRESS)
+            .createdBy(p1)
+            .tournamentMatchId(UUID.randomUUID())
+            .build();
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any())).thenReturn(game);
 

@@ -8,6 +8,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
+import com.github.solisa14.fourbagger.api.user.Role;
+import com.github.solisa14.fourbagger.api.user.User;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,102 +23,114 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
-import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
-import com.github.solisa14.fourbagger.api.user.Role;
-import com.github.solisa14.fourbagger.api.user.User;
 
 @WebMvcTest(GameController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import({GlobalExceptionHandler.class, GameMapper.class})
 class GameControllerWebMvcTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Autowired
-    private MockMvc mockMvc;
-    @MockitoBean
-    private GameService gameService;
-    @MockitoBean
-    private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
-    @MockitoBean
-    private com.github.solisa14.fourbagger.api.user.UserService userService;
+  @Autowired private MockMvc mockMvc;
+  @MockitoBean private GameService gameService;
+  @MockitoBean private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
+  @MockitoBean private com.github.solisa14.fourbagger.api.user.UserService userService;
 
-    private User authenticatedUser() {
-        return TestDataFactory.user(UUID.randomUUID(), "testuser", "test@example.com", "encoded",
-                Role.USER);
-    }
+  private User authenticatedUser() {
+    return TestDataFactory.user(
+        UUID.randomUUID(), "testuser", "test@example.com", "encoded", Role.USER);
+  }
 
-    @Test
-    void createGame_whenPlayerTwoIdMissing_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
-        String body = "{}";
+  @Test
+  void createGame_whenPlayerTwoIdMissing_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+    String body = "{}";
 
-        mockMvc.perform(post("/api/v1/games").with(user(principal))
-                .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isBadRequest());
-    }
+    mockMvc
+        .perform(
+            post("/api/v1/games")
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isBadRequest());
+  }
 
-    @Test
-    void createGame_whenTargetScoreTooLow_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
-        String body = objectMapper.writeValueAsString(new CreateGameRequest(UUID.randomUUID(), 5));
+  @Test
+  void createGame_whenTargetScoreTooLow_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+    String body = objectMapper.writeValueAsString(new CreateGameRequest(UUID.randomUUID(), 5));
 
-        mockMvc.perform(post("/api/v1/games").with(user(principal))
-                .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isBadRequest());
-    }
+    mockMvc
+        .perform(
+            post("/api/v1/games")
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isBadRequest());
+  }
 
-    @Test
-    void recordFrame_whenBagsOutOfRange_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
-        UUID gameId = UUID.randomUUID();
-        // p1BagsIn = 5, which violates @Max(4)
-        String body = objectMapper.writeValueAsString(new RecordFrameRequest(5, 0, 0, 0));
+  @Test
+  void recordFrame_whenBagsOutOfRange_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+    UUID gameId = UUID.randomUUID();
+    // p1BagsIn = 5, which violates @Max(4)
+    String body = objectMapper.writeValueAsString(new RecordFrameRequest(5, 0, 0, 0));
 
-        mockMvc.perform(post("/api/v1/games/{gameId}/frames", gameId).with(user(principal))
-                .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isBadRequest());
-    }
+    mockMvc
+        .perform(
+            post("/api/v1/games/{gameId}/frames", gameId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isBadRequest());
+  }
 
-    @Test
-    void getGame_whenGameNotFound_returnsNotFound() throws Exception {
-        User principal = authenticatedUser();
-        UUID gameId = UUID.randomUUID();
-        when(gameService.getGameForUser(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId)))
-                .thenThrow(new GameNotFoundException(gameId));
+  @Test
+  void getGame_whenGameNotFound_returnsNotFound() throws Exception {
+    User principal = authenticatedUser();
+    UUID gameId = UUID.randomUUID();
+    when(gameService.getGameForUser(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId)))
+        .thenThrow(new GameNotFoundException(gameId));
 
-        mockMvc.perform(get("/api/v1/games/{gameId}", gameId).with(user(principal)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Game not found: " + gameId));
-    }
+    mockMvc
+        .perform(get("/api/v1/games/{gameId}", gameId).with(user(principal)))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("Game not found: " + gameId));
+  }
 
-    @Test
-    void recordFrame_whenGameNotInProgress_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
-        UUID gameId = UUID.randomUUID();
-        when(gameService.recordFrame(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId),
-                any(RecordFrameRequest.class)))
-                        .thenThrow(new InvalidGameStateException(
-                                "Cannot record a frame for a game that is not IN_PROGRESS"));
+  @Test
+  void recordFrame_whenGameNotInProgress_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+    UUID gameId = UUID.randomUUID();
+    when(gameService.recordFrame(
+            org.mockito.ArgumentMatchers.nullable(User.class),
+            eq(gameId),
+            any(RecordFrameRequest.class)))
+        .thenThrow(
+            new InvalidGameStateException(
+                "Cannot record a frame for a game that is not IN_PROGRESS"));
 
-        String body = objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0));
+    String body = objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0));
 
-        mockMvc.perform(post("/api/v1/games/{gameId}/frames", gameId).with(user(principal))
-                .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isBadRequest());
-    }
+    mockMvc
+        .perform(
+            post("/api/v1/games/{gameId}/frames", gameId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isBadRequest());
+  }
 
-    @Test
-    void cancelGame_whenUserCannotModifyGame_returnsForbidden() throws Exception {
-        User principal = authenticatedUser();
-        UUID gameId = UUID.randomUUID();
-        when(gameService.cancelGame(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId)))
-                .thenThrow(new GameAccessDeniedException());
+  @Test
+  void cancelGame_whenUserCannotModifyGame_returnsForbidden() throws Exception {
+    User principal = authenticatedUser();
+    UUID gameId = UUID.randomUUID();
+    when(gameService.cancelGame(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId)))
+        .thenThrow(new GameAccessDeniedException());
 
-        mockMvc.perform(post("/api/v1/games/{gameId}/cancel", gameId).with(user(principal)))
-                .andExpect(status().isForbidden()).andExpect(jsonPath("$.message")
-                        .value("You are not allowed to access this game"));
-    }
+    mockMvc
+        .perform(post("/api/v1/games/{gameId}/cancel", gameId).with(user(principal)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.message").value("You are not allowed to access this game"));
+  }
 }

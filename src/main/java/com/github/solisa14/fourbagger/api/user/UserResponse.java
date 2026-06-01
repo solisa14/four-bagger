@@ -12,6 +12,5 @@ import java.util.UUID;
  * @param lastName the user's last name
  * @param role the user's role
  */
-public record UserResponse(UUID id, String username, String email, String firstName,
-        String lastName, Role role) {
-}
+public record UserResponse(
+    UUID id, String username, String email, String firstName, String lastName, Role role) {}

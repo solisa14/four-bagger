@@ -1,7 +1,7 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import org.springframework.http.HttpStatus;
 import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
+import org.springframework.http.HttpStatus;
 
 /**
  * Exception thrown when an action cannot be performed because of the game's current status. (e.g.,

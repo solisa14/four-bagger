@@ -1,11 +1,5 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import com.github.solisa14.fourbagger.api.user.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -21,11 +15,17 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * Entity representing a cornhole game, either standalone or as part of a tournament match. Tracks
@@ -109,5 +109,4 @@ public class Game {
   @UpdateTimestamp
   @Column(name = "updated_at")
   private Instant updatedAt;
-
 }

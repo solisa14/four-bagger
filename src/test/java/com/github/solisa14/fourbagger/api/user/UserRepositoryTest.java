@@ -2,19 +2,18 @@ package com.github.solisa14.fourbagger.api.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.github.solisa14.fourbagger.api.testsupport.AbstractDataJpaTest;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
-import com.github.solisa14.fourbagger.api.testsupport.AbstractDataJpaTest;
 
 class UserRepositoryTest extends AbstractDataJpaTest {
 
-  @Autowired
-  private UserRepository userRepository;
+  @Autowired private UserRepository userRepository;
 
-  @Autowired
-  private Flyway flyway;
+  @Autowired private Flyway flyway;
 
   @Test
   void flywayInfo_whenChecked_returnsCurrentMigration() {
@@ -58,7 +57,13 @@ class UserRepositoryTest extends AbstractDataJpaTest {
   }
 
   private User createUser(String username, String email) {
-    return User.builder().username(username).email(email).password("encoded").firstName("Test")
-        .lastName("User").role(Role.USER).build();
+    return User.builder()
+        .username(username)
+        .email(email)
+        .password("encoded")
+        .firstName("Test")
+        .lastName("User")
+        .role(Role.USER)
+        .build();
   }
 }

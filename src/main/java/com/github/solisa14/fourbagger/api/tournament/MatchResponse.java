@@ -16,8 +16,15 @@ import java.util.UUID;
  * @param teamTwoWins the number of games won by team two in this match series
  * @param winner summary of the winning team, or null if the match is not yet completed
  */
-public record MatchResponse(UUID id, int matchNumber, MatchStatus status, boolean isBye,
-    TeamSummary teamOne, TeamSummary teamTwo, int teamOneWins, int teamTwoWins,
+public record MatchResponse(
+    UUID id,
+    int matchNumber,
+    MatchStatus status,
+    boolean isBye,
+    TeamSummary teamOne,
+    TeamSummary teamTwo,
+    int teamOneWins,
+    int teamTwoWins,
     TeamSummary winner) {
 
   /**
@@ -28,7 +35,6 @@ public record MatchResponse(UUID id, int matchNumber, MatchStatus status, boolea
    * @param playerTwoUsername username of the second player, or null for singles
    * @param seed the team's seed number in the bracket
    */
-  public record TeamSummary(UUID id, String playerOneUsername, String playerTwoUsername,
-      Integer seed) {
-  }
+  public record TeamSummary(
+      UUID id, String playerOneUsername, String playerTwoUsername, Integer seed) {}
 }

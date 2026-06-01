@@ -1,9 +1,9 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import java.util.UUID;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.util.UUID;
 
 /**
  * Request payload for creating a new game.

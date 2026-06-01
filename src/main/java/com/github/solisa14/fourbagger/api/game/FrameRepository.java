@@ -6,5 +6,4 @@ import org.springframework.stereotype.Repository;
 
 /** Repository interface for managing {@link Frame} entities. */
 @Repository
-public interface FrameRepository extends JpaRepository<Frame, UUID> {
-}
+public interface FrameRepository extends JpaRepository<Frame, UUID> {}

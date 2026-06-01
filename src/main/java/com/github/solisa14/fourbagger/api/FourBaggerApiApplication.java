@@ -11,8 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 /**
  * Spring Boot application entry point for the FourBagger API.
  *
- * <p>
- * Bootstraps the REST API server with auto-configuration for web, JPA, and security components.
+ * <p>Bootstraps the REST API server with auto-configuration for web, JPA, and security components.
  * Runs Flyway database migrations before the Spring context starts so JPA schema validation always
  * sees the expected tables.
  */
@@ -29,7 +28,8 @@ public class FourBaggerApiApplication {
    */
   public static void main(String[] args) {
     new SpringApplicationBuilder(FourBaggerApiApplication.class)
-        .initializers(ctx -> runFlywayMigrations(ctx.getEnvironment())).run(args);
+        .initializers(ctx -> runFlywayMigrations(ctx.getEnvironment()))
+        .run(args);
   }
 
   /**
@@ -47,10 +47,16 @@ public class FourBaggerApiApplication {
     }
 
     log.info("Running Flyway migrations against {}", url);
-    Flyway flyway = Flyway.configure().dataSource(url, user, password)
-        .locations("classpath:db/migration").baselineOnMigrate(true).load();
+    Flyway flyway =
+        Flyway.configure()
+            .dataSource(url, user, password)
+            .locations("classpath:db/migration")
+            .baselineOnMigrate(true)
+            .load();
     var result = flyway.migrate();
-    log.info("Flyway migration complete: {} migration(s) applied, schema version now {}",
-        result.migrationsExecuted, result.targetSchemaVersion);
+    log.info(
+        "Flyway migration complete: {} migration(s) applied, schema version now {}",
+        result.migrationsExecuted,
+        result.targetSchemaVersion);
   }
 }

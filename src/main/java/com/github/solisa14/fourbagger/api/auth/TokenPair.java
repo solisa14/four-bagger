@@ -6,5 +6,4 @@ package com.github.solisa14.fourbagger.api.auth;
  * @param accessToken the JWT access token
  * @param refreshToken the JWT refresh token
  */
-public record TokenPair(String accessToken, String refreshToken) {
-}
+public record TokenPair(String accessToken, String refreshToken) {}

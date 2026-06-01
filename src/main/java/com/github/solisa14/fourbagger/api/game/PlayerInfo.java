@@ -10,5 +10,4 @@ import java.util.UUID;
  * @param firstName The player's first name.
  * @param lastName The player's last name.
  */
-public record PlayerInfo(UUID id, String username, String firstName, String lastName) {
-}
+public record PlayerInfo(UUID id, String username, String firstName, String lastName) {}

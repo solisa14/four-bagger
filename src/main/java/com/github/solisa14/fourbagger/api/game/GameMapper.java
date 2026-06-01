@@ -1,17 +1,16 @@
 package com.github.solisa14.fourbagger.api.game;
 
-import java.util.UUID;
-import org.springframework.stereotype.Component;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserService;
+import java.util.UUID;
+import org.springframework.stereotype.Component;
 
 /**
  * Mapper component responsible for transforming game-related API requests into internal domain
  * commands, and domain objects into responses.
  *
- * <p>
- * Encapulates the logic for resolving participants and applying default game configuration during
- * the transformation process.
+ * <p>Encapulates the logic for resolving participants and applying default game configuration
+ * during the transformation process.
  */
 @Component
 public class GameMapper {
@@ -37,17 +36,21 @@ public class GameMapper {
    * @param tournamentMatchId The ID of the tournament match, if applicable.
    * @return A valid {@link CreateGameCommand}.
    */
-  public CreateGameCommand toCreateCommand(User currentUser, CreateGameRequest request,
-      UUID tournamentMatchId) {
+  public CreateGameCommand toCreateCommand(
+      User currentUser, CreateGameRequest request, UUID tournamentMatchId) {
     User playerTwo = userService.getUser(request.playerTwoId());
     GameType gameType = resolveGameType(request);
     GameParticipants participants = resolveParticipants(currentUser, playerTwo, request, gameType);
-    return new CreateGameCommand(participants, resolveTargetScore(request),
-        resolveScoringMode(request), tournamentMatchId, currentUser);
+    return new CreateGameCommand(
+        participants,
+        resolveTargetScore(request),
+        resolveScoringMode(request),
+        tournamentMatchId,
+        currentUser);
   }
 
-  private GameParticipants resolveParticipants(User currentUser, User playerTwo,
-      CreateGameRequest request, GameType gameType) {
+  private GameParticipants resolveParticipants(
+      User currentUser, User playerTwo, CreateGameRequest request, GameType gameType) {
     if (gameType == GameType.DOUBLES) {
       if (request.playerOnePartnerId() == null || request.playerTwoPartnerId() == null) {
         throw new InvalidGameConfigurationException(
@@ -108,13 +111,19 @@ public class GameMapper {
    * @return the summary game response
    */
   public GameSummaryResponse toGameSummaryResponse(Game game) {
-    return new GameSummaryResponse(game.getId(), game.getGameType(),
+    return new GameSummaryResponse(
+        game.getId(),
+        game.getGameType(),
         toPlayerInfo(game.getPlayerOne()),
         game.getPlayerOnePartner() != null ? toPlayerInfo(game.getPlayerOnePartner()) : null,
         toPlayerInfo(game.getPlayerTwo()),
         game.getPlayerTwoPartner() != null ? toPlayerInfo(game.getPlayerTwoPartner()) : null,
-        game.getPlayerOneScore(), game.getPlayerTwoScore(), game.getTargetScore(), game.getStatus(),
-        game.getWinner() != null ? toPlayerInfo(game.getWinner()) : null, game.getCreatedAt(),
+        game.getPlayerOneScore(),
+        game.getPlayerTwoScore(),
+        game.getTargetScore(),
+        game.getStatus(),
+        game.getWinner() != null ? toPlayerInfo(game.getWinner()) : null,
+        game.getCreatedAt(),
         game.getUpdatedAt());
   }
 
@@ -125,9 +134,16 @@ public class GameMapper {
    * @return the frame response
    */
   public FrameResponse toFrameResponse(Frame frame) {
-    return new FrameResponse(frame.getId(), frame.getFrameNumber(), frame.getPlayerOneBagsIn(),
-        frame.getPlayerOneBagsOn(), frame.getPlayerTwoBagsIn(), frame.getPlayerTwoBagsOn(),
-        frame.getPlayerOneFramePoints(), frame.getPlayerTwoFramePoints(), frame.getCreatedAt());
+    return new FrameResponse(
+        frame.getId(),
+        frame.getFrameNumber(),
+        frame.getPlayerOneBagsIn(),
+        frame.getPlayerOneBagsOn(),
+        frame.getPlayerTwoBagsIn(),
+        frame.getPlayerTwoBagsOn(),
+        frame.getPlayerOneFramePoints(),
+        frame.getPlayerTwoFramePoints(),
+        frame.getCreatedAt());
   }
 
   /**
@@ -137,7 +153,7 @@ public class GameMapper {
    * @return the player info DTO
    */
   public PlayerInfo toPlayerInfo(User user) {
-    return new PlayerInfo(user.getId(), user.getUsername(), user.getFirstName(),
-        user.getLastName());
+    return new PlayerInfo(
+        user.getId(), user.getUsername(), user.getFirstName(), user.getLastName());
   }
 }

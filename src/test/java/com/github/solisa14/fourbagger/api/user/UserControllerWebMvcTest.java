@@ -7,6 +7,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -18,9 +22,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
-import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 
 @WebMvcTest(UserController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -28,12 +29,9 @@ import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 class UserControllerWebMvcTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
-  @Autowired
-  private MockMvc mockMvc;
-  @MockitoBean
-  private UserService userService;
-  @MockitoBean
-  private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
+  @Autowired private MockMvc mockMvc;
+  @MockitoBean private UserService userService;
+  @MockitoBean private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
 
   @Test
   void updateProfile_whenPayloadIsEmpty_returnsBadRequest() throws Exception {
@@ -44,13 +42,19 @@ class UserControllerWebMvcTest {
         new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
     SecurityContextHolder.getContext().setAuthentication(authentication);
     try {
-      doAnswer(invocation -> {
-        throw new InvalidProfileUpdateException();
-      }).when(userService).updateProfile(any(), any());
+      doAnswer(
+              invocation -> {
+                throw new InvalidProfileUpdateException();
+              })
+          .when(userService)
+          .updateProfile(any(), any());
 
       mockMvc
-          .perform(patch("/api/v1/user/me").with(user(principal)).contentType("application/json")
-              .content("{}"))
+          .perform(
+              patch("/api/v1/user/me")
+                  .with(user(principal))
+                  .contentType("application/json")
+                  .content("{}"))
           .andExpect(status().isBadRequest())
           .andExpect(jsonPath("$.message").value("At least one field must be provided"));
     } finally {
@@ -65,8 +69,11 @@ class UserControllerWebMvcTest {
     Map<String, String> payload = Map.of("currentPassword", "current");
 
     mockMvc
-        .perform(put("/api/v1/user/me/password").with(user(principal))
-            .contentType("application/json").content(objectMapper.writeValueAsString(payload)))
+        .perform(
+            put("/api/v1/user/me/password")
+                .with(user(principal))
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(payload)))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message").value("newPassword: New password is required"));
   }

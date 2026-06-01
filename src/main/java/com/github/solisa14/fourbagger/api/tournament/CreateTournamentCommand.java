@@ -10,5 +10,4 @@ import com.github.solisa14.fourbagger.api.user.User;
  * @param title the title of the tournament
  * @param gameType the type of tournament (SINGLES or DOUBLES)
  */
-public record CreateTournamentCommand(User organizer, String title, GameType gameType) {
-}
+public record CreateTournamentCommand(User organizer, String title, GameType gameType) {}

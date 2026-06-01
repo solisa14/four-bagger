@@ -16,8 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /**
  * Centralized exception handling for REST API endpoints.
  *
- * <p>
- * Intercepts exceptions thrown by controllers and converts them into consistent JSON error
+ * <p>Intercepts exceptions thrown by controllers and converts them into consistent JSON error
  * responses with appropriate HTTP status codes. Handles both business logic exceptions and
  * framework validation errors.
  */
@@ -29,8 +28,7 @@ public class GlobalExceptionHandler {
   /**
    * Converts application business exceptions into standardized error responses.
    *
-   * <p>
-   * Extracts the HTTP status and message from the BusinessException and wraps them in an
+   * <p>Extracts the HTTP status and message from the BusinessException and wraps them in an
    * ErrorResponse with the current timestamp.
    *
    * @param ex the caught business exception
@@ -44,8 +42,7 @@ public class GlobalExceptionHandler {
   /**
    * Handles Jakarta Bean Validation failures on request body parameters.
    *
-   * <p>
-   * Extracts the first validation error and formats it as "fieldName: error message" for the
+   * <p>Extracts the first validation error and formats it as "fieldName: error message" for the
    * client. Returns HTTP 400 Bad Request.
    *
    * @param e the validation exception containing field-level errors
@@ -67,8 +64,7 @@ public class GlobalExceptionHandler {
   /**
    * Handles authentication failures.
    *
-   * <p>
-   * Returns HTTP 401 Unauthorized when authentication fails (e.g., invalid credentials).
+   * <p>Returns HTTP 401 Unauthorized when authentication fails (e.g., invalid credentials).
    *
    * @param ex the authentication exception
    * @return response entity with HTTP 401 and a generic error message
@@ -81,8 +77,7 @@ public class GlobalExceptionHandler {
   /**
    * Handles token refresh exceptions.
    *
-   * <p>
-   * Returns HTTP 403 Forbidden when a token refresh fails (e.g., expired or invalid token).
+   * <p>Returns HTTP 403 Forbidden when a token refresh fails (e.g., expired or invalid token).
    *
    * @param ex the token refresh exception
    * @return response entity with HTTP 403 and the error message
@@ -95,8 +90,7 @@ public class GlobalExceptionHandler {
   /**
    * Handles missing request cookie exceptions.
    *
-   * <p>
-   * Returns HTTP 401 Unauthorized when a required cookie is missing from the request.
+   * <p>Returns HTTP 401 Unauthorized when a required cookie is missing from the request.
    *
    * @param ex the missing request cookie exception
    * @return response entity with HTTP 401 and an error message specifying the missing cookie
@@ -104,19 +98,19 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(MissingRequestCookieException.class)
   public ResponseEntity<ErrorResponse> handleMissingRequestCookieException(
       MissingRequestCookieException ex) {
-    String message = switch (ex.getCookieName()) {
-      case "refreshToken" -> "Refresh token is required";
-      case "accessToken" -> "Access token is required";
-      default -> ex.getCookieName() + " cookie is required";
-    };
+    String message =
+        switch (ex.getCookieName()) {
+          case "refreshToken" -> "Refresh token is required";
+          case "accessToken" -> "Access token is required";
+          default -> ex.getCookieName() + " cookie is required";
+        };
     return buildResponse(HttpStatus.UNAUTHORIZED, message);
   }
 
   /**
    * Handles data integrity violation exceptions.
    *
-   * <p>
-   * Returns HTTP 409 Conflict when a database operation violates integrity constraints.
+   * <p>Returns HTTP 409 Conflict when a database operation violates integrity constraints.
    *
    * @param ex the data integrity violation exception
    * @return response entity with HTTP 409 and a conflict error message
@@ -130,9 +124,8 @@ public class GlobalExceptionHandler {
   /**
    * Handles any uncaught exception not mapped above.
    *
-   * <p>
-   * Logs the full exception server-side and returns HTTP 500 with a generic message so clients do
-   * not receive Spring Boot's default {@code /error} payload or internal details.
+   * <p>Logs the full exception server-side and returns HTTP 500 with a generic message so clients
+   * do not receive Spring Boot's default {@code /error} payload or internal details.
    *
    * @param ex the unexpected exception
    * @return response entity with HTTP 500 and a generic error message

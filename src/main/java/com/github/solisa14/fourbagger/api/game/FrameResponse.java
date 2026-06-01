@@ -16,8 +16,13 @@ import java.util.UUID;
  * @param playerTwoFramePoints Net points scored by player two in this frame.
  * @param createdAt The time the frame was recorded.
  */
-public record FrameResponse(UUID id, int frameNumber, int playerOneBagsIn, int playerOneBagsOn,
-        int playerTwoBagsIn, int playerTwoBagsOn, int playerOneFramePoints,
-        int playerTwoFramePoints, Instant createdAt) {
-
-}
+public record FrameResponse(
+    UUID id,
+    int frameNumber,
+    int playerOneBagsIn,
+    int playerOneBagsOn,
+    int playerTwoBagsIn,
+    int playerTwoBagsOn,
+    int playerOneFramePoints,
+    int playerTwoFramePoints,
+    Instant createdAt) {}

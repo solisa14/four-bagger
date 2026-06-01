@@ -1,5 +1,7 @@
 package com.github.solisa14.fourbagger.api.auth;
 
+import com.github.solisa14.fourbagger.api.security.JwtService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -10,14 +12,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.github.solisa14.fourbagger.api.security.JwtService;
-import jakarta.validation.Valid;
 
 /**
  * REST controller that manages user registration and authentication endpoints.
  *
- * <p>
- * Provides HTTP endpoints for creating new user accounts, logging in, refreshing tokens, and
+ * <p>Provides HTTP endpoints for creating new user accounts, logging in, refreshing tokens, and
  * logging out.
  */
 @RestController
@@ -39,10 +38,12 @@ public class AuthenticationController {
    * @param isCookieSecure whether cookies should be secure
    * @param authMapper the authentication mapper
    */
-  public AuthenticationController(AuthenticationService authenticationService,
+  public AuthenticationController(
+      AuthenticationService authenticationService,
       JwtService jwtService,
       @Value("${app.security.jwt.refresh-token.expiration-ms}") long refreshTokenDurationMs,
-      @Value("${app.security.cookie.secure}") boolean isCookieSecure, AuthMapper authMapper) {
+      @Value("${app.security.cookie.secure}") boolean isCookieSecure,
+      AuthMapper authMapper) {
     this.authenticationService = authenticationService;
     this.jwtService = jwtService;
     this.refreshTokenDurationMs = refreshTokenDurationMs;
@@ -53,14 +54,13 @@ public class AuthenticationController {
   /**
    * Registers a new user account with the provided credentials and profile information.
    *
-   * <p>
-   * Validates the request payload, creates the user, logs them in, and returns HTTP 201 (Created)
-   * with the user details and HttpOnly authentication cookies.
+   * <p>Validates the request payload, creates the user, logs them in, and returns HTTP 201
+   * (Created) with the user details and HttpOnly authentication cookies.
    *
    * @param request validated user registration data including username, password, and required
-   *        names
+   *     names
    * @return response entity with HTTP 201 status, the newly created user's public details, and auth
-   *         cookies
+   *     cookies
    */
   @PostMapping("/register")
   public ResponseEntity<RegisterUserResponse> register(
@@ -69,15 +69,17 @@ public class AuthenticationController {
     var createdUser = authenticationService.registerUser(command);
     RegisterUserResponse response = authMapper.toRegisterResponse(createdUser);
 
-    TokenPair authResponse = authenticationService
-        .authenticate(new LoginCommand(request.username(), request.password()));
+    TokenPair authResponse =
+        authenticationService.authenticate(
+            new LoginCommand(request.username(), request.password()));
 
     ResponseCookie jwtCookie = createAccessTokenCookie(authResponse.accessToken());
     ResponseCookie refreshCookie = createRefreshTokenCookie(authResponse.refreshToken());
 
     return ResponseEntity.status(HttpStatus.CREATED)
         .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString()).body(response);
+        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+        .body(response);
   }
 
   /**
@@ -92,8 +94,10 @@ public class AuthenticationController {
     ResponseCookie jwtCookie = createAccessTokenCookie(authResponse.accessToken());
     ResponseCookie refreshCookie = createRefreshTokenCookie(authResponse.refreshToken());
 
-    return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString()).build();
+    return ResponseEntity.ok()
+        .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+        .build();
   }
 
   /**
@@ -109,8 +113,10 @@ public class AuthenticationController {
     ResponseCookie jwtCookie = createAccessTokenCookie(authResponse.accessToken());
     ResponseCookie refreshCookie = createRefreshTokenCookie(authResponse.refreshToken());
 
-    return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString()).build();
+    return ResponseEntity.ok()
+        .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+        .build();
   }
 
   /**
@@ -127,24 +133,39 @@ public class AuthenticationController {
     }
     ResponseCookie jwtCookie = createCleanCookie("accessToken");
     ResponseCookie refreshCookie = createCleanCookie("refreshToken");
-    return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString()).build();
+    return ResponseEntity.ok()
+        .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+        .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+        .build();
   }
 
   private ResponseCookie createAccessTokenCookie(String token) {
-    return ResponseCookie.from("accessToken", token).httpOnly(true).secure(isCookieSecure).path("/")
-        .maxAge(jwtService.getExpirationTime() / 1000).sameSite("Strict").build();
+    return ResponseCookie.from("accessToken", token)
+        .httpOnly(true)
+        .secure(isCookieSecure)
+        .path("/")
+        .maxAge(jwtService.getExpirationTime() / 1000)
+        .sameSite("Strict")
+        .build();
   }
 
   private ResponseCookie createRefreshTokenCookie(String token) {
-    return ResponseCookie.from("refreshToken", token).httpOnly(true).secure(isCookieSecure)
+    return ResponseCookie.from("refreshToken", token)
+        .httpOnly(true)
+        .secure(isCookieSecure)
         .path("/api/v1/auth") // Restrict to auth endpoints
-        .maxAge(refreshTokenDurationMs / 1000).sameSite("Strict").build();
+        .maxAge(refreshTokenDurationMs / 1000)
+        .sameSite("Strict")
+        .build();
   }
 
   private ResponseCookie createCleanCookie(String name) {
-    return ResponseCookie.from(name, "").httpOnly(true).secure(isCookieSecure)
-        .path(name.equals("refreshToken") ? "/api/v1/auth" : "/").maxAge(0).sameSite("Strict")
+    return ResponseCookie.from(name, "")
+        .httpOnly(true)
+        .secure(isCookieSecure)
+        .path(name.equals("refreshToken") ? "/api/v1/auth" : "/")
+        .maxAge(0)
+        .sameSite("Strict")
         .build();
   }
 }

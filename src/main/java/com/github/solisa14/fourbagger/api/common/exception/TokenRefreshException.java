@@ -5,8 +5,7 @@ import org.springframework.http.HttpStatus;
 /**
  * Exception thrown when a refresh token is missing, invalid, or expired.
  *
- * <p>
- * Detail messages are surfaced to API clients via {@code GlobalExceptionHandler}; they must not
+ * <p>Detail messages are surfaced to API clients via {@code GlobalExceptionHandler}; they must not
  * include the raw refresh token or other credentials.
  */
 public class TokenRefreshException extends BusinessException {

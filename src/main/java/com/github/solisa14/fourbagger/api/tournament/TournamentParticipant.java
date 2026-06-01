@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import java.util.UUID;
 import com.github.solisa14.fourbagger.api.user.User;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -11,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -28,9 +28,13 @@ import lombok.Setter;
 @Setter
 @Builder
 @Entity
-@Table(name = "tournament_participants",
-    uniqueConstraints = {@UniqueConstraint(name = "uk_tournament_participants_tournament_user",
-        columnNames = {"tournament_id", "user_id"})})
+@Table(
+    name = "tournament_participants",
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "uk_tournament_participants_tournament_user",
+          columnNames = {"tournament_id", "user_id"})
+    })
 public class TournamentParticipant {
 
   @Id
