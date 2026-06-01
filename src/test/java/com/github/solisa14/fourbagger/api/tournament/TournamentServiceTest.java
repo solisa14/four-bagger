@@ -9,11 +9,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import com.github.solisa14.fourbagger.api.game.GameType;
@@ -26,11 +25,15 @@ class TournamentServiceTest {
 
   @Mock
   private TournamentRepository tournamentRepository;
-  @Spy
-  private TournamentBracketService tournamentBracketService = new TournamentBracketService();
 
-  @InjectMocks
+  private final TournamentBracketService tournamentBracketService = new TournamentBracketService();
+
   private TournamentService tournamentService;
+
+  @BeforeEach
+  void setUp() {
+    tournamentService = new TournamentService(tournamentRepository, tournamentBracketService);
+  }
 
   private User organizer() {
     return TestDataFactory.user(UUID.randomUUID(), "organizer", "org@example.com", "encoded",
