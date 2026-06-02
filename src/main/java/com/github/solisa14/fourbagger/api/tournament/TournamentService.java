@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class TournamentService {
   private static final SecureRandom RANDOM = new SecureRandom();
-  private static final int MAX_JOIN_CODE_ATTEMPTS = 5;
+  private static final int MAX_JOIN_CODE_ATTEMPTS = 10;
   private final TournamentRepository tournamentRepository;
   private final TournamentBracketService tournamentBracketService;
 
