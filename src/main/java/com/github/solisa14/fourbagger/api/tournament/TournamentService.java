@@ -110,6 +110,8 @@ public class TournamentService {
               .title(command.title())
               .status(TournamentStatus.REGISTRATION)
               .gameType(command.gameType() != null ? command.gameType() : GameType.SINGLES)
+              .format(
+                  command.format() != null ? command.format() : TournamentFormat.SINGLE_ELIMINATION)
               .joinCode(joinCode)
               .build();
       try {

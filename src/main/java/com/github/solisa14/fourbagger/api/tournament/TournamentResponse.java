@@ -21,4 +21,5 @@ public record TournamentResponse(
     String joinCode,
     TournamentStatus status,
     GameType gameType,
+    TournamentFormat format,
     List<TournamentRoundResponse> rounds) {}

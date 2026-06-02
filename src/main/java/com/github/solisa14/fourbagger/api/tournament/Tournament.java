@@ -59,6 +59,11 @@ public class Tournament {
   private GameType gameType = GameType.SINGLES;
 
   @Column(nullable = false)
+  @Enumerated(EnumType.STRING)
+  @Builder.Default
+  private TournamentFormat format = TournamentFormat.SINGLE_ELIMINATION;
+
+  @Column(nullable = false)
   private String title;
 
   @Column(nullable = false, unique = true)
