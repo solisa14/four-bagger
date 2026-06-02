@@ -839,8 +839,10 @@ class TournamentServiceTest {
     when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
     Tournament result =
         tournamentService.createTournament(
-            new CreateTournamentCommand(organizer, "Test Tournament", null));
+            new CreateTournamentCommand(organizer, "Test Tournament", null, null));
     assertThat(result.getStatus()).isEqualTo(TournamentStatus.REGISTRATION);
+    assertThat(result.getGameType()).isEqualTo(GameType.SINGLES);
+    assertThat(result.getFormat()).isEqualTo(TournamentFormat.SINGLE_ELIMINATION);
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     assertThat(result.getOrganizer()).isEqualTo(organizer);
     assertThat(result.getTitle()).isEqualTo("Test Tournament");
@@ -856,7 +858,8 @@ class TournamentServiceTest {
 
     Tournament result =
         tournamentService.createTournament(
-            new CreateTournamentCommand(organizer, "Test Tournament", null));
+            new CreateTournamentCommand(
+                organizer, "Test Tournament", GameType.SINGLES, TournamentFormat.SINGLE_ELIMINATION));
 
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     verify(tournamentRepository, times(2)).save(any(Tournament.class));
@@ -872,8 +875,12 @@ class TournamentServiceTest {
     assertThatThrownBy(
             () ->
                 tournamentService.createTournament(
-                    new CreateTournamentCommand(organizer, "Test Tournament", null)))
+                    new CreateTournamentCommand(
+                        organizer,
+                        "Test Tournament",
+                        GameType.SINGLES,
+                        TournamentFormat.SINGLE_ELIMINATION)))
         .isInstanceOf(JoinCodeGenerationException.class);
-    verify(tournamentRepository, times(5)).save(any(Tournament.class));
+    verify(tournamentRepository, times(10)).save(any(Tournament.class));
   }
 }

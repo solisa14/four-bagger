@@ -40,8 +40,10 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new CreateTournamentRequest("Read Test", null))))
+                            new CreateTournamentRequest(
+                                "Read Test", null, TournamentFormat.SINGLE_ELIMINATION))))
             .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
 
     UUID tournamentId =
@@ -59,6 +61,7 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.id").value(tournamentId.toString()))
         .andExpect(jsonPath("$.title").value("Read Test"))
         .andExpect(jsonPath("$.status").value("REGISTRATION"))
+        .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
         .andExpect(jsonPath("$.rounds").isArray())
         .andExpect(jsonPath("$.rounds").isEmpty());
   }
@@ -84,8 +87,10 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new CreateTournamentRequest("Read Bracket Test", null))))
+                            new CreateTournamentRequest(
+                                "Read Bracket Test", null, TournamentFormat.SINGLE_ELIMINATION))))
             .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
 
     var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
@@ -106,6 +111,7 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+        .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
         .andExpect(jsonPath("$.rounds").isArray())
         .andExpect(jsonPath("$.rounds.length()").value(2))
         .andExpect(jsonPath("$.rounds[0].roundNumber").value(1))

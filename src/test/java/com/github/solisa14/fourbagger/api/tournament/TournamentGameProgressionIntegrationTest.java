@@ -51,8 +51,10 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new CreateTournamentRequest("Mutation Test", null))))
+                            new CreateTournamentRequest(
+                                "Mutation Test", null, TournamentFormat.SINGLE_ELIMINATION))))
             .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
 
     var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
@@ -131,8 +133,11 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                     .cookie(TestCookieHelper.cookie("accessToken", orgToken))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
-                        objectMapper.writeValueAsString(new CreateTournamentRequest("Test", null))))
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Test", null, TournamentFormat.SINGLE_ELIMINATION))))
             .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
 
     var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
@@ -230,8 +235,10 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new CreateTournamentRequest("Bo3 Test", null))))
+                            new CreateTournamentRequest(
+                                "Bo3 Test", null, TournamentFormat.SINGLE_ELIMINATION))))
             .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
 
     var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());

@@ -89,12 +89,13 @@ class TournamentControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new CreateTournamentRequest("TestTournament", null))))
+                        new CreateTournamentRequest("TestTournament", null, null))))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.title").value("TestTournament"))
         .andExpect(jsonPath("$.joinCode").value("ABC123"))
         .andExpect(jsonPath("$.status").value("REGISTRATION"))
         .andExpect(jsonPath("$.gameType").value("SINGLES"))
+        .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
         .andExpect(jsonPath("$.rounds").isArray());
   }
 
@@ -114,9 +115,11 @@ class TournamentControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new CreateTournamentRequest("TestTournament", GameType.DOUBLES))))
+                        new CreateTournamentRequest(
+                            "TestTournament", GameType.DOUBLES, TournamentFormat.SINGLE_ELIMINATION))))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.gameType").value("DOUBLES"));
+        .andExpect(jsonPath("$.gameType").value("DOUBLES"))
+        .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"));
   }
 
   @Test
@@ -133,9 +136,10 @@ class TournamentControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new CreateTournamentRequest("TestTournament", null))))
+                        new CreateTournamentRequest("TestTournament", null, null))))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.gameType").value("SINGLES"));
+        .andExpect(jsonPath("$.gameType").value("SINGLES"))
+        .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"));
   }
 
   @Test
@@ -167,6 +171,7 @@ class TournamentControllerWebMvcTest {
         .andExpect(jsonPath("$.joinCode").value("ABC123"))
         .andExpect(jsonPath("$.title").value("TestTournament"))
         .andExpect(jsonPath("$.status").value("REGISTRATION"))
+        .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
         .andExpect(jsonPath("$.rounds").isArray());
   }
 
