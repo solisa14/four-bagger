@@ -24,7 +24,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 @ExtendWith(MockitoExtension.class)
 class TournamentServiceTest {
 
-  private final TournamentBracketService tournamentBracketService = new TournamentBracketService();
+  private final TournamentBracketService tournamentBracketService =
+      new TournamentBracketService(new SingleEliminationBracketGenerator());
   @Mock private TournamentRepository tournamentRepository;
   private TournamentService tournamentService;
 
