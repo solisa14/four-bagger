@@ -120,10 +120,10 @@ class TournamentProgressionService {
     match.setStatus(MatchStatus.COMPLETED);
     matchRepository.save(match);
 
-    Match nextMatch = match.getNextMatch();
-    if (nextMatch != null) {
-      advanceWinner(match, winningTeam, nextMatch);
-      matchRepository.save(nextMatch);
+    Match winnerNextMatch = match.getWinnerNextMatch();
+    if (winnerNextMatch != null) {
+      advanceWinner(match, winningTeam, winnerNextMatch);
+      matchRepository.save(winnerNextMatch);
       return;
     }
 
@@ -132,11 +132,12 @@ class TournamentProgressionService {
     tournamentRepository.save(tournament);
   }
 
-  private void advanceWinner(Match match, TournamentTeam winningTeam, Match nextMatch) {
-    if (match.getNextMatchPosition() != null && match.getNextMatchPosition() == 1) {
-      nextMatch.setTeamOne(winningTeam);
-    } else if (match.getNextMatchPosition() != null && match.getNextMatchPosition() == 2) {
-      nextMatch.setTeamTwo(winningTeam);
+  private void advanceWinner(Match match, TournamentTeam winningTeam, Match winnerNextMatch) {
+    if (match.getWinnerNextMatchPosition() != null && match.getWinnerNextMatchPosition() == 1) {
+      winnerNextMatch.setTeamOne(winningTeam);
+    } else if (match.getWinnerNextMatchPosition() != null
+        && match.getWinnerNextMatchPosition() == 2) {
+      winnerNextMatch.setTeamTwo(winningTeam);
     }
   }
 }

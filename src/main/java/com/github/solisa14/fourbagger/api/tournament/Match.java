@@ -25,7 +25,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 /**
  * Represents a single contest between two teams within a tournament round. A match may consist of
  * one or more games depending on the round's "best of" configuration. It tracks the wins for each
- * team and progresses the winner to the subsequent match in the bracket.
+ * team and routes the winner and loser to their configured next matches in the bracket graph.
  */
 @NoArgsConstructor
 @AllArgsConstructor
@@ -62,11 +62,18 @@ public class Match {
   private Integer matchNumber;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "next_match_id")
-  private Match nextMatch;
+  @JoinColumn(name = "winner_next_match_id")
+  private Match winnerNextMatch;
 
-  @Column(name = "next_match_position")
-  private Integer nextMatchPosition;
+  @Column(name = "winner_next_match_position")
+  private Integer winnerNextMatchPosition;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "loser_next_match_id")
+  private Match loserNextMatch;
+
+  @Column(name = "loser_next_match_position")
+  private Integer loserNextMatchPosition;
 
   @Column(name = "is_bye", nullable = false)
   @Builder.Default

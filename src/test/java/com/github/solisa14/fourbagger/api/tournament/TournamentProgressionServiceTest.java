@@ -104,11 +104,11 @@ class TournamentProgressionServiceTest {
   void processCompletedGame_whenSeriesClinched_advancesWinnerToNextMatch() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    Match nextMatch = match(tournament, false);
-    nextMatch.setTeamOne(null);
-    nextMatch.setTeamTwo(null);
-    match.setNextMatch(nextMatch);
-    match.setNextMatchPosition(2);
+    Match winnerNextMatch = match(tournament, false);
+    winnerNextMatch.setTeamOne(null);
+    winnerNextMatch.setTeamTwo(null);
+    match.setWinnerNextMatch(winnerNextMatch);
+    match.setWinnerNextMatchPosition(2);
     match.getRound().setBestOf(3);
     match.setTeamOneWins(1);
 
@@ -120,7 +120,7 @@ class TournamentProgressionServiceTest {
 
     assertThat(match.getStatus()).isEqualTo(MatchStatus.COMPLETED);
     assertThat(match.getWinner()).isEqualTo(match.getTeamOne());
-    assertThat(nextMatch.getTeamTwo()).isEqualTo(match.getTeamOne());
+    assertThat(winnerNextMatch.getTeamTwo()).isEqualTo(match.getTeamOne());
     verify(matchRepository, times(2)).save(any(Match.class));
   }
 
@@ -128,11 +128,11 @@ class TournamentProgressionServiceTest {
   void processCompletedGame_whenSeriesClinchedAndAdvancingToPositionOne_setsTeamOne() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    Match nextMatch = match(tournament, false);
-    nextMatch.setTeamOne(null);
-    nextMatch.setTeamTwo(null);
-    match.setNextMatch(nextMatch);
-    match.setNextMatchPosition(1);
+    Match winnerNextMatch = match(tournament, false);
+    winnerNextMatch.setTeamOne(null);
+    winnerNextMatch.setTeamTwo(null);
+    match.setWinnerNextMatch(winnerNextMatch);
+    match.setWinnerNextMatchPosition(1);
     match.getRound().setBestOf(3);
     match.setTeamOneWins(1);
 
@@ -142,7 +142,7 @@ class TournamentProgressionServiceTest {
 
     tournamentProgressionService.processCompletedGame(completedGame.getId());
 
-    assertThat(nextMatch.getTeamOne()).isEqualTo(match.getTeamOne());
+    assertThat(winnerNextMatch.getTeamOne()).isEqualTo(match.getTeamOne());
   }
 
   @Test

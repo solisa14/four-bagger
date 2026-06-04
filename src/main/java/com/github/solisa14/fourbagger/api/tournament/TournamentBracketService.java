@@ -11,8 +11,8 @@ import org.springframework.stereotype.Service;
 
 /**
  * Service responsible for generating and seeding a single-elimination tournament bracket. Computes
- * necessary rounds, handles byes for non-power-of-two team counts, and links matches so winners
- * automatically progress.
+ * necessary rounds, handles byes for non-power-of-two team counts, and links winner routes so
+ * winners automatically progress.
  */
 @Service
 public class TournamentBracketService {
@@ -90,9 +90,9 @@ public class TournamentBracketService {
       List<Match> nextRound = matchesByRound.get(roundIndex + 1);
       for (int matchIndex = 0; matchIndex < currentRound.size(); matchIndex++) {
         Match current = currentRound.get(matchIndex);
-        Match nextMatch = nextRound.get(matchIndex / 2);
-        current.setNextMatch(nextMatch);
-        current.setNextMatchPosition((matchIndex % 2) + 1);
+        Match winnerNextMatch = nextRound.get(matchIndex / 2);
+        current.setWinnerNextMatch(winnerNextMatch);
+        current.setWinnerNextMatchPosition((matchIndex % 2) + 1);
       }
     }
   }
@@ -146,13 +146,14 @@ public class TournamentBracketService {
 
   private void autoAdvanceByes(List<Match> firstRoundMatches) {
     for (Match match : firstRoundMatches) {
-      if (!match.isBye() || match.getWinner() == null || match.getNextMatch() == null) {
+      if (!match.isBye() || match.getWinner() == null || match.getWinnerNextMatch() == null) {
         continue;
       }
-      if (match.getNextMatchPosition() != null && match.getNextMatchPosition() == 1) {
-        match.getNextMatch().setTeamOne(match.getWinner());
-      } else if (match.getNextMatchPosition() != null && match.getNextMatchPosition() == 2) {
-        match.getNextMatch().setTeamTwo(match.getWinner());
+      if (match.getWinnerNextMatchPosition() != null && match.getWinnerNextMatchPosition() == 1) {
+        match.getWinnerNextMatch().setTeamOne(match.getWinner());
+      } else if (match.getWinnerNextMatchPosition() != null
+          && match.getWinnerNextMatchPosition() == 2) {
+        match.getWinnerNextMatch().setTeamTwo(match.getWinner());
       }
     }
   }

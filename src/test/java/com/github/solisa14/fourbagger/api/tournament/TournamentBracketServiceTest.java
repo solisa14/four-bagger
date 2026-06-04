@@ -38,8 +38,10 @@ class TournamentBracketServiceTest {
     assertThat(roundOne.getMatches())
         .allSatisfy(
             match -> {
-              assertThat(match.getNextMatch()).isEqualTo(roundTwo.getMatches().getFirst());
-              assertThat(match.getNextMatchPosition()).isIn(1, 2);
+              assertThat(match.getWinnerNextMatch()).isEqualTo(roundTwo.getMatches().getFirst());
+              assertThat(match.getWinnerNextMatchPosition()).isIn(1, 2);
+              assertThat(match.getLoserNextMatch()).isNull();
+              assertThat(match.getLoserNextMatchPosition()).isNull();
             });
   }
 

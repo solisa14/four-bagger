@@ -72,7 +72,11 @@ public class TournamentMapper {
         match.getTeamTwo() != null ? toTeamSummary(match.getTeamTwo()) : null,
         match.getTeamOneWins(),
         match.getTeamTwoWins(),
-        match.getWinner() != null ? toTeamSummary(match.getWinner()) : null);
+        match.getWinner() != null ? toTeamSummary(match.getWinner()) : null,
+        match.getWinnerNextMatch() != null ? match.getWinnerNextMatch().getId() : null,
+        match.getWinnerNextMatchPosition(),
+        match.getLoserNextMatch() != null ? match.getLoserNextMatch().getId() : null,
+        match.getLoserNextMatchPosition());
   }
 
   /**

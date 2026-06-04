@@ -15,6 +15,14 @@ import java.util.UUID;
  * @param teamOneWins the number of games won by team one in this match series
  * @param teamTwoWins the number of games won by team two in this match series
  * @param winner summary of the winning team, or null if the match is not yet completed
+ * @param winnerNextMatchId the match that receives this match's winner, or null for terminal
+ *     matches
+ * @param winnerNextMatchPosition the destination team slot for this match's winner, or null when no
+ *     winner route exists
+ * @param loserNextMatchId the match that receives this match's loser, or null when no loser route
+ *     exists
+ * @param loserNextMatchPosition the destination team slot for this match's loser, or null when no
+ *     loser route exists
  */
 public record MatchResponse(
     UUID id,
@@ -25,7 +33,11 @@ public record MatchResponse(
     TeamSummary teamTwo,
     int teamOneWins,
     int teamTwoWins,
-    TeamSummary winner) {
+    TeamSummary winner,
+    UUID winnerNextMatchId,
+    Integer winnerNextMatchPosition,
+    UUID loserNextMatchId,
+    Integer loserNextMatchPosition) {
 
   /**
    * Summary of a tournament team for inclusion in match responses.

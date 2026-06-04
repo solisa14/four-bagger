@@ -213,7 +213,11 @@ class TournamentMatchControllerWebMvcTest {
         .andExpect(jsonPath("$.teamTwo.playerOneUsername").value("team2-a"))
         .andExpect(jsonPath("$.teamOneWins").value(0))
         .andExpect(jsonPath("$.teamTwoWins").value(0))
-        .andExpect(jsonPath("$.winner").isEmpty());
+        .andExpect(jsonPath("$.winner").isEmpty())
+        .andExpect(jsonPath("$.winnerNextMatchId").isEmpty())
+        .andExpect(jsonPath("$.winnerNextMatchPosition").isEmpty())
+        .andExpect(jsonPath("$.loserNextMatchId").isEmpty())
+        .andExpect(jsonPath("$.loserNextMatchPosition").isEmpty());
   }
 
   @Test

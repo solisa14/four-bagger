@@ -78,10 +78,16 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
 
     assertThat(roundOneMatches).hasSize(2);
     assertThat(roundOneMatches)
-        .allSatisfy(match -> assertThat(match.getNextMatch().getId()).isEqualTo(finalMatch.getId()));
-    assertThat(roundOneMatches).extracting(Match::getNextMatchPosition).containsExactly(1, 2);
-    assertThat(finalMatch.getNextMatch()).isNull();
-    assertThat(finalMatch.getNextMatchPosition()).isNull();
+        .allSatisfy(
+            match -> assertThat(match.getWinnerNextMatch().getId()).isEqualTo(finalMatch.getId()));
+    assertThat(roundOneMatches)
+        .extracting(Match::getWinnerNextMatchPosition)
+        .containsExactly(1, 2);
+    assertThat(finalMatch.getWinnerNextMatch()).isNull();
+    assertThat(finalMatch.getWinnerNextMatchPosition()).isNull();
+    assertThat(roundOneMatches).allSatisfy(match -> assertThat(match.getLoserNextMatch()).isNull());
+    assertThat(roundOneMatches)
+        .allSatisfy(match -> assertThat(match.getLoserNextMatchPosition()).isNull());
   }
 
   private List<TournamentTeam> seededTeams(Tournament tournament, int count) {
