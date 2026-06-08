@@ -255,21 +255,24 @@ public class TournamentService {
       throw new InvalidRoundConfigurationException("At least one round setting must be provided");
     }
 
-    TournamentRound round =
+    List<TournamentRound> matchingRounds =
         tournament.getRounds().stream()
             .filter(r -> roundNumber == r.getRoundNumber())
-            .findFirst()
-            .orElseThrow(TournamentRoundNotFoundException::new);
+            .toList();
+
+    if (matchingRounds.isEmpty()) {
+      throw new TournamentRoundNotFoundException();
+    }
 
     if (bestOf != null) {
       if (!isValidBestOf(bestOf)) {
         throw new InvalidRoundConfigurationException("bestOf must be one of: 1, 3, 5, or 7");
       }
-      round.setBestOf(bestOf);
+      matchingRounds.forEach(round -> round.setBestOf(bestOf));
     }
 
     if (scoringMode != null) {
-      round.setScoringMode(scoringMode);
+      matchingRounds.forEach(round -> round.setScoringMode(scoringMode));
     }
 
     tournamentRepository.save(tournament);

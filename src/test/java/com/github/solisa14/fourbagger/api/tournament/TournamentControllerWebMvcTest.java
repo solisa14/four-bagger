@@ -96,7 +96,11 @@ class TournamentControllerWebMvcTest {
         .andExpect(jsonPath("$.status").value("REGISTRATION"))
         .andExpect(jsonPath("$.gameType").value("SINGLES"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
-        .andExpect(jsonPath("$.rounds").isArray());
+        .andExpect(jsonPath("$.brackets.winners").isArray())
+        .andExpect(jsonPath("$.brackets.losers").isArray())
+        .andExpect(jsonPath("$.brackets.finalRounds").isArray())
+        .andExpect(jsonPath("$.brackets.grandFinal").isArray())
+        .andExpect(jsonPath("$.rounds").doesNotExist());
   }
 
   @Test
@@ -172,7 +176,8 @@ class TournamentControllerWebMvcTest {
         .andExpect(jsonPath("$.title").value("TestTournament"))
         .andExpect(jsonPath("$.status").value("REGISTRATION"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
-        .andExpect(jsonPath("$.rounds").isArray());
+        .andExpect(jsonPath("$.brackets.winners").isArray())
+        .andExpect(jsonPath("$.rounds").doesNotExist());
   }
 
   @Test

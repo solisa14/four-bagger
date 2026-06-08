@@ -62,8 +62,12 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.title").value("Read Test"))
         .andExpect(jsonPath("$.status").value("REGISTRATION"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
-        .andExpect(jsonPath("$.rounds").isArray())
-        .andExpect(jsonPath("$.rounds").isEmpty());
+        .andExpect(jsonPath("$.brackets.winners").isArray())
+        .andExpect(jsonPath("$.brackets.winners").isEmpty())
+        .andExpect(jsonPath("$.brackets.losers").isEmpty())
+        .andExpect(jsonPath("$.brackets.finalRounds").isEmpty())
+        .andExpect(jsonPath("$.brackets.grandFinal").isEmpty())
+        .andExpect(jsonPath("$.rounds").doesNotExist());
   }
 
   @Test
@@ -112,14 +116,17 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
-        .andExpect(jsonPath("$.rounds").isArray())
-        .andExpect(jsonPath("$.rounds.length()").value(2))
-        .andExpect(jsonPath("$.rounds[0].roundNumber").value(1))
-        .andExpect(jsonPath("$.rounds[0].bestOf").value(1))
-        .andExpect(jsonPath("$.rounds[0].scoringMode").value("STANDARD"))
-        .andExpect(jsonPath("$.rounds[0].matches").isArray())
-        .andExpect(jsonPath("$.rounds[0].matches.length()").value(2))
-        .andExpect(jsonPath("$.rounds[1].roundNumber").value(2))
-        .andExpect(jsonPath("$.rounds[1].matches.length()").value(1));
+        .andExpect(jsonPath("$.brackets.winners").isArray())
+        .andExpect(jsonPath("$.brackets.winners.length()").value(2))
+        .andExpect(jsonPath("$.brackets.winners[0].bracketType").value("WINNERS"))
+        .andExpect(jsonPath("$.brackets.winners[0].roundNumber").value(1))
+        .andExpect(jsonPath("$.brackets.winners[0].bestOf").value(1))
+        .andExpect(jsonPath("$.brackets.winners[0].scoringMode").value("STANDARD"))
+        .andExpect(jsonPath("$.brackets.winners[0].matches").isArray())
+        .andExpect(jsonPath("$.brackets.winners[0].matches.length()").value(2))
+        .andExpect(jsonPath("$.brackets.winners[1].bracketType").value("WINNERS"))
+        .andExpect(jsonPath("$.brackets.winners[1].roundNumber").value(2))
+        .andExpect(jsonPath("$.brackets.winners[1].matches.length()").value(1))
+        .andExpect(jsonPath("$.rounds").doesNotExist());
   }
 }

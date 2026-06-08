@@ -50,6 +50,14 @@ public class TournamentTeam {
   @JoinColumn(name = "player_two_id")
   private User playerTwo;
 
+  @Column(name = "losses")
+  @Builder.Default
+  private int losses = 0;
+
+  @Column(name = "is_eliminated")
+  @Builder.Default
+  private boolean isEliminated = false;
+
   /** The seed number assigned to the team during bracket generation. */
   @Column private Integer seed;
 }

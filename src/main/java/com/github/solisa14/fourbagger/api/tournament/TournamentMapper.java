@@ -35,11 +35,7 @@ public class TournamentMapper {
    * @return the tournament response
    */
   public TournamentResponse toTournamentResponse(Tournament tournament) {
-    List<TournamentRoundResponse> rounds =
-        tournament.getRounds().stream()
-            .sorted(Comparator.comparingInt(TournamentRound::getRoundNumber))
-            .map(this::toRoundResponse)
-            .toList();
+    TournamentBracketsResponse brackets = toBracketsResponse(tournament.getRounds());
     return new TournamentResponse(
         tournament.getId(),
         tournament.getTitle(),
@@ -47,13 +43,34 @@ public class TournamentMapper {
         tournament.getStatus(),
         tournament.getGameType(),
         tournament.getFormat(),
-        rounds);
+        brackets);
+  }
+
+  private TournamentBracketsResponse toBracketsResponse(List<TournamentRound> rounds) {
+    return new TournamentBracketsResponse(
+        roundsForBracket(rounds, BracketType.WINNERS),
+        roundsForBracket(rounds, BracketType.LOSERS),
+        roundsForBracket(rounds, BracketType.FINAL),
+        roundsForBracket(rounds, BracketType.GRAND_FINAL));
+  }
+
+  private List<TournamentRoundResponse> roundsForBracket(
+      List<TournamentRound> rounds, BracketType bracketType) {
+    return rounds.stream()
+        .filter(round -> bracketType == round.getBracketType())
+        .sorted(Comparator.comparingInt(TournamentRound::getRoundNumber))
+        .map(this::toRoundResponse)
+        .toList();
   }
 
   private TournamentRoundResponse toRoundResponse(TournamentRound round) {
     List<MatchResponse> matches = round.getMatches().stream().map(this::toMatchResponse).toList();
     return new TournamentRoundResponse(
-        round.getRoundNumber(), round.getBestOf(), round.getScoringMode(), matches);
+        round.getBracketType(),
+        round.getRoundNumber(),
+        round.getBestOf(),
+        round.getScoringMode(),
+        matches);
   }
 
   /**
@@ -90,6 +107,8 @@ public class TournamentMapper {
         team.getId(),
         team.getPlayerOne().getUsername(),
         team.getPlayerTwo() != null ? team.getPlayerTwo().getUsername() : null,
-        team.getSeed());
+        team.getSeed(),
+        team.getLosses(),
+        team.isEliminated());
   }
 }

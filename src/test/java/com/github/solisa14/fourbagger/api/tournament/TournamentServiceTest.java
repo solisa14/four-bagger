@@ -78,9 +78,14 @@ class TournamentServiceTest {
   }
 
   private TournamentRound round(Tournament tournament, int roundNumber) {
+    return round(tournament, BracketType.WINNERS, roundNumber);
+  }
+
+  private TournamentRound round(Tournament tournament, BracketType bracketType, int roundNumber) {
     return TournamentRound.builder()
         .id(UUID.randomUUID())
         .tournament(tournament)
+        .bracketType(bracketType)
         .roundNumber(roundNumber)
         .bestOf(1)
         .scoringMode(ScoringMode.STANDARD)
@@ -242,6 +247,9 @@ class TournamentServiceTest {
     assertThat(tournament.getRounds())
         .extracting(TournamentRound::getRoundNumber)
         .containsExactly(1, 2);
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getBracketType)
+        .containsOnly(BracketType.WINNERS);
     assertThat(tournament.getRounds()).extracting(TournamentRound::getBestOf).containsOnly(1);
     assertThat(tournament.getRounds())
         .extracting(TournamentRound::getScoringMode)
@@ -289,6 +297,9 @@ class TournamentServiceTest {
         .extracting(TournamentTeam::getSeed)
         .containsExactlyInAnyOrder(1, 2, 3, 4);
     assertThat(tournament.getRounds()).hasSize(2);
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getBracketType)
+        .containsOnly(BracketType.WINNERS);
     assertThat(tournament.getRounds()).extracting(TournamentRound::getBestOf).containsExactly(3, 5);
     assertThat(tournament.getRounds())
         .extracting(TournamentRound::getScoringMode)
@@ -567,6 +578,29 @@ class TournamentServiceTest {
     TournamentRound updatedRound = tournament.getRounds().get(0);
     assertThat(updatedRound.getBestOf()).isEqualTo(3);
     assertThat(updatedRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void updateRoundSettings_whenMultipleBracketTypesShareRoundNumber_updatesAllMatchingRounds() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
+    TournamentRound winnersRound = round(tournament, BracketType.WINNERS, 1);
+    TournamentRound losersRound = round(tournament, BracketType.LOSERS, 1);
+    TournamentRound winnersRoundTwo = round(tournament, BracketType.WINNERS, 2);
+    tournament.getRounds().add(winnersRound);
+    tournament.getRounds().add(losersRound);
+    tournament.getRounds().add(winnersRoundTwo);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    tournamentService.updateRoundSettings(
+        tournament.getId(), tournament.getOrganizer(), 1, 3, ScoringMode.EXACT);
+
+    assertThat(winnersRound.getBestOf()).isEqualTo(3);
+    assertThat(winnersRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
+    assertThat(losersRound.getBestOf()).isEqualTo(3);
+    assertThat(losersRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
+    assertThat(winnersRoundTwo.getBestOf()).isEqualTo(1);
+    assertThat(winnersRoundTwo.getScoringMode()).isEqualTo(ScoringMode.STANDARD);
     verify(tournamentRepository).save(tournament);
   }
 

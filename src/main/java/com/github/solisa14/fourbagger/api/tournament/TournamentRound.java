@@ -41,8 +41,8 @@ import org.hibernate.annotations.UpdateTimestamp;
     name = "tournament_rounds",
     uniqueConstraints = {
       @UniqueConstraint(
-          name = "uk_tournament_rounds_tournament_round_number",
-          columnNames = {"tournament_id", "round_number"})
+          name = "uk_tournament_rounds_tournament_bracket_round_number",
+          columnNames = {"tournament_id", "bracket_type", "round_number"})
     })
 public class TournamentRound {
 
@@ -53,6 +53,10 @@ public class TournamentRound {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "tournament_id", nullable = false)
   private Tournament tournament;
+
+  @Column(name = "bracket_type", nullable = false)
+  @Enumerated(EnumType.STRING)
+  private BracketType bracketType;
 
   @Column(name = "round_number", nullable = false)
   private Integer roundNumber;

@@ -22,6 +22,9 @@ class SingleEliminationBracketGeneratorTest {
     generator.planBracket(tournament, teams);
 
     assertThat(tournament.getRounds()).hasSize(2);
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getBracketType)
+        .containsOnly(BracketType.WINNERS);
     TournamentRound roundOne =
         tournament.getRounds().stream()
             .filter(r -> r.getRoundNumber() == 1)
@@ -124,6 +127,7 @@ class SingleEliminationBracketGeneratorTest {
     TournamentRound roundOne =
         TournamentRound.builder()
             .tournament(tournament)
+            .bracketType(BracketType.WINNERS)
             .roundNumber(1)
             .bestOf(3)
             .scoringMode(ScoringMode.EXACT)
@@ -131,6 +135,7 @@ class SingleEliminationBracketGeneratorTest {
     TournamentRound roundTwo =
         TournamentRound.builder()
             .tournament(tournament)
+            .bracketType(BracketType.WINNERS)
             .roundNumber(2)
             .bestOf(5)
             .scoringMode(ScoringMode.STANDARD)

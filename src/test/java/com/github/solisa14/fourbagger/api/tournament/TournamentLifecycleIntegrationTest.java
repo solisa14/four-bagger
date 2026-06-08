@@ -81,7 +81,8 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("BRACKET_READY"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
-        .andExpect(jsonPath("$.rounds").isNotEmpty());
+        .andExpect(jsonPath("$.brackets.winners").isNotEmpty())
+        .andExpect(jsonPath("$.rounds").doesNotExist());
 
     // 5. Update round 1 settings to best-of-3
     mockMvc
@@ -109,10 +110,12 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
-        .andExpect(jsonPath("$.rounds").isArray())
-        .andExpect(jsonPath("$.rounds.length()").value(2))
-        .andExpect(jsonPath("$.rounds[0].bestOf").value(3))
-        .andExpect(jsonPath("$.rounds[0].matches").isNotEmpty());
+        .andExpect(jsonPath("$.brackets.winners").isArray())
+        .andExpect(jsonPath("$.brackets.winners.length()").value(2))
+        .andExpect(jsonPath("$.brackets.winners[0].bracketType").value("WINNERS"))
+        .andExpect(jsonPath("$.brackets.winners[0].bestOf").value(3))
+        .andExpect(jsonPath("$.brackets.winners[0].matches").isNotEmpty())
+        .andExpect(jsonPath("$.rounds").doesNotExist());
 
     // 8. Delete tournament
     mockMvc
@@ -430,7 +433,8 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.status").value("BRACKET_READY"))
         .andExpect(jsonPath("$.gameType").value("DOUBLES"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
-        .andExpect(jsonPath("$.rounds").isNotEmpty());
+        .andExpect(jsonPath("$.brackets.winners").isNotEmpty())
+        .andExpect(jsonPath("$.rounds").doesNotExist());
 
     // 5. Start tournament
     mockMvc
@@ -449,8 +453,10 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
         .andExpect(jsonPath("$.gameType").value("DOUBLES"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
-        .andExpect(jsonPath("$.rounds.length()").value(2))
-        .andExpect(jsonPath("$.rounds[0].matches").isNotEmpty());
+        .andExpect(jsonPath("$.brackets.winners.length()").value(2))
+        .andExpect(jsonPath("$.brackets.winners[0].bracketType").value("WINNERS"))
+        .andExpect(jsonPath("$.brackets.winners[0].matches").isNotEmpty())
+        .andExpect(jsonPath("$.rounds").doesNotExist());
   }
 
   @Test

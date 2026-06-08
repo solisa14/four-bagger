@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.springframework.stereotype.Component;
@@ -63,28 +62,36 @@ public class SingleEliminationBracketGenerator implements TournamentBracketGener
   }
 
   private void ensureRoundCount(Tournament tournament, int roundCount) {
-    Map<Integer, TournamentRound> roundsByNumber =
+    Map<Integer, TournamentRound> winnersRoundsByNumber =
         tournament.getRounds().stream()
-            .collect(Collectors.toMap(TournamentRound::getRoundNumber, Function.identity()));
+            .filter(round -> round.getBracketType() == BracketType.WINNERS)
+            .collect(Collectors.toMap(TournamentRound::getRoundNumber, round -> round));
 
     for (int roundNumber = 1; roundNumber <= roundCount; roundNumber++) {
-      if (roundsByNumber.containsKey(roundNumber)) {
+      if (winnersRoundsByNumber.containsKey(roundNumber)) {
         continue;
       }
       TournamentRound newRound =
           TournamentRound.builder()
               .tournament(tournament)
+              .bracketType(BracketType.WINNERS)
               .roundNumber(roundNumber)
               .bestOf(1)
               .scoringMode(ScoringMode.STANDARD)
               .build();
       tournament.getRounds().add(newRound);
     }
-    tournament.getRounds().removeIf(round -> round.getRoundNumber() > roundCount);
+    tournament
+        .getRounds()
+        .removeIf(
+            round ->
+                round.getBracketType() == BracketType.WINNERS
+                    && round.getRoundNumber() > roundCount);
   }
 
   private List<TournamentRound> sortedRounds(Tournament tournament) {
     return tournament.getRounds().stream()
+        .filter(round -> round.getBracketType() == BracketType.WINNERS)
         .sorted(Comparator.comparing(TournamentRound::getRoundNumber))
         .toList();
   }

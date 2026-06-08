@@ -6,10 +6,15 @@ import java.util.List;
  * Data Transfer Object representing a single round in the tournament bracket. Includes round
  * configuration and all matches scheduled within that round.
  *
- * @param roundNumber the round's position in the bracket (1 = first round, 2 = semis, etc.)
+ * @param bracketType the bracket section this round belongs to
+ * @param roundNumber the round's position in its bracket section
  * @param bestOf the maximum number of games to determine a match winner (1, 3, 5, or 7)
  * @param scoringMode the scoring rules applied to all games played in this round
  * @param matches the matches in this round, ordered by match number
  */
 public record TournamentRoundResponse(
-    int roundNumber, int bestOf, ScoringMode scoringMode, List<MatchResponse> matches) {}
+    BracketType bracketType,
+    int roundNumber,
+    int bestOf,
+    ScoringMode scoringMode,
+    List<MatchResponse> matches) {}

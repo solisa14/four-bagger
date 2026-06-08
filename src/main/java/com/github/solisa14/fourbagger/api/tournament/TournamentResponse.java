@@ -1,7 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.game.GameType;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -12,8 +11,8 @@ import java.util.UUID;
  * @param joinCode the 6-character unique join code
  * @param status the current status of the tournament
  * @param gameType whether the tournament is SINGLES or DOUBLES
- * @param rounds the tournament rounds including bracket structure and match state, ordered by round
- *     number; empty when the bracket has not yet been generated
+ * @param brackets the tournament rounds grouped by bracket section; each group is ordered by round
+ *     number and empty when absent
  */
 public record TournamentResponse(
     UUID id,
@@ -22,4 +21,4 @@ public record TournamentResponse(
     TournamentStatus status,
     GameType gameType,
     TournamentFormat format,
-    List<TournamentRoundResponse> rounds) {}
+    TournamentBracketsResponse brackets) {}

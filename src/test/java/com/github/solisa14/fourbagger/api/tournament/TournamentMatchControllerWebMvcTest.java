@@ -290,6 +290,7 @@ class TournamentMatchControllerWebMvcTest {
         TournamentRound.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
+            .bracketType(BracketType.WINNERS)
             .roundNumber(1)
             .bestOf(1)
             .scoringMode(ScoringMode.STANDARD)
