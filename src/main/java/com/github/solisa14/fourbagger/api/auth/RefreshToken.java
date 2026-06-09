@@ -12,10 +12,10 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /**
  * Entity representing a refresh token used to obtain new access tokens.
@@ -27,10 +27,9 @@ import lombok.Setter;
 @Entity
 @Table(name = "refresh_tokens")
 @Getter
-@Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Builder(access = AccessLevel.PACKAGE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class RefreshToken {
 
   @Id
@@ -46,4 +45,20 @@ public class RefreshToken {
   @OneToOne
   @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, unique = true)
   private User user;
+
+  static RefreshToken issue(User user, String tokenHash, Instant expiryDate) {
+    return RefreshToken.builder().user(user).tokenHash(tokenHash).expiryDate(expiryDate).build();
+  }
+
+  public static RefreshToken restore(User user, String tokenHash, Instant expiryDate) {
+    return issue(user, tokenHash, expiryDate);
+  }
+
+  public void rotate(String tokenHash, Instant expiryDate) {
+    if (tokenHash == null || tokenHash.isBlank() || expiryDate == null) {
+      throw new IllegalArgumentException("Token hash and expiry date are required");
+    }
+    this.tokenHash = tokenHash;
+    this.expiryDate = expiryDate;
+  }
 }

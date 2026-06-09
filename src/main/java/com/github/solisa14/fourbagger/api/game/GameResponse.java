@@ -37,4 +37,9 @@ public record GameResponse(
     PlayerInfo winner,
     List<FrameResponse> frames,
     Instant createdAt,
-    Instant updatedAt) {}
+    Instant updatedAt) {
+
+  public GameResponse {
+    frames = List.copyOf(frames);
+  }
+}

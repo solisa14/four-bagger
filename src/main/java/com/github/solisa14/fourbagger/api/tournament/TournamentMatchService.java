@@ -87,7 +87,7 @@ public class TournamentMatchService {
         gameRepository.findByTournamentMatchIdOrderByCreatedAtAsc(match.getId());
     if (!existingGames.isEmpty()) {
       if (match.getStatus() == MatchStatus.PENDING) {
-        match.setStatus(MatchStatus.IN_PROGRESS);
+        match.start();
         matchRepository.save(match);
       }
       return existingGames.getLast();
@@ -97,7 +97,7 @@ public class TournamentMatchService {
         tournamentGameCommandFactory.createCommand(match, tournament.getOrganizer());
 
     Game game = gameCreationService.createPendingGame(command);
-    match.setStatus(MatchStatus.IN_PROGRESS);
+    match.start();
     matchRepository.save(match);
     return game;
   }

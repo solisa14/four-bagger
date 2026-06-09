@@ -72,7 +72,7 @@ public class GameService {
           "Cannot start a game that is not in PENDING status. Current status: " + game.getStatus());
     }
 
-    game.setStatus(GameStatus.IN_PROGRESS);
+    game.start();
     Game savedGame = gameRepository.save(game);
     initializeGameDetails(savedGame);
     return savedGame;
@@ -117,18 +117,17 @@ public class GameService {
     applyScoringPolicy(game, p1Points, p2Points);
 
     Frame frame =
-        Frame.builder()
-            .game(game)
-            .frameNumber(frameNumber)
-            .playerOneBagsIn(request.p1BagsIn())
-            .playerOneBagsOn(request.p1BagsOn())
-            .playerTwoBagsIn(request.p2BagsIn())
-            .playerTwoBagsOn(request.p2BagsOn())
-            .playerOneFramePoints(p1Points)
-            .playerTwoFramePoints(p2Points)
-            .build();
+        Frame.record(
+            game,
+            frameNumber,
+            request.p1BagsIn(),
+            request.p1BagsOn(),
+            request.p2BagsIn(),
+            request.p2BagsOn(),
+            p1Points,
+            p2Points);
 
-    game.getFrames().add(frame);
+    game.addFrame(frame);
     gameRepository.save(game);
 
     if (game.getStatus() == GameStatus.COMPLETED) {
@@ -195,7 +194,7 @@ public class GameService {
       throw new InvalidGameStateException("Cannot cancel a game with status: " + game.getStatus());
     }
 
-    game.setStatus(GameStatus.CANCELLED);
+    game.cancel();
     Game savedGame = gameRepository.save(game);
     initializeGameDetails(savedGame);
     return savedGame;

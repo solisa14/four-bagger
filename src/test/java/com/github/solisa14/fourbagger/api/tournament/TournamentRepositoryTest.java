@@ -60,7 +60,7 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
             .joinCode("ROUTE1")
             .build();
     List<TournamentTeam> teams = seededTeams(tournament, 4);
-    tournament.getTeams().addAll(teams);
+    tournament.replaceTeams(teams);
 
     tournamentBracketService.planBracket(tournament, teams);
     UUID tournamentId = tournamentRepository.saveAndFlush(tournament).getId();
@@ -89,6 +89,34 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
     assertThat(roundOneMatches).allSatisfy(match -> assertThat(match.getLoserNextMatch()).isNull());
     assertThat(roundOneMatches)
         .allSatisfy(match -> assertThat(match.getLoserNextMatchPosition()).isNull());
+  }
+
+  @Test
+  void removeRound_whenPersistedRoundRemoved_deletesMatchesAsOrphans() {
+    User organizer = savedUser("orphan-organizer");
+    Tournament tournament =
+        Tournament.create(
+            organizer,
+            "Orphan Cup",
+            "ORPHAN",
+            com.github.solisa14.fourbagger.api.game.GameType.SINGLES,
+            TournamentFormat.SINGLE_ELIMINATION);
+    TournamentRound round =
+        TournamentRound.create(
+            tournament, BracketType.WINNERS, 1, 1, ScoringMode.STANDARD);
+    round.addMatch(Match.create(round, 1));
+    tournament.addRound(round);
+    Tournament saved = tournamentRepository.saveAndFlush(tournament);
+
+    saved.removeRound(round);
+    tournamentRepository.saveAndFlush(saved);
+    entityManager.clear();
+
+    assertThat(tournamentRepository.findById(saved.getId()).orElseThrow().getRounds()).isEmpty();
+    assertThat(
+            matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
+                saved.getId()))
+        .isEmpty();
   }
 
   private List<TournamentTeam> seededTeams(Tournament tournament, int count) {

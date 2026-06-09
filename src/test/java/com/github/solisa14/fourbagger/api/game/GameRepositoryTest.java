@@ -7,6 +7,7 @@ import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
+import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ class GameRepositoryTest extends AbstractDataJpaTest {
 
   @Autowired private GameRepository gameRepository;
   @Autowired private UserRepository userRepository;
+  @Autowired private EntityManager entityManager;
 
   private User savedUser(String suffix) {
     return userRepository.saveAndFlush(
@@ -87,11 +89,26 @@ class GameRepositoryTest extends AbstractDataJpaTest {
             .playerOneBagsIn(1)
             .playerOneFramePoints(3)
             .build();
-    game.getFrames().add(frame);
+    game.addFrame(frame);
 
     Game saved = gameRepository.saveAndFlush(game);
 
     assertThat(saved.getFrames()).hasSize(1);
     assertThat(saved.getFrames().get(0).getPlayerOneFramePoints()).isEqualTo(3);
+  }
+
+  @Test
+  void replaceFrames_whenPersistedFrameRemoved_deletesOrphan() {
+    User p1 = savedUser("orphan-a");
+    User p2 = savedUser("orphan-b");
+    Game game = TestDataFactory.game(p1, p2, GameStatus.IN_PROGRESS);
+    game.addFrame(Frame.builder().frameNumber(1).build());
+    Game saved = gameRepository.saveAndFlush(game);
+
+    saved.replaceFrames(List.of());
+    gameRepository.saveAndFlush(saved);
+    entityManager.clear();
+
+    assertThat(gameRepository.findById(saved.getId()).orElseThrow().getFrames()).isEmpty();
   }
 }

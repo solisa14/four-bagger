@@ -14,4 +14,12 @@ public record TournamentBracketsResponse(
     List<TournamentRoundResponse> winners,
     List<TournamentRoundResponse> losers,
     List<TournamentRoundResponse> finalRounds,
-    List<TournamentRoundResponse> grandFinal) {}
+    List<TournamentRoundResponse> grandFinal) {
+
+  public TournamentBracketsResponse {
+    winners = List.copyOf(winners);
+    losers = List.copyOf(losers);
+    finalRounds = List.copyOf(finalRounds);
+    grandFinal = List.copyOf(grandFinal);
+  }
+}

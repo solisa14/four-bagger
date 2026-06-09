@@ -144,13 +144,12 @@ public class RefreshTokenService {
   }
 
   private RefreshToken buildRefreshToken(User user, String tokenHash, Instant expiryDate) {
-    return RefreshToken.builder().user(user).tokenHash(tokenHash).expiryDate(expiryDate).build();
+    return RefreshToken.issue(user, tokenHash, expiryDate);
   }
 
   private RefreshToken updateRefreshToken(
       RefreshToken refreshToken, String tokenHash, Instant expiryDate) {
-    refreshToken.setTokenHash(tokenHash);
-    refreshToken.setExpiryDate(expiryDate);
+    refreshToken.rotate(tokenHash, expiryDate);
     return refreshToken;
   }
 

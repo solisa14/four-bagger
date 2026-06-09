@@ -12,21 +12,20 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /**
  * Represents a user who has registered to participate in a specific tournament. In a singles
  * tournament, a participant directly maps to a team. In doubles, participants are combined to form
  * teams.
  */
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Setter
-@Builder
+@Builder(access = AccessLevel.PACKAGE)
 @Entity
 @Table(
     name = "tournament_participants",
@@ -48,4 +47,21 @@ public class TournamentParticipant {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
+
+  static TournamentParticipant register(Tournament tournament, User user) {
+    return TournamentParticipant.builder().tournament(tournament).user(user).build();
+  }
+
+  void assignTournament(Tournament tournament) {
+    if (this.tournament != null && this.tournament != tournament) {
+      throw new IllegalArgumentException("Participant already belongs to another tournament");
+    }
+    this.tournament = tournament;
+  }
+
+  void detachTournament(Tournament tournament) {
+    if (this.tournament == tournament) {
+      this.tournament = null;
+    }
+  }
 }

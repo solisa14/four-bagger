@@ -55,14 +55,13 @@ public class UserService {
       throw new EmailAlreadyExistsException(command.email());
     }
     User createdUser =
-        User.builder()
-            .username(command.username())
-            .email(command.email())
-            .password(passwordEncoder.encode(command.password()))
-            .firstName(command.firstName())
-            .lastName(command.lastName())
-            .role(Role.USER)
-            .build();
+        User.register(
+            command.username(),
+            command.email(),
+            passwordEncoder.encode(command.password()),
+            command.firstName(),
+            command.lastName(),
+            Role.USER);
 
     return userRepository.save(createdUser);
   }
@@ -92,12 +91,7 @@ public class UserService {
       throw new InvalidProfileUpdateException();
     }
     User user = getUser(id);
-    if (command.firstName() != null) {
-      user.setFirstName(command.firstName());
-    }
-    if (command.lastName() != null) {
-      user.setLastName(command.lastName());
-    }
+    user.updateProfile(command.firstName(), command.lastName());
     return userRepository.save(user);
   }
 
@@ -116,7 +110,7 @@ public class UserService {
     if (!passwordEncoder.matches(command.currentPassword(), user.getPassword())) {
       throw new InvalidPasswordException();
     }
-    user.setPassword(passwordEncoder.encode(command.newPassword()));
+    user.changePasswordHash(passwordEncoder.encode(command.newPassword()));
     userRepository.save(user);
     refreshTokenService.deleteByUserId(user.getId());
   }

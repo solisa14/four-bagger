@@ -40,8 +40,8 @@ class TournamentProgressionServiceTest {
   void processCompletedGame_whenSeriesNotDecided_incrementsWinsAndCreatesNextGame() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    match.getRound().setBestOf(3);
-    match.setStatus(MatchStatus.IN_PROGRESS);
+    match.getRound().updateSettings(3, null);
+    match.start();
 
     Game completedGame = completedGame(match);
     when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
@@ -61,9 +61,9 @@ class TournamentProgressionServiceTest {
   void processCompletedGame_whenBestOfFive_requiresThreeWinsToClinch() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    match.getRound().setBestOf(5);
-    match.setStatus(MatchStatus.IN_PROGRESS);
-    match.setTeamOneWins(1);
+    match.getRound().updateSettings(5, null);
+    match.start();
+    match.recordWin(match.getTeamOne());
 
     Game completedGame = completedGame(match);
     when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
@@ -82,9 +82,8 @@ class TournamentProgressionServiceTest {
   void processCompletedGame_whenRoundUsesExactScoring_nextGameUsesExactScoringMode() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    match.getRound().setBestOf(3);
-    match.getRound().setScoringMode(ScoringMode.EXACT);
-    match.setStatus(MatchStatus.IN_PROGRESS);
+    match.getRound().updateSettings(3, ScoringMode.EXACT);
+    match.start();
 
     Game completedGame = completedGame(match);
     when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
@@ -105,12 +104,10 @@ class TournamentProgressionServiceTest {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
     Match winnerNextMatch = match(tournament, false);
-    winnerNextMatch.setTeamOne(null);
-    winnerNextMatch.setTeamTwo(null);
-    match.setWinnerNextMatch(winnerNextMatch);
-    match.setWinnerNextMatchPosition(2);
-    match.getRound().setBestOf(3);
-    match.setTeamOneWins(1);
+    winnerNextMatch.assignTeams(null, null);
+    match.configureWinnerRoute(winnerNextMatch, 2);
+    match.getRound().updateSettings(3, null);
+    match.recordWin(match.getTeamOne());
 
     Game completedGame = completedGame(match);
     when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
@@ -129,12 +126,10 @@ class TournamentProgressionServiceTest {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
     Match winnerNextMatch = match(tournament, false);
-    winnerNextMatch.setTeamOne(null);
-    winnerNextMatch.setTeamTwo(null);
-    match.setWinnerNextMatch(winnerNextMatch);
-    match.setWinnerNextMatchPosition(1);
-    match.getRound().setBestOf(3);
-    match.setTeamOneWins(1);
+    winnerNextMatch.assignTeams(null, null);
+    match.configureWinnerRoute(winnerNextMatch, 1);
+    match.getRound().updateSettings(3, null);
+    match.recordWin(match.getTeamOne());
 
     Game completedGame = completedGame(match);
     when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
@@ -149,8 +144,8 @@ class TournamentProgressionServiceTest {
   void processCompletedGame_whenFinalMatchClinched_completesTournament() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    match.getRound().setBestOf(3);
-    match.setTeamOneWins(1);
+    match.getRound().updateSettings(3, null);
+    match.recordWin(match.getTeamOne());
 
     Game completedGame = completedGame(match);
     when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));

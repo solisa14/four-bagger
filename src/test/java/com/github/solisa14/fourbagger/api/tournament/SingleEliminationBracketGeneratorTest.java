@@ -17,7 +17,7 @@ class SingleEliminationBracketGeneratorTest {
   void planBracket_whenFourTeams_createsWiredSingleEliminationTree() {
     Tournament tournament = tournament();
     List<TournamentTeam> teams = seededTeams(tournament, 4);
-    tournament.getTeams().addAll(teams);
+    tournament.replaceTeams(teams);
 
     generator.planBracket(tournament, teams);
 
@@ -52,7 +52,7 @@ class SingleEliminationBracketGeneratorTest {
   void planBracket_whenThreeTeams_marksByeAndAutoAdvancesWinner() {
     Tournament tournament = tournament();
     List<TournamentTeam> teams = seededTeams(tournament, 3);
-    tournament.getTeams().addAll(teams);
+    tournament.replaceTeams(teams);
 
     generator.planBracket(tournament, teams);
 
@@ -77,7 +77,7 @@ class SingleEliminationBracketGeneratorTest {
   void planBracket_whenSixTeams_assignsTwoByesToTopSeeds() {
     Tournament tournament = tournament();
     List<TournamentTeam> teams = seededTeams(tournament, 6);
-    tournament.getTeams().addAll(teams);
+    tournament.replaceTeams(teams);
 
     generator.planBracket(tournament, teams);
 
@@ -101,7 +101,7 @@ class SingleEliminationBracketGeneratorTest {
   void planBracket_whenFiveTeams_assignsThreeByesToTopSeeds() {
     Tournament tournament = tournament();
     List<TournamentTeam> teams = seededTeams(tournament, 5);
-    tournament.getTeams().addAll(teams);
+    tournament.replaceTeams(teams);
 
     generator.planBracket(tournament, teams);
 
@@ -140,10 +140,10 @@ class SingleEliminationBracketGeneratorTest {
             .bestOf(5)
             .scoringMode(ScoringMode.STANDARD)
             .build();
-    tournament.getRounds().add(roundOne);
-    tournament.getRounds().add(roundTwo);
+    tournament.addRound(roundOne);
+    tournament.addRound(roundTwo);
     List<TournamentTeam> teams = seededTeams(tournament, 4);
-    tournament.getTeams().addAll(teams);
+    tournament.replaceTeams(teams);
 
     generator.planBracket(tournament, teams);
 

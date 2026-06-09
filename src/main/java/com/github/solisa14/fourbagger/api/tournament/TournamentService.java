@@ -61,9 +61,8 @@ public class TournamentService {
       throw new DuplicateTournamentParticipantException();
     }
 
-    TournamentParticipant participant =
-        TournamentParticipant.builder().tournament(tournament).user(user).build();
-    tournament.getParticipants().add(participant);
+    TournamentParticipant participant = TournamentParticipant.register(tournament, user);
+    tournament.addParticipant(participant);
     tournamentRepository.save(tournament);
     return participant;
   }
@@ -105,15 +104,14 @@ public class TournamentService {
     for (int attempt = 1; attempt <= MAX_JOIN_CODE_ATTEMPTS; attempt++) {
       String joinCode = generateJoinCode();
       Tournament tournament =
-          Tournament.builder()
-              .organizer(command.organizer())
-              .title(command.title())
-              .status(TournamentStatus.REGISTRATION)
-              .gameType(command.gameType() != null ? command.gameType() : GameType.SINGLES)
-              .format(
-                  command.format() != null ? command.format() : TournamentFormat.SINGLE_ELIMINATION)
-              .joinCode(joinCode)
-              .build();
+          Tournament.create(
+              command.organizer(),
+              command.title(),
+              joinCode,
+              command.gameType() != null ? command.gameType() : GameType.SINGLES,
+              command.format() != null
+                  ? command.format()
+                  : TournamentFormat.SINGLE_ELIMINATION);
       try {
         return tournamentRepository.save(tournament);
       } catch (DataIntegrityViolationException ex) {
@@ -184,7 +182,7 @@ public class TournamentService {
         new ArrayList<>(tournament.getParticipants());
     Collections.shuffle(shuffledParticipants, RANDOM);
 
-    tournament.getTeams().clear();
+    tournament.replaceTeams(List.of());
     if (tournament.getGameType() == GameType.DOUBLES) {
       if (shuffledParticipants.size() < 6 || shuffledParticipants.size() % 2 != 0) {
         throw new InvalidTournamentStateException(
@@ -192,13 +190,12 @@ public class TournamentService {
       }
       for (int i = 0; i < shuffledParticipants.size(); i += 2) {
         TournamentTeam team =
-            TournamentTeam.builder()
-                .tournament(tournament)
-                .playerOne(shuffledParticipants.get(i).getUser())
-                .playerTwo(shuffledParticipants.get(i + 1).getUser())
-                .seed((i / 2) + 1)
-                .build();
-        tournament.getTeams().add(team);
+            TournamentTeam.create(
+                tournament,
+                shuffledParticipants.get(i).getUser(),
+                shuffledParticipants.get(i + 1).getUser(),
+                (i / 2) + 1);
+        tournament.addTeam(team);
       }
     } else {
       if (shuffledParticipants.size() <= 2) {
@@ -207,18 +204,15 @@ public class TournamentService {
       }
       for (int i = 0; i < shuffledParticipants.size(); i++) {
         TournamentTeam team =
-            TournamentTeam.builder()
-                .tournament(tournament)
-                .playerOne(shuffledParticipants.get(i).getUser())
-                .seed(i + 1)
-                .build();
-        tournament.getTeams().add(team);
+            TournamentTeam.create(
+                tournament, shuffledParticipants.get(i).getUser(), null, i + 1);
+        tournament.addTeam(team);
       }
     }
 
     tournamentBracketService.planBracket(tournament, tournament.getTeams());
 
-    tournament.setStatus(TournamentStatus.BRACKET_READY);
+    tournament.markBracketReady();
     tournamentRepository.save(tournament);
   }
 
@@ -268,11 +262,11 @@ public class TournamentService {
       if (!isValidBestOf(bestOf)) {
         throw new InvalidRoundConfigurationException("bestOf must be one of: 1, 3, 5, or 7");
       }
-      matchingRounds.forEach(round -> round.setBestOf(bestOf));
+      matchingRounds.forEach(round -> round.updateSettings(bestOf, null));
     }
 
     if (scoringMode != null) {
-      matchingRounds.forEach(round -> round.setScoringMode(scoringMode));
+      matchingRounds.forEach(round -> round.updateSettings(null, scoringMode));
     }
 
     tournamentRepository.save(tournament);
@@ -294,7 +288,7 @@ public class TournamentService {
           "Tournament can only be started when bracket is ready");
     }
 
-    tournament.setStatus(TournamentStatus.IN_PROGRESS);
+    tournament.start();
     tournamentRepository.save(tournament);
   }
 
@@ -326,10 +320,7 @@ public class TournamentService {
       throw new InvalidTournamentStateException("Cannot remove participants after registration");
     }
 
-    boolean removed =
-        tournament
-            .getParticipants()
-            .removeIf(participant -> participantId.equals(participant.getId()));
+    boolean removed = tournament.removeParticipant(participantId);
     if (!removed) {
       throw new TournamentParticipantNotFoundException();
     }

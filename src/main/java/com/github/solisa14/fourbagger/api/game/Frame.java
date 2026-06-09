@@ -12,10 +12,10 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 /**
@@ -25,11 +25,10 @@ import org.hibernate.annotations.CreationTimestamp;
  */
 @Entity
 @Table(name = "frames")
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Setter
-@Builder
+@Builder(access = AccessLevel.PACKAGE)
 public class Frame {
 
   @Id
@@ -70,4 +69,38 @@ public class Frame {
   @CreationTimestamp
   @Column(name = "created_at", updatable = false)
   private Instant createdAt;
+
+  static Frame record(
+      Game game,
+      int frameNumber,
+      int playerOneBagsIn,
+      int playerOneBagsOn,
+      int playerTwoBagsIn,
+      int playerTwoBagsOn,
+      int playerOneFramePoints,
+      int playerTwoFramePoints) {
+    return Frame.builder()
+        .game(game)
+        .frameNumber(frameNumber)
+        .playerOneBagsIn(playerOneBagsIn)
+        .playerOneBagsOn(playerOneBagsOn)
+        .playerTwoBagsIn(playerTwoBagsIn)
+        .playerTwoBagsOn(playerTwoBagsOn)
+        .playerOneFramePoints(playerOneFramePoints)
+        .playerTwoFramePoints(playerTwoFramePoints)
+        .build();
+  }
+
+  void assignGame(Game game) {
+    if (this.game != null && this.game != game) {
+      throw new IllegalArgumentException("Frame already belongs to another game");
+    }
+    this.game = game;
+  }
+
+  void detachGame(Game game) {
+    if (this.game == game) {
+      this.game = null;
+    }
+  }
 }

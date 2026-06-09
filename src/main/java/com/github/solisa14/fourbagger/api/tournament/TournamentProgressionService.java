@@ -77,7 +77,7 @@ class TournamentProgressionService {
         tournamentGameCommandFactory.createCommand(
             match, match.getRound().getTournament().getOrganizer());
     gameCreationService.createPendingGame(command);
-    match.setStatus(MatchStatus.IN_PROGRESS);
+    match.start();
     matchRepository.save(match);
   }
 
@@ -102,12 +102,7 @@ class TournamentProgressionService {
   }
 
   private void incrementWins(Match match, TournamentTeam winningTeam) {
-    if (winningTeam.getId().equals(match.getTeamOne().getId())) {
-      match.setTeamOneWins(match.getTeamOneWins() + 1);
-    } else if (match.getTeamTwo() != null
-        && winningTeam.getId().equals(match.getTeamTwo().getId())) {
-      match.setTeamTwoWins(match.getTeamTwoWins() + 1);
-    }
+    match.recordWin(winningTeam);
   }
 
   private boolean isSeriesClinched(Match match) {
@@ -116,8 +111,7 @@ class TournamentProgressionService {
   }
 
   private void completeMatch(Match match, TournamentTeam winningTeam) {
-    match.setWinner(winningTeam);
-    match.setStatus(MatchStatus.COMPLETED);
+    match.complete(winningTeam);
     matchRepository.save(match);
 
     Match winnerNextMatch = match.getWinnerNextMatch();
@@ -128,16 +122,16 @@ class TournamentProgressionService {
     }
 
     Tournament tournament = match.getRound().getTournament();
-    tournament.setStatus(TournamentStatus.COMPLETED);
+    tournament.complete();
     tournamentRepository.save(tournament);
   }
 
   private void advanceWinner(Match match, TournamentTeam winningTeam, Match winnerNextMatch) {
     if (match.getWinnerNextMatchPosition() != null && match.getWinnerNextMatchPosition() == 1) {
-      winnerNextMatch.setTeamOne(winningTeam);
+      winnerNextMatch.assignTeam(1, winningTeam);
     } else if (match.getWinnerNextMatchPosition() != null
         && match.getWinnerNextMatchPosition() == 2) {
-      winnerNextMatch.setTeamTwo(winningTeam);
+      winnerNextMatch.assignTeam(2, winningTeam);
     }
   }
 }

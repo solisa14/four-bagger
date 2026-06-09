@@ -116,7 +116,7 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
         refreshTokenRepository
             .findByTokenHash(refreshTokenService.hashToken(refreshToken))
             .orElseThrow();
-    token.setExpiryDate(Instant.now().minusSeconds(30));
+    token.rotate(token.getTokenHash(), Instant.now().minusSeconds(30));
     refreshTokenRepository.saveAndFlush(token);
 
     mockMvc

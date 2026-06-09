@@ -13,10 +13,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.jspecify.annotations.NonNull;
@@ -32,11 +32,10 @@ import org.springframework.security.core.userdetails.UserDetails;
  */
 @Entity
 @Table(name = "users")
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Setter
-@Builder
+@Builder(access = AccessLevel.PACKAGE)
 public class User implements UserDetails {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -68,6 +67,42 @@ public class User implements UserDetails {
   @UpdateTimestamp
   @Column(name = "updated_at")
   private Instant updatedAt;
+
+  public static User register(
+      String username,
+      String email,
+      String passwordHash,
+      String firstName,
+      String lastName,
+      Role role) {
+    return User.builder()
+        .username(username)
+        .email(email)
+        .password(passwordHash)
+        .firstName(firstName)
+        .lastName(lastName)
+        .role(role)
+        .build();
+  }
+
+  public static User restore(
+      UUID id,
+      String username,
+      String email,
+      String passwordHash,
+      String firstName,
+      String lastName,
+      Role role) {
+    return User.builder()
+        .id(id)
+        .username(username)
+        .email(email)
+        .password(passwordHash)
+        .firstName(firstName)
+        .lastName(lastName)
+        .role(role)
+        .build();
+  }
 
   /**
    * Returns the user's granted authorities based on their assigned role.
@@ -110,5 +145,24 @@ public class User implements UserDetails {
   @Override
   public boolean isEnabled() {
     return UserDetails.super.isEnabled();
+  }
+
+  public void updateProfile(String firstName, String lastName) {
+    if (firstName == null && lastName == null) {
+      throw new InvalidProfileUpdateException();
+    }
+    if (firstName != null) {
+      this.firstName = firstName;
+    }
+    if (lastName != null) {
+      this.lastName = lastName;
+    }
+  }
+
+  public void changePasswordHash(String passwordHash) {
+    if (passwordHash == null || passwordHash.isBlank()) {
+      throw new IllegalArgumentException("Password hash is required");
+    }
+    password = passwordHash;
   }
 }

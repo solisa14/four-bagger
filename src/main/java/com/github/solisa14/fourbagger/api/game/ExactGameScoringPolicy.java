@@ -20,14 +20,13 @@ class ExactGameScoringPolicy implements GameScoringPolicy {
    */
   @Override
   public void applyFrame(Game game, int playerOneFramePoints, int playerTwoFramePoints) {
-    game.setPlayerOneScore(game.getPlayerOneScore() + playerOneFramePoints);
-    game.setPlayerTwoScore(game.getPlayerTwoScore() + playerTwoFramePoints);
+    game.addScores(playerOneFramePoints, playerTwoFramePoints);
 
     if (game.getPlayerOneScore() > game.getTargetScore()) {
-      game.setPlayerOneScore(EXACT_BUST_RESET_SCORE);
+      game.resetPlayerOneScore(EXACT_BUST_RESET_SCORE);
     }
     if (game.getPlayerTwoScore() > game.getTargetScore()) {
-      game.setPlayerTwoScore(EXACT_BUST_RESET_SCORE);
+      game.resetPlayerTwoScore(EXACT_BUST_RESET_SCORE);
     }
 
     StandardGameScoringPolicy.setWinnerIfSatisfied(game, false);

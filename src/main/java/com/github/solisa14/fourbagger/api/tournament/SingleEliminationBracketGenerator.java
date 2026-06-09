@@ -35,7 +35,7 @@ public class SingleEliminationBracketGenerator implements TournamentBracketGener
 
     ensureRoundCount(tournament, roundCount);
     List<TournamentRound> rounds = sortedRounds(tournament);
-    rounds.forEach(round -> round.getMatches().clear());
+    rounds.forEach(TournamentRound::clearMatches);
 
     List<List<Match>> matchesByRound = new ArrayList<>();
     for (int roundIndex = 0; roundIndex < roundCount; roundIndex++) {
@@ -43,15 +43,10 @@ public class SingleEliminationBracketGenerator implements TournamentBracketGener
       int matchesThisRound = bracketSize / (1 << (roundIndex + 1));
       List<Match> roundMatches = new ArrayList<>(matchesThisRound);
       for (int matchIndex = 0; matchIndex < matchesThisRound; matchIndex++) {
-        Match match =
-            Match.builder()
-                .round(round)
-                .matchNumber(matchIndex + 1)
-                .status(MatchStatus.PENDING)
-                .build();
+        Match match = Match.create(round, matchIndex + 1);
         roundMatches.add(match);
       }
-      round.getMatches().addAll(roundMatches);
+      round.replaceMatches(roundMatches);
       matchesByRound.add(roundMatches);
     }
 
@@ -72,21 +67,17 @@ public class SingleEliminationBracketGenerator implements TournamentBracketGener
         continue;
       }
       TournamentRound newRound =
-          TournamentRound.builder()
-              .tournament(tournament)
-              .bracketType(BracketType.WINNERS)
-              .roundNumber(roundNumber)
-              .bestOf(1)
-              .scoringMode(ScoringMode.STANDARD)
-              .build();
-      tournament.getRounds().add(newRound);
+          TournamentRound.create(
+              tournament, BracketType.WINNERS, roundNumber, 1, ScoringMode.STANDARD);
+      tournament.addRound(newRound);
     }
-    tournament
-        .getRounds()
-        .removeIf(
+    tournament.getRounds().stream()
+        .filter(
             round ->
                 round.getBracketType() == BracketType.WINNERS
-                    && round.getRoundNumber() > roundCount);
+                    && round.getRoundNumber() > roundCount)
+        .toList()
+        .forEach(tournament::removeRound);
   }
 
   private List<TournamentRound> sortedRounds(Tournament tournament) {
@@ -103,8 +94,7 @@ public class SingleEliminationBracketGenerator implements TournamentBracketGener
       for (int matchIndex = 0; matchIndex < currentRound.size(); matchIndex++) {
         Match current = currentRound.get(matchIndex);
         Match winnerNextMatch = nextRound.get(matchIndex / 2);
-        current.setWinnerNextMatch(winnerNextMatch);
-        current.setWinnerNextMatchPosition((matchIndex % 2) + 1);
+        current.configureWinnerRoute(winnerNextMatch, (matchIndex % 2) + 1);
       }
     }
   }
@@ -131,29 +121,17 @@ public class SingleEliminationBracketGenerator implements TournamentBracketGener
 
   private void configureSeededMatch(
       Match match, TournamentTeam seedTop, TournamentTeam seedBottom) {
-    match.setTeamOneWins(0);
-    match.setTeamTwoWins(0);
-    match.setWinner(null);
-
     if (seedTop != null && seedBottom != null) {
-      match.setTeamOne(seedTop);
-      match.setTeamTwo(seedBottom);
-      match.setBye(false);
-      match.setStatus(MatchStatus.PENDING);
+      match.resetForSeeding(seedTop, seedBottom);
       return;
     }
 
     TournamentTeam advancingTeam = seedTop != null ? seedTop : seedBottom;
-    match.setTeamOne(advancingTeam);
-    match.setTeamTwo(null);
     if (advancingTeam == null) {
-      match.setBye(false);
-      match.setStatus(MatchStatus.PENDING);
+      match.resetForSeeding(null, null);
       return;
     }
-    match.setBye(true);
-    match.setStatus(MatchStatus.COMPLETED);
-    match.setWinner(advancingTeam);
+    match.markBye(advancingTeam);
   }
 
   private void autoAdvanceByes(List<Match> firstRoundMatches) {
@@ -162,10 +140,10 @@ public class SingleEliminationBracketGenerator implements TournamentBracketGener
         continue;
       }
       if (match.getWinnerNextMatchPosition() != null && match.getWinnerNextMatchPosition() == 1) {
-        match.getWinnerNextMatch().setTeamOne(match.getWinner());
+        match.getWinnerNextMatch().assignTeam(1, match.getWinner());
       } else if (match.getWinnerNextMatchPosition() != null
           && match.getWinnerNextMatchPosition() == 2) {
-        match.getWinnerNextMatch().setTeamTwo(match.getWinner());
+        match.getWinnerNextMatch().assignTeam(2, match.getWinner());
       }
     }
   }

@@ -47,29 +47,16 @@ public final class TestDataFactory {
   }
 
   public static User user(UUID id, String username, String email, String password, Role role) {
-    return User.builder()
-        .id(id)
-        .username(username)
-        .email(email)
-        .password(password)
-        .firstName(DEFAULT_FIRST_NAME)
-        .lastName(DEFAULT_LAST_NAME)
-        .role(role)
-        .build();
+    return User.restore(
+        id, username, email, password, DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME, role);
   }
 
   public static RefreshToken refreshToken(User user, Instant expiryDate, String token) {
-    return RefreshToken.builder().user(user).expiryDate(expiryDate).tokenHash(token).build();
+    return RefreshToken.restore(user, token, expiryDate);
   }
 
   public static Game game(User playerOne, User playerTwo, GameStatus status) {
-    return Game.builder()
-        .playerOne(playerOne)
-        .playerTwo(playerTwo)
-        .targetScore(21)
-        .status(status)
-        .createdBy(playerOne)
-        .build();
+    return Game.restore(playerOne, playerTwo, status, playerOne);
   }
 
   public static Tournament tournament(User organizer, String title, String joinCode) {
@@ -82,13 +69,7 @@ public final class TestDataFactory {
 
   public static Tournament tournament(
       UUID id, User organizer, String title, String joinCode, GameType gameType) {
-    return Tournament.builder()
-        .id(id)
-        .organizer(organizer)
-        .title(title)
-        .joinCode(joinCode)
-        .status(TournamentStatus.REGISTRATION)
-        .gameType(gameType)
-        .build();
+    return Tournament.restore(
+        id, organizer, title, joinCode, TournamentStatus.REGISTRATION, gameType);
   }
 }

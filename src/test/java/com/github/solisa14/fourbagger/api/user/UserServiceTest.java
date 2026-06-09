@@ -64,8 +64,15 @@ class UserServiceTest {
         .thenAnswer(
             invocation -> {
               User user = invocation.getArgument(0, User.class);
-              user.setId(UUID.randomUUID());
-              return user;
+              return User.builder()
+                  .id(UUID.randomUUID())
+                  .username(user.getUsername())
+                  .email(user.getEmail())
+                  .password(user.getPassword())
+                  .firstName(user.getFirstName())
+                  .lastName(user.getLastName())
+                  .role(user.getRole())
+                  .build();
             });
 
     User created = userService.createUser(command);

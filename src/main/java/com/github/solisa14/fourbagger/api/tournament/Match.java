@@ -15,10 +15,10 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -27,11 +27,10 @@ import org.hibernate.annotations.UpdateTimestamp;
  * one or more games depending on the round's "best of" configuration. It tracks the wins for each
  * team and routes the winner and loser to their configured next matches in the bracket graph.
  */
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Setter
-@Builder
+@Builder(access = AccessLevel.PACKAGE)
 @Entity
 @Table(
     name = "tournament_matches",
@@ -103,4 +102,103 @@ public class Match {
   @UpdateTimestamp
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
+
+  static Match create(TournamentRound round, int matchNumber) {
+    return Match.builder()
+        .round(round)
+        .matchNumber(matchNumber)
+        .status(MatchStatus.PENDING)
+        .build();
+  }
+
+  void assignRound(TournamentRound round) {
+    if (this.round != null && this.round != round) {
+      throw new IllegalArgumentException("Match already belongs to another round");
+    }
+    this.round = round;
+  }
+
+  void detachRound(TournamentRound round) {
+    if (this.round == round) {
+      this.round = null;
+    }
+  }
+
+  public void configureWinnerRoute(Match nextMatch, Integer position) {
+    validateRoute(nextMatch, position);
+    winnerNextMatch = nextMatch;
+    winnerNextMatchPosition = position;
+  }
+
+  public void configureLoserRoute(Match nextMatch, Integer position) {
+    validateRoute(nextMatch, position);
+    loserNextMatch = nextMatch;
+    loserNextMatchPosition = position;
+  }
+
+  private void validateRoute(Match nextMatch, Integer position) {
+    if ((nextMatch == null) != (position == null)) {
+      throw new IllegalArgumentException("Next match and position must both be set or both be null");
+    }
+    if (position != null && position != 1 && position != 2) {
+      throw new IllegalArgumentException("Next match position must be 1 or 2");
+    }
+  }
+
+  public void assignTeams(TournamentTeam teamOne, TournamentTeam teamTwo) {
+    this.teamOne = teamOne;
+    this.teamTwo = teamTwo;
+  }
+
+  public void assignTeam(int position, TournamentTeam team) {
+    if (position == 1) {
+      teamOne = team;
+    } else if (position == 2) {
+      teamTwo = team;
+    } else {
+      throw new IllegalArgumentException("Team position must be 1 or 2");
+    }
+  }
+
+  public void resetForSeeding(TournamentTeam teamOne, TournamentTeam teamTwo) {
+    this.teamOne = teamOne;
+    this.teamTwo = teamTwo;
+    teamOneWins = 0;
+    teamTwoWins = 0;
+    winner = null;
+    isBye = false;
+    status = MatchStatus.PENDING;
+  }
+
+  public void markBye(TournamentTeam advancingTeam) {
+    assignTeams(advancingTeam, null);
+    isBye = true;
+    winner = advancingTeam;
+    status = MatchStatus.COMPLETED;
+  }
+
+  public void start() {
+    if (status == MatchStatus.COMPLETED || isBye) {
+      throw new InvalidTournamentStateException("Completed or bye matches cannot be started");
+    }
+    status = MatchStatus.IN_PROGRESS;
+  }
+
+  public void recordWin(TournamentTeam winningTeam) {
+    if (winningTeam == teamOne) {
+      teamOneWins++;
+    } else if (winningTeam == teamTwo) {
+      teamTwoWins++;
+    } else {
+      throw new InvalidTournamentStateException("Winning team is not assigned to this match");
+    }
+  }
+
+  public void complete(TournamentTeam winningTeam) {
+    if (winningTeam != teamOne && winningTeam != teamTwo) {
+      throw new InvalidTournamentStateException("Winning team is not assigned to this match");
+    }
+    winner = winningTeam;
+    status = MatchStatus.COMPLETED;
+  }
 }

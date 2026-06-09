@@ -43,13 +43,30 @@ class GameServiceTest {
   }
 
   private Game inProgressGame(User p1, User p2) {
+    return inProgressGame(p1, p2, GameScoringMode.STANDARD, 0, null, null, null);
+  }
+
+  private Game inProgressGame(
+      User p1,
+      User p2,
+      GameScoringMode scoringMode,
+      int playerOneScore,
+      UUID tournamentMatchId,
+      User playerOnePartner,
+      User playerTwoPartner) {
     return Game.builder()
         .id(UUID.randomUUID())
         .playerOne(p1)
         .playerTwo(p2)
+        .playerOnePartner(playerOnePartner)
+        .playerTwoPartner(playerTwoPartner)
+        .gameType(playerOnePartner == null ? GameType.SINGLES : GameType.DOUBLES)
+        .scoringMode(scoringMode)
+        .playerOneScore(playerOneScore)
         .targetScore(21)
         .status(GameStatus.IN_PROGRESS)
         .createdBy(p1)
+        .tournamentMatchId(tournamentMatchId)
         .build();
   }
 
@@ -218,8 +235,8 @@ class GameServiceTest {
   void recordFrame_whenTargetReached_setsWinnerAndCompletesGame() {
     User p1 = playerOne();
     User p2 = playerTwo();
-    Game game = inProgressGame(p1, p2);
-    game.setPlayerOneScore(18);
+    Game game =
+        inProgressGame(p1, p2, GameScoringMode.STANDARD, 18, null, null, null);
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -234,9 +251,7 @@ class GameServiceTest {
   void recordFrame_whenExactModeAndScoreExceedsTarget_resetsScoringSideToEleven() {
     User p1 = playerOne();
     User p2 = playerTwo();
-    Game game = inProgressGame(p1, p2);
-    game.setScoringMode(GameScoringMode.EXACT);
-    game.setPlayerOneScore(20);
+    Game game = inProgressGame(p1, p2, GameScoringMode.EXACT, 20, null, null, null);
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -251,9 +266,7 @@ class GameServiceTest {
   void recordFrame_whenExactModeAndTargetReachedExactly_completesGame() {
     User p1 = playerOne();
     User p2 = playerTwo();
-    Game game = inProgressGame(p1, p2);
-    game.setScoringMode(GameScoringMode.EXACT);
-    game.setPlayerOneScore(18);
+    Game game = inProgressGame(p1, p2, GameScoringMode.EXACT, 18, null, null, null);
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -424,8 +437,9 @@ class GameServiceTest {
   void cancelGame_whenGameBelongsToTournament_throwsInvalidGameStateException() {
     User p1 = playerOne();
     User p2 = playerTwo();
-    Game game = inProgressGame(p1, p2);
-    game.setTournamentMatchId(UUID.randomUUID());
+    Game game =
+        inProgressGame(
+            p1, p2, GameScoringMode.STANDARD, 0, UUID.randomUUID(), null, null);
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(() -> gameService.cancelGame(p1, game.getId()))
@@ -455,10 +469,9 @@ class GameServiceTest {
         TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
     User p2Partner =
         TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
-    Game game = inProgressGame(p1, p2);
-    game.setGameType(GameType.DOUBLES);
-    game.setPlayerOnePartner(p1Partner);
-    game.setPlayerTwoPartner(p2Partner);
+    Game game =
+        inProgressGame(
+            p1, p2, GameScoringMode.STANDARD, 0, null, p1Partner, p2Partner);
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     assertThatThrownBy(
@@ -474,10 +487,9 @@ class GameServiceTest {
         TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
     User p2Partner =
         TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
-    Game game = inProgressGame(p1, p2);
-    game.setGameType(GameType.DOUBLES);
-    game.setPlayerOnePartner(p1Partner);
-    game.setPlayerTwoPartner(p2Partner);
+    Game game =
+        inProgressGame(
+            p1, p2, GameScoringMode.STANDARD, 0, null, p1Partner, p2Partner);
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
 
     RecordFrameRequest request =
@@ -495,10 +507,9 @@ class GameServiceTest {
         TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
     User p2Partner =
         TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
-    Game game = inProgressGame(p1, p2);
-    game.setGameType(GameType.DOUBLES);
-    game.setPlayerOnePartner(p1Partner);
-    game.setPlayerTwoPartner(p2Partner);
+    Game game =
+        inProgressGame(
+            p1, p2, GameScoringMode.STANDARD, 0, null, p1Partner, p2Partner);
     when(gameRepository.findById(game.getId())).thenReturn(Optional.of(game));
     when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -518,8 +529,7 @@ class GameServiceTest {
             .playerOneFramePoints(3)
             .playerTwoFramePoints(0)
             .build();
-    game.getFrames().clear();
-    game.getFrames().add(existing);
+    game.replaceFrames(java.util.List.of(existing));
 
     Frame secondFrame =
         gameService.recordFrame(

@@ -118,7 +118,7 @@ class TournamentMatchServiceTest {
   void startMatch_whenRoundUsesExactScoring_mapsToExactGameScoringMode() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    match.getRound().setScoringMode(ScoringMode.EXACT);
+    match.getRound().updateSettings(null, ScoringMode.EXACT);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
     when(gameRepository.findByTournamentMatchIdOrderByCreatedAtAsc(match.getId()))
@@ -156,7 +156,7 @@ class TournamentMatchServiceTest {
   void startMatch_whenMatchIsBye_throwsInvalidTournamentStateException() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    match.setBye(true);
+    match.markBye(match.getTeamOne());
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
 
@@ -171,7 +171,7 @@ class TournamentMatchServiceTest {
   void startMatch_whenMatchTeamMissing_throwsInvalidTournamentStateException() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    match.setTeamTwo(null);
+    match.assignTeams(match.getTeamOne(), null);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
 

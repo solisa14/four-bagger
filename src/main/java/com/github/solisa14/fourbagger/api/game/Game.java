@@ -17,13 +17,14 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -33,10 +34,9 @@ import org.hibernate.annotations.UpdateTimestamp;
  */
 @Entity
 @Table(name = "games")
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Setter
 @Builder
 public class Game {
 
@@ -109,4 +109,90 @@ public class Game {
   @UpdateTimestamp
   @Column(name = "updated_at")
   private Instant updatedAt;
+
+  public static Game createPending(
+      User playerOne,
+      User playerOnePartner,
+      User playerTwo,
+      User playerTwoPartner,
+      GameType gameType,
+      GameScoringMode scoringMode,
+      int targetScore,
+      User createdBy,
+      UUID tournamentMatchId) {
+    return Game.builder()
+        .playerOne(playerOne)
+        .playerOnePartner(playerOnePartner)
+        .playerTwo(playerTwo)
+        .playerTwoPartner(playerTwoPartner)
+        .gameType(gameType)
+        .scoringMode(scoringMode)
+        .targetScore(targetScore)
+        .status(GameStatus.PENDING)
+        .createdBy(createdBy)
+        .tournamentMatchId(tournamentMatchId)
+        .build();
+  }
+
+  public static Game restore(
+      User playerOne, User playerTwo, GameStatus status, User createdBy) {
+    return Game.builder()
+        .playerOne(playerOne)
+        .playerTwo(playerTwo)
+        .status(status)
+        .createdBy(createdBy)
+        .build();
+  }
+
+  public List<Frame> getFrames() {
+    return Collections.unmodifiableList(frames);
+  }
+
+  public void addFrame(Frame frame) {
+    frame.assignGame(this);
+    frames.add(frame);
+  }
+
+  public void replaceFrames(List<Frame> replacementFrames) {
+    List<Frame> replacements = List.copyOf(replacementFrames);
+    frames.forEach(frame -> frame.detachGame(this));
+    frames.clear();
+    replacements.forEach(this::addFrame);
+  }
+
+  public void start() {
+    if (status != GameStatus.PENDING) {
+      throw new InvalidGameStateException(
+          "Cannot start a game that is not in PENDING status. Current status: " + status);
+    }
+    status = GameStatus.IN_PROGRESS;
+  }
+
+  public void cancel() {
+    if (status == GameStatus.COMPLETED || status == GameStatus.CANCELLED) {
+      throw new InvalidGameStateException("Cannot cancel a game with status: " + status);
+    }
+    status = GameStatus.CANCELLED;
+  }
+
+  void addScores(int playerOnePoints, int playerTwoPoints) {
+    playerOneScore += playerOnePoints;
+    playerTwoScore += playerTwoPoints;
+  }
+
+  void resetPlayerOneScore(int score) {
+    playerOneScore = score;
+  }
+
+  void resetPlayerTwoScore(int score) {
+    playerTwoScore = score;
+  }
+
+  void complete(User winner) {
+    if (winner != playerOne && winner != playerTwo) {
+      throw new InvalidGameStateException("Winner must be a primary game participant");
+    }
+    this.winner = winner;
+    status = GameStatus.COMPLETED;
+  }
 }

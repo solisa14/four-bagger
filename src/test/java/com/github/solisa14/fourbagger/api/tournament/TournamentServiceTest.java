@@ -45,11 +45,16 @@ class TournamentServiceTest {
   }
 
   private Tournament registrationTournament() {
+    return tournament(TournamentStatus.REGISTRATION, GameType.SINGLES);
+  }
+
+  private Tournament tournament(TournamentStatus status, GameType gameType) {
     return Tournament.builder()
         .id(UUID.randomUUID())
         .organizer(organizer())
         .title("Test Tournament")
-        .status(TournamentStatus.REGISTRATION)
+        .status(status)
+        .gameType(gameType)
         .joinCode("ABC123")
         .build();
   }
@@ -68,11 +73,9 @@ class TournamentServiceTest {
 
   private Tournament tournamentWithParticipants(
       TournamentStatus status, int participantCount, GameType gameType) {
-    Tournament tournament = registrationTournament();
-    tournament.setStatus(status);
-    tournament.setGameType(gameType);
+    Tournament tournament = tournament(status, gameType);
     for (int i = 0; i < participantCount; i++) {
-      tournament.getParticipants().add(participant(tournament));
+      tournament.addParticipant(participant(tournament));
     }
     return tournament;
   }
@@ -126,7 +129,7 @@ class TournamentServiceTest {
             .tournament(tournament)
             .user(player())
             .build();
-    tournament.getParticipants().add(participant);
+    tournament.addParticipant(participant);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     tournamentService.removeParticipant(
         tournament.getId(), tournament.getOrganizer(), participant.getId());
@@ -149,8 +152,8 @@ class TournamentServiceTest {
             .tournament(tournament)
             .user(player())
             .build();
-    tournament.getParticipants().add(participantOne);
-    tournament.getParticipants().add(participantTwo);
+    tournament.addParticipant(participantOne);
+    tournament.addParticipant(participantTwo);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     tournamentService.removeParticipant(
@@ -162,8 +165,7 @@ class TournamentServiceTest {
 
   @Test
   void removeParticipant_whenTournamentIsNotInRegistration_throwsException() {
-    Tournament tournament = registrationTournament();
-    tournament.setStatus(TournamentStatus.IN_PROGRESS);
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS, GameType.SINGLES);
     UUID participantId = UUID.randomUUID();
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     assertThatThrownBy(
@@ -176,8 +178,7 @@ class TournamentServiceTest {
 
   @Test
   void removeParticipant_whenTournamentIsBracketReady_throwsException() {
-    Tournament tournament = registrationTournament();
-    tournament.setStatus(TournamentStatus.BRACKET_READY);
+    Tournament tournament = tournament(TournamentStatus.BRACKET_READY, GameType.SINGLES);
     UUID participantId = UUID.randomUUID();
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
@@ -216,7 +217,7 @@ class TournamentServiceTest {
   void removeParticipant_whenUserIsNotOrganizer_throwsTournamentAccessDeniedException() {
     Tournament tournament = registrationTournament();
     TournamentParticipant participant = participant(tournament);
-    tournament.getParticipants().add(participant);
+    tournament.addParticipant(participant);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
@@ -269,24 +270,21 @@ class TournamentServiceTest {
         .forEach(
             p ->
                 tournament
-                    .getTeams()
-                    .add(
+                    .addTeam(
                         TournamentTeam.builder()
                             .tournament(tournament)
                             .playerOne(p.getUser())
                             .build()));
-    tournament.getTeams().get(0).setSeed(10);
-    tournament.getTeams().get(1).setSeed(20);
-    tournament.getTeams().get(2).setSeed(30);
-    tournament.getTeams().get(3).setSeed(40);
+    tournament.getTeams().get(0).assignSeed(10);
+    tournament.getTeams().get(1).assignSeed(20);
+    tournament.getTeams().get(2).assignSeed(30);
+    tournament.getTeams().get(3).assignSeed(40);
     TournamentRound roundOne = round(tournament, 1);
     TournamentRound roundTwo = round(tournament, 2);
-    roundOne.setBestOf(3);
-    roundOne.setScoringMode(ScoringMode.EXACT);
-    roundTwo.setBestOf(5);
-    roundTwo.setScoringMode(ScoringMode.STANDARD);
-    tournament.getRounds().add(roundOne);
-    tournament.getRounds().add(roundTwo);
+    roundOne.updateSettings(3, ScoringMode.EXACT);
+    roundTwo.updateSettings(5, ScoringMode.STANDARD);
+    tournament.addRound(roundOne);
+    tournament.addRound(roundTwo);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -479,8 +477,7 @@ class TournamentServiceTest {
         .forEach(
             p ->
                 tournament
-                    .getTeams()
-                    .add(
+                    .addTeam(
                         TournamentTeam.builder()
                             .tournament(tournament)
                             .playerOne(p.getUser())
@@ -569,7 +566,7 @@ class TournamentServiceTest {
   @Test
   void updateRoundSettings_whenTournamentIsBracketReady_updatesBothFields() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
-    tournament.getRounds().add(round(tournament, 1));
+    tournament.addRound(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     tournamentService.updateRoundSettings(
@@ -587,9 +584,9 @@ class TournamentServiceTest {
     TournamentRound winnersRound = round(tournament, BracketType.WINNERS, 1);
     TournamentRound losersRound = round(tournament, BracketType.LOSERS, 1);
     TournamentRound winnersRoundTwo = round(tournament, BracketType.WINNERS, 2);
-    tournament.getRounds().add(winnersRound);
-    tournament.getRounds().add(losersRound);
-    tournament.getRounds().add(winnersRoundTwo);
+    tournament.addRound(winnersRound);
+    tournament.addRound(losersRound);
+    tournament.addRound(winnersRoundTwo);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     tournamentService.updateRoundSettings(
@@ -608,8 +605,8 @@ class TournamentServiceTest {
   void updateRoundSettings_whenOnlyBestOfProvided_updatesBestOfOnly() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
     TournamentRound tournamentRound = round(tournament, 1);
-    tournamentRound.setScoringMode(ScoringMode.EXACT);
-    tournament.getRounds().add(tournamentRound);
+    tournamentRound.updateSettings(null, ScoringMode.EXACT);
+    tournament.addRound(tournamentRound);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     tournamentService.updateRoundSettings(
@@ -624,8 +621,8 @@ class TournamentServiceTest {
   void updateRoundSettings_whenOnlyScoringModeProvided_updatesScoringModeOnly() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
     TournamentRound tournamentRound = round(tournament, 1);
-    tournamentRound.setBestOf(7);
-    tournament.getRounds().add(tournamentRound);
+    tournamentRound.updateSettings(7, null);
+    tournament.addRound(tournamentRound);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     tournamentService.updateRoundSettings(
@@ -639,7 +636,7 @@ class TournamentServiceTest {
   @Test
   void updateRoundSettings_whenTournamentIsNotBracketReady_throwsException() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.REGISTRATION, 4);
-    tournament.getRounds().add(round(tournament, 1));
+    tournament.addRound(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
@@ -653,7 +650,7 @@ class TournamentServiceTest {
   @Test
   void updateRoundSettings_whenUserIsNotOrganizer_throwsTournamentAccessDeniedException() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
-    tournament.getRounds().add(round(tournament, 1));
+    tournament.addRound(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
@@ -680,7 +677,7 @@ class TournamentServiceTest {
   @Test
   void updateRoundSettings_whenRoundNumberIsZero_throwsInvalidRoundConfigurationException() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
-    tournament.getRounds().add(round(tournament, 1));
+    tournament.addRound(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
@@ -695,8 +692,8 @@ class TournamentServiceTest {
   void
       updateRoundSettings_whenRoundNumberExceedsBracketRounds_throwsTournamentRoundNotFoundException() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
-    tournament.getRounds().add(round(tournament, 1));
-    tournament.getRounds().add(round(tournament, 2));
+    tournament.addRound(round(tournament, 1));
+    tournament.addRound(round(tournament, 2));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
@@ -710,7 +707,7 @@ class TournamentServiceTest {
   @Test
   void updateRoundSettings_whenRoundDoesNotExist_throwsTournamentRoundNotFoundException() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
-    tournament.getRounds().add(round(tournament, 1));
+    tournament.addRound(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
@@ -724,7 +721,7 @@ class TournamentServiceTest {
   @Test
   void updateRoundSettings_whenBestOfIsInvalid_throwsInvalidRoundConfigurationException() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
-    tournament.getRounds().add(round(tournament, 1));
+    tournament.addRound(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
@@ -738,7 +735,7 @@ class TournamentServiceTest {
   @Test
   void updateRoundSettings_whenNoFieldsProvided_throwsInvalidRoundConfigurationException() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.BRACKET_READY, 4);
-    tournament.getRounds().add(round(tournament, 1));
+    tournament.addRound(round(tournament, 1));
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(
@@ -760,8 +757,7 @@ class TournamentServiceTest {
 
   @Test
   void deleteTournament_whenTournamentIsInProgress_stillDeletesTournament() {
-    Tournament tournament = registrationTournament();
-    tournament.setStatus(TournamentStatus.IN_PROGRESS);
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS, GameType.SINGLES);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
 
     tournamentService.deleteTournament(tournament.getId(), tournament.getOrganizer());
@@ -810,8 +806,7 @@ class TournamentServiceTest {
 
   @Test
   void joinTournament_whenNotRegistration_throwsException() {
-    Tournament tournament = registrationTournament();
-    tournament.setStatus(TournamentStatus.IN_PROGRESS);
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS, GameType.SINGLES);
     when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", player()))
@@ -820,8 +815,7 @@ class TournamentServiceTest {
 
   @Test
   void joinTournament_whenBracketReady_throwsException() {
-    Tournament tournament = registrationTournament();
-    tournament.setStatus(TournamentStatus.BRACKET_READY);
+    Tournament tournament = tournament(TournamentStatus.BRACKET_READY, GameType.SINGLES);
     when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", player()))
@@ -831,8 +825,7 @@ class TournamentServiceTest {
 
   @Test
   void joinTournament_whenCompleted_throwsException() {
-    Tournament tournament = registrationTournament();
-    tournament.setStatus(TournamentStatus.COMPLETED);
+    Tournament tournament = tournament(TournamentStatus.COMPLETED, GameType.SINGLES);
     when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", player()))
@@ -850,7 +843,7 @@ class TournamentServiceTest {
             .tournament(tournament)
             .user(existingUser)
             .build();
-    tournament.getParticipants().add(existingParticipant);
+    tournament.addParticipant(existingParticipant);
     when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
 
     assertThatThrownBy(() -> tournamentService.joinTournament("ABC123", existingUser))

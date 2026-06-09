@@ -17,4 +17,9 @@ public record TournamentRoundResponse(
     int roundNumber,
     int bestOf,
     ScoringMode scoringMode,
-    List<MatchResponse> matches) {}
+    List<MatchResponse> matches) {
+
+  public TournamentRoundResponse {
+    matches = List.copyOf(matches);
+  }
+}

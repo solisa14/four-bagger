@@ -25,11 +25,9 @@ class StandardGameScoringPolicy implements GameScoringPolicy {
         allowGreaterThanTarget ? playerTwoScore >= target : playerTwoScore == target;
 
     if (playerOneWins) {
-      game.setWinner(game.getPlayerOne());
-      game.setStatus(GameStatus.COMPLETED);
+      game.complete(game.getPlayerOne());
     } else if (playerTwoWins) {
-      game.setWinner(game.getPlayerTwo());
-      game.setStatus(GameStatus.COMPLETED);
+      game.complete(game.getPlayerTwo());
     }
   }
 
@@ -43,8 +41,7 @@ class StandardGameScoringPolicy implements GameScoringPolicy {
    */
   @Override
   public void applyFrame(Game game, int playerOneFramePoints, int playerTwoFramePoints) {
-    game.setPlayerOneScore(game.getPlayerOneScore() + playerOneFramePoints);
-    game.setPlayerTwoScore(game.getPlayerTwoScore() + playerTwoFramePoints);
+    game.addScores(playerOneFramePoints, playerTwoFramePoints);
     setWinnerIfSatisfied(game, true);
   }
 }

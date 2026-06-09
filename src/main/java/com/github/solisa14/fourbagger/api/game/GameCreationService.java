@@ -23,18 +23,16 @@ public class GameCreationService {
   public Game createPendingGame(CreateGameCommand command) {
     GameParticipants participants = command.participants();
     Game game =
-        Game.builder()
-            .playerOne(participants.teamOne().player())
-            .playerOnePartner(participants.teamOne().partner())
-            .playerTwo(participants.teamTwo().player())
-            .playerTwoPartner(participants.teamTwo().partner())
-            .gameType(participants.gameType())
-            .scoringMode(command.resolvedScoringMode())
-            .targetScore(command.resolvedTargetScore())
-            .status(GameStatus.PENDING)
-            .createdBy(command.createdBy())
-            .tournamentMatchId(command.tournamentMatchId())
-            .build();
+        Game.createPending(
+            participants.teamOne().player(),
+            participants.teamOne().partner(),
+            participants.teamTwo().player(),
+            participants.teamTwo().partner(),
+            participants.gameType(),
+            command.resolvedScoringMode(),
+            command.resolvedTargetScore(),
+            command.createdBy(),
+            command.tournamentMatchId());
 
     return gameRepository.save(game);
   }

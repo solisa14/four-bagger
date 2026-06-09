@@ -61,17 +61,10 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
   }
 
   private User createUser(String username, String email) {
-    return User.builder()
-        .username(username)
-        .email(email)
-        .password("encoded")
-        .firstName("Test")
-        .lastName("User")
-        .role(Role.USER)
-        .build();
+    return User.register(username, email, "encoded", "Test", "User", Role.USER);
   }
 
   private RefreshToken createToken(User user, String tokenHash, Instant expiry) {
-    return RefreshToken.builder().user(user).tokenHash(tokenHash).expiryDate(expiry).build();
+    return RefreshToken.restore(user, tokenHash, expiry);
   }
 }

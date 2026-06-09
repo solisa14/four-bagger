@@ -17,13 +17,14 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -31,11 +32,10 @@ import org.hibernate.annotations.UpdateTimestamp;
  * Represents a specific round within a tournament bracket (e.g., Quarterfinals, Semifinals). It
  * dictates the scoring rules and the number of games required to win a match in this round.
  */
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Setter
-@Builder
+@Builder(access = AccessLevel.PACKAGE)
 @Entity
 @Table(
     name = "tournament_rounds",
@@ -82,4 +82,68 @@ public class TournamentRound {
   @UpdateTimestamp
   @Column(name = "updated_at", nullable = false)
   private Instant updatedAt;
+
+  static TournamentRound create(
+      Tournament tournament,
+      BracketType bracketType,
+      int roundNumber,
+      int bestOf,
+      ScoringMode scoringMode) {
+    return TournamentRound.builder()
+        .tournament(tournament)
+        .bracketType(bracketType)
+        .roundNumber(roundNumber)
+        .bestOf(bestOf)
+        .scoringMode(scoringMode)
+        .build();
+  }
+
+  public List<Match> getMatches() {
+    return Collections.unmodifiableList(matches);
+  }
+
+  void assignTournament(Tournament tournament) {
+    if (this.tournament != null && this.tournament != tournament) {
+      throw new IllegalArgumentException("Round already belongs to another tournament");
+    }
+    this.tournament = tournament;
+  }
+
+  void detachTournament(Tournament tournament) {
+    if (this.tournament == tournament) {
+      this.tournament = null;
+    }
+  }
+
+  public void addMatch(Match match) {
+    match.assignRound(this);
+    matches.add(match);
+  }
+
+  public void replaceMatches(List<Match> replacementMatches) {
+    List<Match> replacements = List.copyOf(replacementMatches);
+    matches.forEach(match -> match.detachRound(this));
+    matches.clear();
+    replacements.forEach(this::addMatch);
+  }
+
+  public void clearMatches() {
+    matches.forEach(match -> match.detachRound(this));
+    matches.clear();
+  }
+
+  public void updateSettings(Integer bestOf, ScoringMode scoringMode) {
+    if (bestOf == null && scoringMode == null) {
+      throw new InvalidRoundConfigurationException("At least one round setting must be provided");
+    }
+    if (bestOf != null && bestOf != 1 && bestOf != 3 && bestOf != 5 && bestOf != 7) {
+      throw new InvalidRoundConfigurationException("bestOf must be one of: 1, 3, 5, or 7");
+    }
+    if (bestOf != null) {
+      this.bestOf = bestOf;
+    }
+    if (scoringMode != null) {
+      this.scoringMode = scoringMode;
+    }
+  }
 }

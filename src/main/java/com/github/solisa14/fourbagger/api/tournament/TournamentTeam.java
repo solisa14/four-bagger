@@ -12,20 +12,19 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 /**
  * Represents a competing entity within a tournament. A team can consist of a single player (for
  * singles tournaments) or two players (for doubles).
  */
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Getter
-@Setter
-@Builder
+@Builder(access = AccessLevel.PACKAGE)
 @Entity
 @Table(name = "tournament_teams")
 public class TournamentTeam {
@@ -60,4 +59,42 @@ public class TournamentTeam {
 
   /** The seed number assigned to the team during bracket generation. */
   @Column private Integer seed;
+
+  static TournamentTeam create(
+      Tournament tournament, User playerOne, User playerTwo, int seed) {
+    return TournamentTeam.builder()
+        .tournament(tournament)
+        .playerOne(playerOne)
+        .playerTwo(playerTwo)
+        .seed(seed)
+        .build();
+  }
+
+  void assignTournament(Tournament tournament) {
+    if (this.tournament != null && this.tournament != tournament) {
+      throw new IllegalArgumentException("Team already belongs to another tournament");
+    }
+    this.tournament = tournament;
+  }
+
+  void detachTournament(Tournament tournament) {
+    if (this.tournament == tournament) {
+      this.tournament = null;
+    }
+  }
+
+  public void assignSeed(int seed) {
+    if (seed <= 0) {
+      throw new IllegalArgumentException("Seed must be greater than zero");
+    }
+    this.seed = seed;
+  }
+
+  public void recordLoss() {
+    losses++;
+  }
+
+  public void eliminate() {
+    isEliminated = true;
+  }
 }

@@ -51,7 +51,7 @@ public class SecurityConfig {
       ApiAuthenticationEntryPoint authenticationEntryPoint,
       ApiAccessDeniedHandler accessDeniedHandler) {
     this.userRepository = userRepository;
-    this.allowedOrigins = allowedOrigins;
+    this.allowedOrigins = List.copyOf(allowedOrigins);
     this.authenticationEntryPoint = authenticationEntryPoint;
     this.accessDeniedHandler = accessDeniedHandler;
   }
