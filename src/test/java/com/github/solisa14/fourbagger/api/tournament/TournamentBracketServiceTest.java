@@ -10,7 +10,9 @@ class TournamentBracketServiceTest {
   @Test
   void planBracket_whenSingleElimination_delegatesToSingleEliminationGenerator() {
     RecordingSingleEliminationGenerator singleGenerator = new RecordingSingleEliminationGenerator();
-    TournamentBracketService service = new TournamentBracketService(singleGenerator);
+    RecordingDoubleEliminationGenerator doubleGenerator = new RecordingDoubleEliminationGenerator();
+    TournamentBracketService service =
+        new TournamentBracketService(singleGenerator, doubleGenerator);
     Tournament tournament = tournament(TournamentFormat.SINGLE_ELIMINATION);
     List<TournamentTeam> teams = List.of();
 
@@ -24,7 +26,9 @@ class TournamentBracketServiceTest {
   @Test
   void planBracket_whenFormatIsNull_defaultsToSingleEliminationGenerator() {
     RecordingSingleEliminationGenerator singleGenerator = new RecordingSingleEliminationGenerator();
-    TournamentBracketService service = new TournamentBracketService(singleGenerator);
+    RecordingDoubleEliminationGenerator doubleGenerator = new RecordingDoubleEliminationGenerator();
+    TournamentBracketService service =
+        new TournamentBracketService(singleGenerator, doubleGenerator);
     Tournament tournament = tournament(null);
     List<TournamentTeam> teams = List.of();
 
@@ -36,17 +40,20 @@ class TournamentBracketServiceTest {
   }
 
   @Test
-  void planBracket_whenDoubleElimination_usesSingleEliminationCompatibilityGenerator() {
+  void planBracket_whenDoubleElimination_delegatesToDoubleEliminationGenerator() {
     RecordingSingleEliminationGenerator singleGenerator = new RecordingSingleEliminationGenerator();
-    TournamentBracketService service = new TournamentBracketService(singleGenerator);
+    RecordingDoubleEliminationGenerator doubleGenerator = new RecordingDoubleEliminationGenerator();
+    TournamentBracketService service =
+        new TournamentBracketService(singleGenerator, doubleGenerator);
     Tournament tournament = tournament(TournamentFormat.DOUBLE_ELIMINATION);
     List<TournamentTeam> teams = List.of();
 
     service.planBracket(tournament, teams);
 
-    assertThat(singleGenerator.callCount).isEqualTo(1);
-    assertThat(singleGenerator.tournament).isSameAs(tournament);
-    assertThat(singleGenerator.seededTeams).isSameAs(teams);
+    assertThat(singleGenerator.callCount).isZero();
+    assertThat(doubleGenerator.callCount).isEqualTo(1);
+    assertThat(doubleGenerator.tournament).isSameAs(tournament);
+    assertThat(doubleGenerator.seededTeams).isSameAs(teams);
   }
 
   private Tournament tournament(TournamentFormat format) {
@@ -54,6 +61,21 @@ class TournamentBracketServiceTest {
   }
 
   private static class RecordingSingleEliminationGenerator extends SingleEliminationBracketGenerator {
+
+    private int callCount;
+    private Tournament tournament;
+    private List<TournamentTeam> seededTeams;
+
+    @Override
+    public void planBracket(Tournament tournament, List<TournamentTeam> seededTeams) {
+      this.callCount++;
+      this.tournament = tournament;
+      this.seededTeams = seededTeams;
+    }
+  }
+
+  private static class RecordingDoubleEliminationGenerator
+      extends DoubleEliminationBracketGenerator {
 
     private int callCount;
     private Tournament tournament;

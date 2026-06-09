@@ -8,12 +8,15 @@ import com.github.solisa14.fourbagger.api.game.GameStatus;
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.tournament.Tournament;
 import com.github.solisa14.fourbagger.api.tournament.TournamentStatus;
+import com.github.solisa14.fourbagger.api.tournament.TournamentTeam;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.UpdatePasswordRequest;
 import com.github.solisa14.fourbagger.api.user.UpdateProfileRequest;
 import com.github.solisa14.fourbagger.api.user.User;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 public final class TestDataFactory {
 
@@ -90,5 +93,24 @@ public final class TestDataFactory {
         .status(TournamentStatus.REGISTRATION)
         .gameType(gameType)
         .build();
+  }
+
+  public static List<TournamentTeam> seededTeams(Tournament tournament, int count) {
+    return IntStream.rangeClosed(1, count)
+        .mapToObj(
+            seed ->
+                TournamentTeam.builder()
+                    .id(UUID.randomUUID())
+                    .tournament(tournament)
+                    .playerOne(
+                        user(
+                            UUID.randomUUID(),
+                            "p" + seed,
+                            "p" + seed + "@example.com",
+                            "encoded",
+                            Role.USER))
+                    .seed(seed)
+                    .build())
+        .toList();
   }
 }

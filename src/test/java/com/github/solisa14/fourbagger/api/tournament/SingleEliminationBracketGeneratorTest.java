@@ -1,5 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import static com.github.solisa14.fourbagger.api.testsupport.TestDataFactory.seededTeams;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
@@ -11,7 +12,8 @@ import org.junit.jupiter.api.Test;
 
 class SingleEliminationBracketGeneratorTest {
 
-  private final SingleEliminationBracketGenerator generator = new SingleEliminationBracketGenerator();
+  private final SingleEliminationBracketGenerator generator =
+      new SingleEliminationBracketGenerator();
 
   @Test
   void planBracket_whenFourTeams_createsWiredSingleEliminationTree() {
@@ -42,10 +44,12 @@ class SingleEliminationBracketGeneratorTest {
         .allSatisfy(
             match -> {
               assertThat(match.getWinnerNextMatch()).isEqualTo(roundTwo.getMatches().getFirst());
-              assertThat(match.getWinnerNextMatchPosition()).isIn(1, 2);
               assertThat(match.getLoserNextMatch()).isNull();
               assertThat(match.getLoserNextMatchPosition()).isNull();
             });
+    assertThat(roundOne.getMatches())
+        .extracting(Match::getWinnerNextMatchPosition)
+        .containsExactlyInAnyOrder(1, 2);
   }
 
   @Test
@@ -163,19 +167,6 @@ class SingleEliminationBracketGeneratorTest {
         .status(TournamentStatus.BRACKET_READY)
         .joinCode("ABC123")
         .build();
-  }
-
-  private List<TournamentTeam> seededTeams(Tournament tournament, int count) {
-    return java.util.stream.IntStream.rangeClosed(1, count)
-        .mapToObj(
-            seed ->
-                TournamentTeam.builder()
-                    .id(UUID.randomUUID())
-                    .tournament(tournament)
-                    .playerOne(user("p" + seed))
-                    .seed(seed)
-                    .build())
-        .toList();
   }
 
   private User user(String suffix) {

@@ -17,7 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 class TournamentRepositoryTest extends AbstractDataJpaTest {
 
   private final TournamentBracketService tournamentBracketService =
-      new TournamentBracketService(new SingleEliminationBracketGenerator());
+      new TournamentBracketService(
+          new SingleEliminationBracketGenerator(), new DoubleEliminationBracketGenerator());
 
   @Autowired private TournamentRepository tournamentRepository;
   @Autowired private MatchRepository matchRepository;

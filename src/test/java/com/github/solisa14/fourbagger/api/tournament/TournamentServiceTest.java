@@ -25,7 +25,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 class TournamentServiceTest {
 
   private final TournamentBracketService tournamentBracketService =
-      new TournamentBracketService(new SingleEliminationBracketGenerator());
+      new TournamentBracketService(
+          new SingleEliminationBracketGenerator(), new DoubleEliminationBracketGenerator());
   @Mock private TournamentRepository tournamentRepository;
   private TournamentService tournamentService;
 

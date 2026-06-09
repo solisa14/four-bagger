@@ -31,34 +31,42 @@ public class SingleEliminationBracketGenerator implements TournamentBracketGener
   @Override
   public void planBracket(Tournament tournament, List<TournamentTeam> seededTeams) {
     int bracketSize = calculateBracketSize(seededTeams.size());
-    int roundCount = Integer.numberOfTrailingZeros(bracketSize);
-
-    ensureRoundCount(tournament, roundCount);
-    List<TournamentRound> rounds = sortedRounds(tournament);
-    rounds.forEach(round -> round.getMatches().clear());
-
-    List<List<Match>> matchesByRound = new ArrayList<>();
-    for (int roundIndex = 0; roundIndex < roundCount; roundIndex++) {
-      TournamentRound round = rounds.get(roundIndex);
-      int matchesThisRound = bracketSize / (1 << (roundIndex + 1));
-      List<Match> roundMatches = new ArrayList<>(matchesThisRound);
-      for (int matchIndex = 0; matchIndex < matchesThisRound; matchIndex++) {
-        Match match =
-            Match.builder()
-                .round(round)
-                .matchNumber(matchIndex + 1)
-                .status(MatchStatus.PENDING)
-                .build();
-        roundMatches.add(match);
-      }
-      round.getMatches().addAll(roundMatches);
-      matchesByRound.add(roundMatches);
-    }
-
+    List<List<Match>> matchesByRound = rebuildMatchesByRound(tournament, bracketSize);
     wireNextMatches(matchesByRound);
-    seedFirstRound(matchesByRound.getFirst(), seededTeams, bracketSize);
-    validateByes(matchesByRound.getFirst(), seededTeams.size(), bracketSize);
-    autoAdvanceByes(matchesByRound.getFirst());
+
+    List<Match> firstRoundMatches = matchesByRound.getFirst();
+    seedFirstRound(firstRoundMatches, seededTeams, bracketSize);
+    validateByes(firstRoundMatches, seededTeams.size(), bracketSize);
+    autoAdvanceByes(firstRoundMatches);
+  }
+
+  private List<List<Match>> rebuildMatchesByRound(Tournament tournament, int bracketSize) {
+    int roundCount = Integer.numberOfTrailingZeros(bracketSize);
+    ensureRoundCount(tournament, roundCount);
+
+    List<List<Match>> matchesByRound = new ArrayList<>(roundCount);
+    int matchCount = bracketSize / 2;
+    for (TournamentRound round : sortedRounds(tournament)) {
+      round.getMatches().clear();
+      List<Match> matches = createMatches(round, matchCount);
+      round.getMatches().addAll(matches);
+      matchesByRound.add(matches);
+      matchCount /= 2;
+    }
+    return matchesByRound;
+  }
+
+  private List<Match> createMatches(TournamentRound round, int matchCount) {
+    List<Match> matches = new ArrayList<>(matchCount);
+    for (int matchNumber = 1; matchNumber <= matchCount; matchNumber++) {
+      matches.add(
+          Match.builder()
+              .round(round)
+              .matchNumber(matchNumber)
+              .status(MatchStatus.PENDING)
+              .build());
+    }
+    return matches;
   }
 
   private void ensureRoundCount(Tournament tournament, int roundCount) {

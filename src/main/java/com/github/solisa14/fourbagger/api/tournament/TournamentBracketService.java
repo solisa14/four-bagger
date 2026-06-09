@@ -7,9 +7,13 @@ import org.springframework.stereotype.Service;
 public class TournamentBracketService {
 
   private final TournamentBracketGenerator singleEliminationGenerator;
+  private final TournamentBracketGenerator doubleEliminationGenerator;
 
-  public TournamentBracketService(SingleEliminationBracketGenerator singleEliminationGenerator) {
+  public TournamentBracketService(
+      SingleEliminationBracketGenerator singleEliminationGenerator,
+      DoubleEliminationBracketGenerator doubleEliminationGenerator) {
     this.singleEliminationGenerator = singleEliminationGenerator;
+    this.doubleEliminationGenerator = doubleEliminationGenerator;
   }
 
   public void planBracket(Tournament tournament, List<TournamentTeam> seededTeams) {
@@ -21,10 +25,11 @@ public class TournamentBracketService {
   }
 
   private TournamentBracketGenerator generatorFor(TournamentFormat format) {
-    // TODO: change this later to support actual doubleEliminationGenerator
-    if (format == TournamentFormat.SINGLE_ELIMINATION
-        || format == TournamentFormat.DOUBLE_ELIMINATION) {
+    if (format == TournamentFormat.SINGLE_ELIMINATION) {
       return singleEliminationGenerator;
+    }
+    if (format == TournamentFormat.DOUBLE_ELIMINATION) {
+      return doubleEliminationGenerator;
     }
     throw new InvalidTournamentStateException("Unsupported tournament format: " + format);
   }
