@@ -363,6 +363,22 @@ class TournamentServiceTest {
   }
 
   @Test
+  void generateBracket_whenDoubleEliminationHasThreeParticipants_throwsException() {
+    Tournament tournament = tournamentWithParticipants(TournamentStatus.REGISTRATION, 3);
+    tournament.setFormat(TournamentFormat.DOUBLE_ELIMINATION);
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+    assertThatThrownBy(
+            () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
+        .isInstanceOf(InvalidTournamentStateException.class)
+        .hasMessageContaining("at least 4 teams");
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.REGISTRATION);
+    assertThat(tournament.getTeams()).hasSize(3);
+    assertThat(tournament.getRounds()).isEmpty();
+    verify(tournamentRepository, never()).save(any(Tournament.class));
+  }
+
+  @Test
   void generateBracket_whenTournamentHasSixParticipants_assignsTwoByesToTopSeeds() {
     Tournament tournament = tournamentWithParticipants(TournamentStatus.REGISTRATION, 6);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
