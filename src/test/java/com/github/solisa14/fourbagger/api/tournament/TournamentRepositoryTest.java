@@ -92,6 +92,42 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
         .allSatisfy(match -> assertThat(match.getLoserNextMatchPosition()).isNull());
   }
 
+  @Test
+  void findForResponseById_whenMatchHasResetRoutes_canMapAfterEntityManagerIsCleared() {
+    User organizer = savedUser("response-organizer");
+    Tournament tournament =
+        Tournament.builder()
+            .organizer(organizer)
+            .title("Response Graph Cup")
+            .status(TournamentStatus.BRACKET_READY)
+            .format(TournamentFormat.DOUBLE_ELIMINATION)
+            .joinCode("RESP01")
+            .build();
+    List<TournamentTeam> teams = seededTeams(tournament, 4);
+    tournament.getTeams().addAll(teams);
+
+    tournamentBracketService.planBracket(tournament, teams);
+    tournamentRepository.saveAndFlush(tournament);
+    Match firstFinal =
+        tournament.getRounds().stream()
+            .filter(round -> round.getBracketType() == BracketType.FINAL)
+            .flatMap(round -> round.getMatches().stream())
+            .findFirst()
+            .orElseThrow();
+    UUID firstFinalId = firstFinal.getId();
+    entityManager.clear();
+
+    Match detachedMatch = matchRepository.findForResponseById(firstFinalId).orElseThrow();
+    entityManager.clear();
+    MatchResponse response = new TournamentMapper().toMatchResponse(detachedMatch);
+
+    assertThat(response.id()).isEqualTo(firstFinalId);
+    assertThat(response.winnerNextMatchId()).isNull();
+    assertThat(response.winnerNextMatchPosition()).isNull();
+    assertThat(response.loserNextMatchId()).isNull();
+    assertThat(response.loserNextMatchPosition()).isNull();
+  }
+
   private List<TournamentTeam> seededTeams(Tournament tournament, int count) {
     return java.util.stream.IntStream.rangeClosed(1, count)
         .mapToObj(

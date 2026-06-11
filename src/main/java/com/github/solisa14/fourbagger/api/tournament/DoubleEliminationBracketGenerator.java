@@ -49,6 +49,7 @@ public class DoubleEliminationBracketGenerator implements TournamentBracketGener
     ensureRoundCount(tournament, BracketType.WINNERS, winnersRoundCount);
     ensureRoundCount(tournament, BracketType.LOSERS, losersRoundCount);
     ensureRoundCount(tournament, BracketType.FINAL, 1);
+    ensureRoundCount(tournament, BracketType.GRAND_FINAL, 1);
     removeUnusedRounds(tournament, winnersRoundCount, losersRoundCount);
 
     List<List<Match>> winners =
@@ -63,8 +64,14 @@ public class DoubleEliminationBracketGenerator implements TournamentBracketGener
         rebuildMatches(sortedRounds(tournament, BracketType.FINAL), roundIndex -> 1)
             .getFirst()
             .getFirst();
+    Match resetFinal =
+        rebuildMatches(sortedRounds(tournament, BracketType.GRAND_FINAL), roundIndex -> 1)
+            .getFirst()
+            .getFirst();
+    routeWinner(championship, resetFinal, 2);
+    routeLoser(championship, resetFinal, 1);
 
-    return new BracketMatches(winners, losers, championship);
+    return new BracketMatches(winners, losers, championship, resetFinal);
   }
 
   private void ensureRoundCount(Tournament tournament, BracketType bracketType, int roundCount) {
@@ -102,7 +109,7 @@ public class DoubleEliminationBracketGenerator implements TournamentBracketGener
                   case WINNERS -> round.getRoundNumber() > winnersRoundCount;
                   case LOSERS -> round.getRoundNumber() > losersRoundCount;
                   case FINAL -> round.getRoundNumber() > 1;
-                  case GRAND_FINAL -> true;
+                  case GRAND_FINAL -> round.getRoundNumber() > 1;
                 });
   }
 
@@ -373,7 +380,10 @@ public class DoubleEliminationBracketGenerator implements TournamentBracketGener
   }
 
   private record BracketMatches(
-      List<List<Match>> winners, List<List<Match>> losers, Match championship) {}
+      List<List<Match>> winners,
+      List<List<Match>> losers,
+      Match championship,
+      Match resetFinal) {}
 
   @FunctionalInterface
   private interface MatchCountByRound {

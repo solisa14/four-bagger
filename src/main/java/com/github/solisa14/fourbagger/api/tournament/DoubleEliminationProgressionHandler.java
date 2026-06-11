@@ -25,6 +25,11 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
     losingTeam.setLosses(losingTeam.getLosses() + 1);
     losingTeam.setEliminated(losingTeam.getLosses() >= LOSSES_TO_ELIMINATE);
 
+    if (isFirstFinal(match)) {
+      progressFirstFinal(match, winningTeam, losingTeam);
+      return;
+    }
+
     routeTeam(
         winningTeam, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
     routeTeam(losingTeam, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
@@ -33,6 +38,27 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
     if (match.getWinnerNextMatch() == null && match.getLoserNextMatch() == null) {
       completeTournament(match.getRound().getTournament());
     }
+  }
+
+  private void progressFirstFinal(
+      Match match, TournamentTeam winningTeam, TournamentTeam losingTeam) {
+    if (losingTeam.isEliminated()) {
+      completeTournament(match.getRound().getTournament());
+      return;
+    }
+
+    Match resetFinal = match.getWinnerNextMatch();
+    routeTeam(winningTeam, resetFinal, match.getWinnerNextMatchPosition());
+    routeTeam(losingTeam, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
+    resetFinal.getRound().setBestOf(match.getRound().getBestOf());
+    resetFinal.getRound().setScoringMode(match.getRound().getScoringMode());
+    matchRepository.save(resetFinal);
+  }
+
+  private boolean isFirstFinal(Match match) {
+    return match.getRound().getBracketType() == BracketType.FINAL
+        && match.getWinnerNextMatch() != null
+        && match.getWinnerNextMatch().getRound().getBracketType() == BracketType.GRAND_FINAL;
   }
 
   private void routeTeam(TournamentTeam team, Match destination, Integer position) {

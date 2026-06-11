@@ -76,6 +76,58 @@ class DoubleEliminationProgressionHandlerTest {
     verify(tournamentRepository).save(tournament);
   }
 
+  @Test
+  void progress_whenUndefeatedFinalistWinsFirstFinal_completesWithoutActivatingReset() {
+    Tournament tournament = tournament();
+    TournamentTeam undefeatedWinner = team(tournament);
+    TournamentTeam oneLossLoser = team(tournament);
+    oneLossLoser.setLosses(1);
+    Match reset = match(tournament, BracketType.GRAND_FINAL, null, null);
+    Match firstFinal = match(tournament, BracketType.FINAL, undefeatedWinner, oneLossLoser);
+    firstFinal.setWinnerNextMatch(reset);
+    firstFinal.setWinnerNextMatchPosition(2);
+    firstFinal.setLoserNextMatch(reset);
+    firstFinal.setLoserNextMatchPosition(1);
+
+    handler.progress(firstFinal, undefeatedWinner, oneLossLoser);
+
+    assertThat(oneLossLoser.getLosses()).isEqualTo(2);
+    assertThat(oneLossLoser.isEliminated()).isTrue();
+    assertThat(reset.getTeamOne()).isNull();
+    assertThat(reset.getTeamTwo()).isNull();
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.COMPLETED);
+    verify(matchRepository, never()).save(reset);
+    verify(tournamentRepository).save(tournament);
+  }
+
+  @Test
+  void progress_whenOneLossFinalistWinsFirstFinal_activatesResetAndCopiesRules() {
+    Tournament tournament = tournament();
+    TournamentTeam oneLossWinner = team(tournament);
+    oneLossWinner.setLosses(1);
+    TournamentTeam undefeatedLoser = team(tournament);
+    Match reset = match(tournament, BracketType.GRAND_FINAL, null, null);
+    Match firstFinal = match(tournament, BracketType.FINAL, undefeatedLoser, oneLossWinner);
+    firstFinal.getRound().setBestOf(5);
+    firstFinal.getRound().setScoringMode(ScoringMode.EXACT);
+    firstFinal.setWinnerNextMatch(reset);
+    firstFinal.setWinnerNextMatchPosition(2);
+    firstFinal.setLoserNextMatch(reset);
+    firstFinal.setLoserNextMatchPosition(1);
+
+    handler.progress(firstFinal, oneLossWinner, undefeatedLoser);
+
+    assertThat(undefeatedLoser.getLosses()).isEqualTo(1);
+    assertThat(undefeatedLoser.isEliminated()).isFalse();
+    assertThat(reset.getTeamOne()).isSameAs(undefeatedLoser);
+    assertThat(reset.getTeamTwo()).isSameAs(oneLossWinner);
+    assertThat(reset.getRound().getBestOf()).isEqualTo(5);
+    assertThat(reset.getRound().getScoringMode()).isEqualTo(ScoringMode.EXACT);
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+    verify(matchRepository).save(reset);
+    verify(tournamentRepository, never()).save(tournament);
+  }
+
   private Tournament tournament() {
     return Tournament.builder()
         .id(UUID.randomUUID())
@@ -90,11 +142,21 @@ class DoubleEliminationProgressionHandlerTest {
 
   private Match match(
       Tournament tournament, TournamentTeam teamOne, TournamentTeam teamTwo) {
+    return match(tournament, BracketType.WINNERS, teamOne, teamTwo);
+  }
+
+  private Match match(
+      Tournament tournament,
+      BracketType bracketType,
+      TournamentTeam teamOne,
+      TournamentTeam teamTwo) {
     TournamentRound round =
         TournamentRound.builder()
             .tournament(tournament)
-            .bracketType(BracketType.WINNERS)
+            .bracketType(bracketType)
             .roundNumber(1)
+            .bestOf(1)
+            .scoringMode(ScoringMode.STANDARD)
             .build();
     return Match.builder()
         .id(UUID.randomUUID())

@@ -203,7 +203,7 @@ class TournamentMatchServiceTest {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
     Match result = tournamentMatchService.getMatch(tournament.getId(), match.getId());
 
@@ -225,7 +225,7 @@ class TournamentMatchServiceTest {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     UUID matchId = UUID.randomUUID();
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findById(matchId)).thenReturn(Optional.empty());
+    when(matchRepository.findForResponseById(matchId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> tournamentMatchService.getMatch(tournament.getId(), matchId))
         .isInstanceOf(MatchNotFoundException.class);

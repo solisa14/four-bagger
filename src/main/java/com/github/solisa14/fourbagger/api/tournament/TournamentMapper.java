@@ -51,7 +51,19 @@ public class TournamentMapper {
         roundsForBracket(rounds, BracketType.WINNERS),
         roundsForBracket(rounds, BracketType.LOSERS),
         roundsForBracket(rounds, BracketType.FINAL),
-        roundsForBracket(rounds, BracketType.GRAND_FINAL));
+        activeGrandFinalRounds(rounds));
+  }
+
+  private List<TournamentRoundResponse> activeGrandFinalRounds(List<TournamentRound> rounds) {
+    return rounds.stream()
+        .filter(round -> round.getBracketType() == BracketType.GRAND_FINAL)
+        .filter(
+            round ->
+                round.getMatches().stream()
+                    .anyMatch(match -> match.getTeamOne() != null && match.getTeamTwo() != null))
+        .sorted(Comparator.comparingInt(TournamentRound::getRoundNumber))
+        .map(this::toRoundResponse)
+        .toList();
   }
 
   private List<TournamentRoundResponse> roundsForBracket(
@@ -80,6 +92,8 @@ public class TournamentMapper {
    * @return the match response
    */
   public MatchResponse toMatchResponse(Match match) {
+    boolean winnerRouteVisible = isRouteVisible(match.getWinnerNextMatch());
+    boolean loserRouteVisible = isRouteVisible(match.getLoserNextMatch());
     return new MatchResponse(
         match.getId(),
         match.getMatchNumber(),
@@ -90,10 +104,18 @@ public class TournamentMapper {
         match.getTeamOneWins(),
         match.getTeamTwoWins(),
         match.getWinner() != null ? toTeamSummary(match.getWinner()) : null,
-        match.getWinnerNextMatch() != null ? match.getWinnerNextMatch().getId() : null,
-        match.getWinnerNextMatchPosition(),
-        match.getLoserNextMatch() != null ? match.getLoserNextMatch().getId() : null,
-        match.getLoserNextMatchPosition());
+        winnerRouteVisible ? match.getWinnerNextMatch().getId() : null,
+        winnerRouteVisible ? match.getWinnerNextMatchPosition() : null,
+        loserRouteVisible ? match.getLoserNextMatch().getId() : null,
+        loserRouteVisible ? match.getLoserNextMatchPosition() : null);
+  }
+
+  private boolean isRouteVisible(Match destination) {
+    if (destination == null) {
+      return false;
+    }
+    return destination.getRound().getBracketType() != BracketType.GRAND_FINAL
+        || (destination.getTeamOne() != null && destination.getTeamTwo() != null);
   }
 
   /**

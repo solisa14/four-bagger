@@ -116,7 +116,9 @@ public class TournamentMatchService {
   public Match getMatch(UUID tournamentId, UUID matchId) {
     tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
     Match match =
-        matchRepository.findById(matchId).orElseThrow(() -> new MatchNotFoundException(matchId));
+        matchRepository
+            .findForResponseById(matchId)
+            .orElseThrow(() -> new MatchNotFoundException(matchId));
     validateMatchBelongsToTournament(tournamentId, match);
     return match;
   }

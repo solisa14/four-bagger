@@ -24,26 +24,26 @@ class DoubleEliminationBracketGeneratorTest {
 
     generator.planBracket(tournament, teams);
 
-    assertThat(tournament.getRounds()).hasSize(5);
+    assertThat(tournament.getRounds()).hasSize(6);
     TournamentRound winnerRoundOne = round(tournament, BracketType.WINNERS, 1);
     TournamentRound winnerRoundTwo = round(tournament, BracketType.WINNERS, 2);
     TournamentRound loserRoundOne = round(tournament, BracketType.LOSERS, 1);
     TournamentRound loserRoundTwo = round(tournament, BracketType.LOSERS, 2);
     TournamentRound finalRound = round(tournament, BracketType.FINAL, 1);
+    TournamentRound resetRound = round(tournament, BracketType.GRAND_FINAL, 1);
 
     assertThat(winnerRoundOne.getMatches()).hasSize(2);
     assertThat(winnerRoundTwo.getMatches()).hasSize(1);
     assertThat(loserRoundOne.getMatches()).hasSize(1);
     assertThat(loserRoundTwo.getMatches()).hasSize(1);
     assertThat(finalRound.getMatches()).hasSize(1);
-    assertThat(tournament.getRounds())
-        .extracting(TournamentRound::getBracketType)
-        .doesNotContain(BracketType.GRAND_FINAL);
+    assertThat(resetRound.getMatches()).hasSize(1);
 
     Match winnerFinal = winnerRoundTwo.getMatches().getFirst();
     Match loserRoundOneMatch = loserRoundOne.getMatches().getFirst();
     Match loserFinal = loserRoundTwo.getMatches().getFirst();
     Match championshipMatch = finalRound.getMatches().getFirst();
+    Match resetMatch = resetRound.getMatches().getFirst();
 
     assertThat(winnerRoundOne.getMatches())
         .allSatisfy(
@@ -70,10 +70,13 @@ class DoubleEliminationBracketGeneratorTest {
     assertThat(loserFinal.getLoserNextMatch()).isNull();
     assertThat(loserFinal.getLoserNextMatchPosition()).isNull();
 
-    assertThat(championshipMatch.getWinnerNextMatch()).isNull();
-    assertThat(championshipMatch.getWinnerNextMatchPosition()).isNull();
-    assertThat(championshipMatch.getLoserNextMatch()).isNull();
-    assertThat(championshipMatch.getLoserNextMatchPosition()).isNull();
+    assertRoute(championshipMatch, resetMatch, 2);
+    assertLoserRoute(championshipMatch, resetMatch, 1);
+    assertThat(resetMatch.getTeamOne()).isNull();
+    assertThat(resetMatch.getTeamTwo()).isNull();
+    assertThat(resetMatch.getStatus()).isEqualTo(MatchStatus.PENDING);
+    assertThat(resetMatch.getWinnerNextMatch()).isNull();
+    assertThat(resetMatch.getLoserNextMatch()).isNull();
 
     assertThat(winnerRoundOne.getMatches().getFirst().getTeamOne().getSeed()).isEqualTo(1);
     assertThat(winnerRoundOne.getMatches().getFirst().getTeamTwo().getSeed()).isEqualTo(4);
@@ -91,6 +94,7 @@ class DoubleEliminationBracketGeneratorTest {
     List<TournamentRound> winners = rounds(tournament, BracketType.WINNERS);
     List<TournamentRound> losers = rounds(tournament, BracketType.LOSERS);
     Match championship = round(tournament, BracketType.FINAL, 1).getMatches().getFirst();
+    Match reset = round(tournament, BracketType.GRAND_FINAL, 1).getMatches().getFirst();
 
     assertThat(winners).hasSize(3);
     assertThat(winners)
@@ -150,6 +154,8 @@ class DoubleEliminationBracketGeneratorTest {
         losers.getLast().getMatches().getFirst(),
         1);
     assertRoute(losers.getLast().getMatches().getFirst(), championship, 2);
+    assertRoute(championship, reset, 2);
+    assertLoserRoute(championship, reset, 1);
     assertThat(losers)
         .flatExtracting(TournamentRound::getMatches)
         .allSatisfy(
@@ -199,7 +205,7 @@ class DoubleEliminationBracketGeneratorTest {
     TournamentRound finalRound = configuredRound(tournament, BracketType.FINAL, 1, 7);
     TournamentRound extraWinnerRound =
         configuredRound(tournament, BracketType.WINNERS, 3, 1);
-    TournamentRound obsoleteGrandFinal =
+    TournamentRound grandFinal =
         configuredRound(tournament, BracketType.GRAND_FINAL, 1, 1);
     tournament
         .getRounds()
@@ -209,20 +215,20 @@ class DoubleEliminationBracketGeneratorTest {
                 loserRound,
                 finalRound,
                 extraWinnerRound,
-                obsoleteGrandFinal));
+                grandFinal));
     List<TournamentTeam> teams = addTeams(tournament, 4);
 
     generator.planBracket(tournament, teams);
 
-    assertThat(tournament.getRounds()).contains(winnerRound, loserRound, finalRound);
-    assertThat(tournament.getRounds()).doesNotContain(extraWinnerRound, obsoleteGrandFinal);
+    assertThat(tournament.getRounds()).contains(winnerRound, loserRound, finalRound, grandFinal);
+    assertThat(tournament.getRounds()).doesNotContain(extraWinnerRound);
     assertThat(winnerRound.getBestOf()).isEqualTo(3);
     assertThat(winnerRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
     assertThat(loserRound.getBestOf()).isEqualTo(5);
     assertThat(loserRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
     assertThat(finalRound.getBestOf()).isEqualTo(7);
     assertThat(finalRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
-    assertThat(tournament.getRounds()).hasSize(5);
+    assertThat(tournament.getRounds()).hasSize(6);
   }
 
   @Test
@@ -237,8 +243,8 @@ class DoubleEliminationBracketGeneratorTest {
 
     List<Match> rebuiltMatches =
         tournament.getRounds().stream().flatMap(round -> round.getMatches().stream()).toList();
-    assertThat(tournament.getRounds()).hasSize(5);
-    assertThat(rebuiltMatches).hasSize(6);
+    assertThat(tournament.getRounds()).hasSize(6);
+    assertThat(rebuiltMatches).hasSize(7);
     assertThat(rebuiltMatches).doesNotContainAnyElementsOf(originalMatches);
   }
 
