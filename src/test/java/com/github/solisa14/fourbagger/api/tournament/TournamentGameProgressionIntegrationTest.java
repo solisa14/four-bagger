@@ -32,6 +32,128 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
   @Autowired private UserRepository userRepository;
 
   @Test
+  void recordFrame_whenFourTeamDoubleEliminationBracketCompletes_progressesEntireGraph()
+      throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken("deorg" + suffix);
+    registerAndGetToken("dep1" + suffix);
+    registerAndGetToken("dep2" + suffix);
+    registerAndGetToken("dep3" + suffix);
+    registerAndGetToken("dep4" + suffix);
+
+    User organizer = userRepository.findUserByUsername("deorg" + suffix + "user").orElseThrow();
+    User player1 = userRepository.findUserByUsername("dep1" + suffix + "user").orElseThrow();
+    User player2 = userRepository.findUserByUsername("dep2" + suffix + "user").orElseThrow();
+    User player3 = userRepository.findUserByUsername("dep3" + suffix + "user").orElseThrow();
+    User player4 = userRepository.findUserByUsername("dep4" + suffix + "user").orElseThrow();
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Double Elimination Progression",
+                                null,
+                                TournamentFormat.DOUBLE_ELIMINATION))))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.format").value("DOUBLE_ELIMINATION"))
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(tournamentJson.get("id").asText());
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    tournamentService.joinTournament(joinCode, player1);
+    tournamentService.joinTournament(joinCode, player2);
+    tournamentService.joinTournament(joinCode, player3);
+    tournamentService.joinTournament(joinCode, player4);
+    tournamentService.generateBracket(tournamentId, organizer);
+    tournamentService.startTournament(tournamentId, organizer);
+
+    // TODO: Add equivalent four-team DOUBLES progression coverage with eight participants.
+    List<Match> matches = tournamentMatches(tournamentId);
+    assertThat(matches).hasSize(6);
+    Match winnerRoundOneMatchOne = match(matches, BracketType.WINNERS, 1, 1);
+    Match winnerRoundOneMatchTwo = match(matches, BracketType.WINNERS, 1, 2);
+
+    completeMatchWithTeamOneWin(tournamentId, winnerRoundOneMatchOne.getId(), orgToken);
+    completeMatchWithTeamOneWin(tournamentId, winnerRoundOneMatchTwo.getId(), orgToken);
+
+    matches = tournamentMatches(tournamentId);
+    winnerRoundOneMatchOne = match(matches, BracketType.WINNERS, 1, 1);
+    winnerRoundOneMatchTwo = match(matches, BracketType.WINNERS, 1, 2);
+    Match winnerFinal = match(matches, BracketType.WINNERS, 2, 1);
+    Match loserRoundOne = match(matches, BracketType.LOSERS, 1, 1);
+
+    assertThat(winnerFinal.getTeamOne().getId())
+        .isEqualTo(winnerRoundOneMatchOne.getWinner().getId());
+    assertThat(winnerFinal.getTeamTwo().getId())
+        .isEqualTo(winnerRoundOneMatchTwo.getWinner().getId());
+    assertThat(loserRoundOne.getTeamOne().getId())
+        .isEqualTo(winnerRoundOneMatchOne.getTeamTwo().getId());
+    assertThat(loserRoundOne.getTeamTwo().getId())
+        .isEqualTo(winnerRoundOneMatchTwo.getTeamTwo().getId());
+    assertThat(loserRoundOne.getTeamOne().getLosses()).isEqualTo(1);
+    assertThat(loserRoundOne.getTeamTwo().getLosses()).isEqualTo(1);
+
+    UUID firstEliminatedTeamId = loserRoundOne.getTeamTwo().getId();
+    completeMatchWithTeamOneWin(tournamentId, loserRoundOne.getId(), orgToken);
+
+    matches = tournamentMatches(tournamentId);
+    TournamentTeam firstEliminatedTeam = team(matches, firstEliminatedTeamId);
+    assertThat(firstEliminatedTeam.getLosses()).isEqualTo(2);
+    assertThat(firstEliminatedTeam.isEliminated()).isTrue();
+
+    winnerFinal = match(matches, BracketType.WINNERS, 2, 1);
+    UUID winnerFinalLoserId = winnerFinal.getTeamTwo().getId();
+    completeMatchWithTeamOneWin(tournamentId, winnerFinal.getId(), orgToken);
+
+    matches = tournamentMatches(tournamentId);
+    Match loserFinal = match(matches, BracketType.LOSERS, 2, 1);
+    Match championship = match(matches, BracketType.FINAL, 1, 1);
+    assertThat(loserFinal.getTeamOne().getId())
+        .isEqualTo(match(matches, BracketType.LOSERS, 1, 1).getWinner().getId());
+    assertThat(loserFinal.getTeamTwo().getId()).isEqualTo(winnerFinalLoserId);
+    assertThat(loserFinal.getTeamTwo().getLosses()).isEqualTo(1);
+    assertThat(championship.getTeamOne().getId())
+        .isEqualTo(match(matches, BracketType.WINNERS, 2, 1).getWinner().getId());
+
+    completeMatchWithTeamOneWin(tournamentId, loserFinal.getId(), orgToken);
+
+    matches = tournamentMatches(tournamentId);
+    TournamentTeam secondEliminatedTeam = team(matches, winnerFinalLoserId);
+    championship = match(matches, BracketType.FINAL, 1, 1);
+    assertThat(secondEliminatedTeam.getLosses()).isEqualTo(2);
+    assertThat(secondEliminatedTeam.isEliminated()).isTrue();
+    assertThat(championship.getTeamTwo().getId())
+        .isEqualTo(match(matches, BracketType.LOSERS, 2, 1).getWinner().getId());
+    assertThat(championship.getTeamTwo().getLosses()).isEqualTo(1);
+
+    UUID championshipLoserId = championship.getTeamTwo().getId();
+    // TODO: Add and activate a reset final when the losers-bracket finalist wins this match.
+    completeMatchWithTeamOneWin(tournamentId, championship.getId(), orgToken);
+
+    matches = tournamentMatches(tournamentId);
+    championship = match(matches, BracketType.FINAL, 1, 1);
+    TournamentTeam championshipLoser = team(matches, championshipLoserId);
+    assertThat(championship.getStatus()).isEqualTo(MatchStatus.COMPLETED);
+    assertThat(championship.getWinner().getId()).isEqualTo(championship.getTeamOne().getId());
+    assertThat(championshipLoser.getLosses()).isEqualTo(2);
+    assertThat(championshipLoser.isEliminated()).isTrue();
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COMPLETED"));
+  }
+
+  @Test
   void recordFrame_whenAllMatchesComplete_completesSingleEliminationTournament()
       throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
@@ -464,5 +586,31 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                   .content(objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0))))
           .andExpect(status().isCreated());
     }
+  }
+
+  private List<Match> tournamentMatches(UUID tournamentId) {
+    return matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
+        tournamentId);
+  }
+
+  private Match match(
+      List<Match> matches, BracketType bracketType, int roundNumber, int matchNumber) {
+    return matches.stream()
+        .filter(candidate -> candidate.getRound().getBracketType() == bracketType)
+        .filter(candidate -> candidate.getRound().getRoundNumber() == roundNumber)
+        .filter(candidate -> candidate.getMatchNumber() == matchNumber)
+        .findFirst()
+        .orElseThrow();
+  }
+
+  private TournamentTeam team(List<Match> matches, UUID teamId) {
+    return matches.stream()
+        .flatMap(
+            candidate ->
+                java.util.stream.Stream.of(candidate.getTeamOne(), candidate.getTeamTwo()))
+        .filter(java.util.Objects::nonNull)
+        .filter(candidate -> candidate.getId().equals(teamId))
+        .findFirst()
+        .orElseThrow();
   }
 }

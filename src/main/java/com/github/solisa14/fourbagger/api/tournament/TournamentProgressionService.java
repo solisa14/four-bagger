@@ -17,23 +17,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 class TournamentProgressionService {
 
-  private final TournamentRepository tournamentRepository;
   private final MatchRepository matchRepository;
   private final GameRepository gameRepository;
   private final GameCreationService gameCreationService;
   private final TournamentGameCommandFactory tournamentGameCommandFactory;
+  private final SingleEliminationProgressionHandler singleEliminationProgressionHandler;
+  private final DoubleEliminationProgressionHandler doubleEliminationProgressionHandler;
 
   TournamentProgressionService(
-      TournamentRepository tournamentRepository,
       MatchRepository matchRepository,
       GameRepository gameRepository,
       GameCreationService gameCreationService,
-      TournamentGameCommandFactory tournamentGameCommandFactory) {
-    this.tournamentRepository = tournamentRepository;
+      TournamentGameCommandFactory tournamentGameCommandFactory,
+      SingleEliminationProgressionHandler singleEliminationProgressionHandler,
+      DoubleEliminationProgressionHandler doubleEliminationProgressionHandler) {
     this.matchRepository = matchRepository;
     this.gameRepository = gameRepository;
     this.gameCreationService = gameCreationService;
     this.tournamentGameCommandFactory = tournamentGameCommandFactory;
+    this.singleEliminationProgressionHandler = singleEliminationProgressionHandler;
+    this.doubleEliminationProgressionHandler = doubleEliminationProgressionHandler;
   }
 
   /**
@@ -66,10 +69,11 @@ class TournamentProgressionService {
     }
 
     TournamentTeam winningTeam = resolveWinningTeam(match, game);
+    TournamentTeam losingTeam = resolveLosingTeam(match, winningTeam);
     incrementWins(match, winningTeam);
 
     if (isSeriesClinched(match)) {
-      completeMatch(match, winningTeam);
+      completeMatch(match, winningTeam, losingTeam);
       return;
     }
 
@@ -115,29 +119,30 @@ class TournamentProgressionService {
     return match.getTeamOneWins() >= winsToClinch || match.getTeamTwoWins() >= winsToClinch;
   }
 
-  private void completeMatch(Match match, TournamentTeam winningTeam) {
+  private TournamentTeam resolveLosingTeam(Match match, TournamentTeam winningTeam) {
+    if (winningTeam.getId().equals(match.getTeamOne().getId())) {
+      return match.getTeamTwo();
+    }
+    return match.getTeamOne();
+  }
+
+  private void completeMatch(
+      Match match, TournamentTeam winningTeam, TournamentTeam losingTeam) {
     match.setWinner(winningTeam);
     match.setStatus(MatchStatus.COMPLETED);
     matchRepository.save(match);
 
-    Match winnerNextMatch = match.getWinnerNextMatch();
-    if (winnerNextMatch != null) {
-      advanceWinner(match, winningTeam, winnerNextMatch);
-      matchRepository.save(winnerNextMatch);
-      return;
-    }
-
     Tournament tournament = match.getRound().getTournament();
-    tournament.setStatus(TournamentStatus.COMPLETED);
-    tournamentRepository.save(tournament);
-  }
-
-  private void advanceWinner(Match match, TournamentTeam winningTeam, Match winnerNextMatch) {
-    if (match.getWinnerNextMatchPosition() != null && match.getWinnerNextMatchPosition() == 1) {
-      winnerNextMatch.setTeamOne(winningTeam);
-    } else if (match.getWinnerNextMatchPosition() != null
-        && match.getWinnerNextMatchPosition() == 2) {
-      winnerNextMatch.setTeamTwo(winningTeam);
+    TournamentFormat format =
+        tournament.getFormat() != null
+            ? tournament.getFormat()
+            : TournamentFormat.SINGLE_ELIMINATION;
+    if (format == TournamentFormat.SINGLE_ELIMINATION) {
+      singleEliminationProgressionHandler.progress(match, winningTeam, losingTeam);
+    } else if (format == TournamentFormat.DOUBLE_ELIMINATION) {
+      doubleEliminationProgressionHandler.progress(match, winningTeam, losingTeam);
+    } else {
+      throw new InvalidTournamentStateException("Unsupported tournament format: " + format);
     }
   }
 }

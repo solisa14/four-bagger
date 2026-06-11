@@ -2,7 +2,7 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,10 +28,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class TournamentProgressionServiceTest {
 
-  @Mock private TournamentRepository tournamentRepository;
   @Mock private MatchRepository matchRepository;
   @Mock private GameRepository gameRepository;
   @Mock private GameCreationService gameCreationService;
+  @Mock private SingleEliminationProgressionHandler singleEliminationProgressionHandler;
+  @Mock private DoubleEliminationProgressionHandler doubleEliminationProgressionHandler;
   @Spy private TournamentGameCommandFactory tournamentGameCommandFactory;
 
   @InjectMocks private TournamentProgressionService tournamentProgressionService;
@@ -101,14 +102,9 @@ class TournamentProgressionServiceTest {
   }
 
   @Test
-  void processCompletedGame_whenSeriesClinched_advancesWinnerToNextMatch() {
+  void processCompletedGame_whenSingleEliminationSeriesClinched_dispatchesCompletedMatch() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    Match winnerNextMatch = match(tournament, false);
-    winnerNextMatch.setTeamOne(null);
-    winnerNextMatch.setTeamTwo(null);
-    match.setWinnerNextMatch(winnerNextMatch);
-    match.setWinnerNextMatchPosition(2);
     match.getRound().setBestOf(3);
     match.setTeamOneWins(1);
 
@@ -120,34 +116,16 @@ class TournamentProgressionServiceTest {
 
     assertThat(match.getStatus()).isEqualTo(MatchStatus.COMPLETED);
     assertThat(match.getWinner()).isEqualTo(match.getTeamOne());
-    assertThat(winnerNextMatch.getTeamTwo()).isEqualTo(match.getTeamOne());
-    verify(matchRepository, times(2)).save(any(Match.class));
+    verify(singleEliminationProgressionHandler)
+        .progress(match, match.getTeamOne(), match.getTeamTwo());
+    verify(doubleEliminationProgressionHandler, never())
+        .progress(any(), any(), any());
   }
 
   @Test
-  void processCompletedGame_whenSeriesClinchedAndAdvancingToPositionOne_setsTeamOne() {
+  void processCompletedGame_whenDoubleEliminationSeriesClinched_dispatchesCompletedMatch() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, false);
-    Match winnerNextMatch = match(tournament, false);
-    winnerNextMatch.setTeamOne(null);
-    winnerNextMatch.setTeamTwo(null);
-    match.setWinnerNextMatch(winnerNextMatch);
-    match.setWinnerNextMatchPosition(1);
-    match.getRound().setBestOf(3);
-    match.setTeamOneWins(1);
-
-    Game completedGame = completedGame(match);
-    when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
-    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
-
-    tournamentProgressionService.processCompletedGame(completedGame.getId());
-
-    assertThat(winnerNextMatch.getTeamOne()).isEqualTo(match.getTeamOne());
-  }
-
-  @Test
-  void processCompletedGame_whenFinalMatchClinched_completesTournament() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    tournament.setFormat(TournamentFormat.DOUBLE_ELIMINATION);
     Match match = match(tournament, false);
     match.getRound().setBestOf(3);
     match.setTeamOneWins(1);
@@ -158,8 +136,29 @@ class TournamentProgressionServiceTest {
 
     tournamentProgressionService.processCompletedGame(completedGame.getId());
 
-    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.COMPLETED);
-    verify(tournamentRepository).save(tournament);
+    verify(doubleEliminationProgressionHandler)
+        .progress(match, match.getTeamOne(), match.getTeamTwo());
+    verify(singleEliminationProgressionHandler, never())
+        .progress(any(), any(), any());
+  }
+
+  @Test
+  void processCompletedGame_whenMatchAlreadyCompleted_doesNotDispatchAgain() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    match.setStatus(MatchStatus.COMPLETED);
+
+    Game completedGame = completedGame(match);
+    when(gameRepository.findById(completedGame.getId())).thenReturn(Optional.of(completedGame));
+    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+
+    tournamentProgressionService.processCompletedGame(completedGame.getId());
+
+    verify(matchRepository, never()).save(any());
+    verify(singleEliminationProgressionHandler, never())
+        .progress(any(), any(), any());
+    verify(doubleEliminationProgressionHandler, never())
+        .progress(any(), any(), any());
   }
 
   private Game completedGame(Match match) {
