@@ -60,21 +60,122 @@ class SingleEliminationBracketGeneratorTest {
 
     generator.planBracket(tournament, teams);
 
-    TournamentRound roundOne =
-        tournament.getRounds().stream()
-            .filter(r -> r.getRoundNumber() == 1)
-            .findFirst()
-            .orElseThrow();
-    TournamentRound roundTwo =
-        tournament.getRounds().stream()
-            .filter(r -> r.getRoundNumber() == 2)
-            .findFirst()
-            .orElseThrow();
-    Match byeMatch = roundOne.getMatches().stream().filter(Match::isBye).findFirst().orElseThrow();
+    assertThat(tournament.getRounds()).hasSize(2);
+    assertThat(tournament.getRounds())
+        .extracting(TournamentRound::getBracketType)
+        .containsOnly(BracketType.WINNERS);
+    TournamentRound roundOne = round(tournament, 1);
+    TournamentRound roundTwo = round(tournament, 2);
+    assertThat(roundOne.getMatches()).hasSize(2);
+    assertThat(roundTwo.getMatches()).hasSize(1);
+    assertThat(roundOne.getMatches()).filteredOn(Match::isBye).hasSize(1);
 
+    Match byeMatch = roundOne.getMatches().stream().filter(Match::isBye).findFirst().orElseThrow();
     assertThat(byeMatch.getStatus()).isEqualTo(MatchStatus.COMPLETED);
     assertThat(byeMatch.getWinner()).isNotNull();
+    assertThat(byeMatch.getWinner().getSeed()).isEqualTo(1);
     assertThat(roundTwo.getMatches().getFirst().getTeamOne()).isEqualTo(byeMatch.getWinner());
+  }
+
+  @Test
+  void planBracket_whenSevenTeams_createsEightSlotBracketWithOneByeForTopSeed() {
+    Tournament tournament = tournament();
+    List<TournamentTeam> teams = seededTeams(tournament, 7);
+    tournament.getTeams().addAll(teams);
+
+    generator.planBracket(tournament, teams);
+
+    List<TournamentRound> winners = winnersRounds(tournament);
+    assertThat(winners).hasSize(3);
+    assertThat(winners)
+        .extracting(round -> round.getMatches().size())
+        .containsExactly(4, 2, 1);
+
+    List<Match> firstRound = winners.getFirst().getMatches();
+    assertThat(firstRound).filteredOn(Match::isBye).hasSize(1);
+    Match byeMatch = firstRound.stream().filter(Match::isBye).findFirst().orElseThrow();
+    assertThat(byeMatch.getWinner().getSeed()).isEqualTo(1);
+    assertThat(byeMatch.getStatus()).isEqualTo(MatchStatus.COMPLETED);
+
+    Match winnerFinal = winners.getLast().getMatches().getFirst();
+    for (int matchIndex = 0; matchIndex < firstRound.size(); matchIndex++) {
+      assertRoute(
+          firstRound.get(matchIndex),
+          winners.get(1).getMatches().get(matchIndex / 2),
+          (matchIndex % 2) + 1);
+    }
+    List<Match> secondRound = winners.get(1).getMatches();
+    for (int matchIndex = 0; matchIndex < secondRound.size(); matchIndex++) {
+      assertRoute(secondRound.get(matchIndex), winnerFinal, (matchIndex % 2) + 1);
+    }
+    assertThat(firstRound.getFirst().getTeamOne().getSeed()).isEqualTo(1);
+  }
+
+  @Test
+  void planBracket_whenEightTeams_createsWiredWinnersBracket() {
+    Tournament tournament = tournament();
+    List<TournamentTeam> teams = seededTeams(tournament, 8);
+    tournament.getTeams().addAll(teams);
+
+    generator.planBracket(tournament, teams);
+
+    List<TournamentRound> winners = winnersRounds(tournament);
+    assertThat(winners).hasSize(3);
+    assertThat(winners)
+        .extracting(round -> round.getMatches().size())
+        .containsExactly(4, 2, 1);
+    assertThat(winners.getFirst().getMatches()).filteredOn(Match::isBye).isEmpty();
+
+    List<Match> firstRound = winners.getFirst().getMatches();
+    Match winnerFinal = winners.getLast().getMatches().getFirst();
+    for (int matchIndex = 0; matchIndex < firstRound.size(); matchIndex++) {
+      assertRoute(
+          firstRound.get(matchIndex),
+          winners.get(1).getMatches().get(matchIndex / 2),
+          (matchIndex % 2) + 1);
+    }
+    List<Match> secondRound = winners.get(1).getMatches();
+    for (int matchIndex = 0; matchIndex < secondRound.size(); matchIndex++) {
+      assertRoute(secondRound.get(matchIndex), winnerFinal, matchIndex + 1);
+    }
+    assertThat(firstRound.getFirst().getTeamOne().getSeed()).isEqualTo(1);
+    assertThat(firstRound.getFirst().getTeamTwo().getSeed()).isEqualTo(8);
+  }
+
+  @Test
+  void planBracket_whenSixteenTeams_createsWiredWinnersBracket() {
+    Tournament tournament = tournament();
+    List<TournamentTeam> teams = seededTeams(tournament, 16);
+    tournament.getTeams().addAll(teams);
+
+    generator.planBracket(tournament, teams);
+
+    List<TournamentRound> winners = winnersRounds(tournament);
+    assertThat(winners).hasSize(4);
+    assertThat(winners)
+        .extracting(round -> round.getMatches().size())
+        .containsExactly(8, 4, 2, 1);
+    assertThat(winners.getFirst().getMatches()).filteredOn(Match::isBye).isEmpty();
+
+    List<Match> firstRound = winners.getFirst().getMatches();
+    for (int matchIndex = 0; matchIndex < firstRound.size(); matchIndex++) {
+      assertRoute(
+          firstRound.get(matchIndex),
+          winners.get(1).getMatches().get(matchIndex / 2),
+          (matchIndex % 2) + 1);
+    }
+    List<Match> secondRound = winners.get(1).getMatches();
+    for (int matchIndex = 0; matchIndex < secondRound.size(); matchIndex++) {
+      assertRoute(
+          secondRound.get(matchIndex),
+          winners.get(2).getMatches().get(matchIndex / 2),
+          (matchIndex % 2) + 1);
+    }
+    List<Match> thirdRound = winners.get(2).getMatches();
+    Match winnerFinal = winners.getLast().getMatches().getFirst();
+    for (int matchIndex = 0; matchIndex < thirdRound.size(); matchIndex++) {
+      assertRoute(thirdRound.get(matchIndex), winnerFinal, matchIndex + 1);
+    }
   }
 
   @Test
@@ -172,5 +273,29 @@ class SingleEliminationBracketGeneratorTest {
   private User user(String suffix) {
     return TestDataFactory.user(
         UUID.randomUUID(), suffix, suffix + "@example.com", "encoded", Role.USER);
+  }
+
+  private List<TournamentRound> winnersRounds(Tournament tournament) {
+    return tournament.getRounds().stream()
+        .filter(round -> round.getBracketType() == BracketType.WINNERS)
+        .sorted(java.util.Comparator.comparing(TournamentRound::getRoundNumber))
+        .toList();
+  }
+
+  private TournamentRound round(Tournament tournament, int roundNumber) {
+    return tournament.getRounds().stream()
+        .filter(
+            round ->
+                round.getBracketType() == BracketType.WINNERS
+                    && round.getRoundNumber() == roundNumber)
+        .findFirst()
+        .orElseThrow();
+  }
+
+  private void assertRoute(Match source, Match destination, int position) {
+    assertThat(source.getWinnerNextMatch()).isSameAs(destination);
+    assertThat(source.getWinnerNextMatchPosition()).isEqualTo(position);
+    assertThat(source.getLoserNextMatch()).isNull();
+    assertThat(source.getLoserNextMatchPosition()).isNull();
   }
 }
