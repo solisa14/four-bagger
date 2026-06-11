@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.game.RecordFrameRequest;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
@@ -74,7 +75,6 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
     tournamentService.generateBracket(tournamentId, organizer);
     tournamentService.startTournament(tournamentId, organizer);
 
-    // TODO: Add equivalent four-team DOUBLES progression coverage with eight participants.
     List<Match> matches = tournamentMatches(tournamentId);
     assertThat(matches).hasSize(7);
     Match winnerRoundOneMatchOne = match(matches, BracketType.WINNERS, 1, 1);
@@ -153,6 +153,141 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.brackets.grandFinal").isEmpty())
         .andExpect(jsonPath("$.brackets.finalRounds[0].matches[0].winnerNextMatchId").isEmpty())
         .andExpect(jsonPath("$.brackets.finalRounds[0].matches[0].loserNextMatchId").isEmpty());
+  }
+
+  @Test
+  void recordFrame_whenFourTeamDoublesDoubleEliminationBracketCompletes_progressesEntireGraph()
+      throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken("dedorg" + suffix);
+    User organizer =
+        userRepository.findUserByUsername("dedorg" + suffix + "user").orElseThrow();
+    User[] players = new User[8];
+    for (int i = 0; i < players.length; i++) {
+      String usernamePrefix = "dedp" + i + suffix;
+      registerAndGetToken(usernamePrefix);
+      players[i] = userRepository.findUserByUsername(usernamePrefix + "user").orElseThrow();
+    }
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Doubles Double Elimination Progression",
+                                GameType.DOUBLES,
+                                TournamentFormat.DOUBLE_ELIMINATION))))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.gameType").value("DOUBLES"))
+            .andExpect(jsonPath("$.format").value("DOUBLE_ELIMINATION"))
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(tournamentJson.get("id").asText());
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    for (User player : players) {
+      tournamentService.joinTournament(joinCode, player);
+    }
+    tournamentService.generateBracket(tournamentId, organizer);
+    tournamentService.startTournament(tournamentId, organizer);
+
+    List<Match> matches = tournamentMatches(tournamentId);
+    assertThat(matches).hasSize(7);
+    List<TournamentTeam> initialTeams =
+        matches.stream()
+            .filter(candidate -> candidate.getRound().getBracketType() == BracketType.WINNERS)
+            .filter(candidate -> candidate.getRound().getRoundNumber() == 1)
+            .flatMap(
+                candidate ->
+                    java.util.stream.Stream.of(candidate.getTeamOne(), candidate.getTeamTwo()))
+            .toList();
+    assertThat(initialTeams).hasSize(4);
+    assertThat(initialTeams).extracting(TournamentTeam::getPlayerOne).doesNotContainNull();
+    assertThat(initialTeams).extracting(TournamentTeam::getPlayerTwo).doesNotContainNull();
+    assertThat(
+            initialTeams.stream()
+                .flatMap(
+                    team ->
+                        java.util.stream.Stream.of(
+                            team.getPlayerOne().getId(), team.getPlayerTwo().getId()))
+                .distinct())
+        .hasSize(8);
+
+    Match winnerRoundOneMatchOne = match(matches, BracketType.WINNERS, 1, 1);
+    Match winnerRoundOneMatchTwo = match(matches, BracketType.WINNERS, 1, 2);
+    completeDoublesMatch(tournamentId, winnerRoundOneMatchOne.getId(), orgToken, true);
+    completeDoublesMatch(tournamentId, winnerRoundOneMatchTwo.getId(), orgToken, true);
+
+    matches = tournamentMatches(tournamentId);
+    winnerRoundOneMatchOne = match(matches, BracketType.WINNERS, 1, 1);
+    winnerRoundOneMatchTwo = match(matches, BracketType.WINNERS, 1, 2);
+    Match winnerFinal = match(matches, BracketType.WINNERS, 2, 1);
+    Match loserRoundOne = match(matches, BracketType.LOSERS, 1, 1);
+    assertThat(winnerFinal.getTeamOne().getId())
+        .isEqualTo(winnerRoundOneMatchOne.getWinner().getId());
+    assertThat(winnerFinal.getTeamTwo().getId())
+        .isEqualTo(winnerRoundOneMatchTwo.getWinner().getId());
+    assertThat(loserRoundOne.getTeamOne().getId())
+        .isEqualTo(winnerRoundOneMatchOne.getTeamTwo().getId());
+    assertThat(loserRoundOne.getTeamTwo().getId())
+        .isEqualTo(winnerRoundOneMatchTwo.getTeamTwo().getId());
+
+    UUID firstEliminatedTeamId = loserRoundOne.getTeamTwo().getId();
+    completeDoublesMatch(tournamentId, loserRoundOne.getId(), orgToken, true);
+
+    matches = tournamentMatches(tournamentId);
+    TournamentTeam firstEliminatedTeam = team(matches, firstEliminatedTeamId);
+    assertThat(firstEliminatedTeam.getLosses()).isEqualTo(2);
+    assertThat(firstEliminatedTeam.isEliminated()).isTrue();
+
+    winnerFinal = match(matches, BracketType.WINNERS, 2, 1);
+    UUID winnerFinalLoserId = winnerFinal.getTeamTwo().getId();
+    completeDoublesMatch(tournamentId, winnerFinal.getId(), orgToken, true);
+
+    matches = tournamentMatches(tournamentId);
+    Match loserFinal = match(matches, BracketType.LOSERS, 2, 1);
+    Match championship = match(matches, BracketType.FINAL, 1, 1);
+    assertThat(loserFinal.getTeamOne().getId())
+        .isEqualTo(match(matches, BracketType.LOSERS, 1, 1).getWinner().getId());
+    assertThat(loserFinal.getTeamTwo().getId()).isEqualTo(winnerFinalLoserId);
+    assertThat(championship.getTeamOne().getId())
+        .isEqualTo(match(matches, BracketType.WINNERS, 2, 1).getWinner().getId());
+
+    completeDoublesMatch(tournamentId, loserFinal.getId(), orgToken, true);
+
+    matches = tournamentMatches(tournamentId);
+    TournamentTeam secondEliminatedTeam = team(matches, winnerFinalLoserId);
+    championship = match(matches, BracketType.FINAL, 1, 1);
+    assertThat(secondEliminatedTeam.getLosses()).isEqualTo(2);
+    assertThat(secondEliminatedTeam.isEliminated()).isTrue();
+    assertThat(championship.getTeamTwo().getId())
+        .isEqualTo(match(matches, BracketType.LOSERS, 2, 1).getWinner().getId());
+
+    UUID championshipLoserId = championship.getTeamTwo().getId();
+    completeDoublesMatch(tournamentId, championship.getId(), orgToken, true);
+
+    matches = tournamentMatches(tournamentId);
+    championship = match(matches, BracketType.FINAL, 1, 1);
+    TournamentTeam championshipLoser = team(matches, championshipLoserId);
+    assertThat(championship.getStatus()).isEqualTo(MatchStatus.COMPLETED);
+    assertThat(championship.getWinner().getId()).isEqualTo(championship.getTeamOne().getId());
+    assertThat(championshipLoser.getLosses()).isEqualTo(2);
+    assertThat(championshipLoser.isEliminated()).isTrue();
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.gameType").value("DOUBLES"))
+        .andExpect(jsonPath("$.format").value("DOUBLE_ELIMINATION"))
+        .andExpect(jsonPath("$.status").value("COMPLETED"))
+        .andExpect(jsonPath("$.brackets.grandFinal").isEmpty());
   }
 
   @Test
@@ -660,6 +795,56 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
   private void completeMatchWithTeamTwoWin(UUID tournamentId, UUID matchId, String orgToken)
       throws Exception {
     completeMatch(tournamentId, matchId, orgToken, false);
+  }
+
+  private void completeDoublesMatch(
+      UUID tournamentId, UUID matchId, String orgToken, boolean teamOneWins) throws Exception {
+    MvcResult startMatchResult =
+        mockMvc
+            .perform(
+                post(
+                        "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                        tournamentId,
+                        matchId)
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.gameType").value("DOUBLES"))
+            .andExpect(jsonPath("$.playerOnePartner").isNotEmpty())
+            .andExpect(jsonPath("$.playerTwoPartner").isNotEmpty())
+            .andReturn();
+
+    var gameJson = objectMapper.readTree(startMatchResult.getResponse().getContentAsString());
+    String gameId = gameJson.get("id").asText();
+    UUID teamOnePlayer = UUID.fromString(gameJson.get("playerOne").get("id").asText());
+    UUID teamOnePartner = UUID.fromString(gameJson.get("playerOnePartner").get("id").asText());
+    UUID teamTwoPlayer = UUID.fromString(gameJson.get("playerTwo").get("id").asText());
+    UUID teamTwoPartner = UUID.fromString(gameJson.get("playerTwoPartner").get("id").asText());
+
+    mockMvc
+        .perform(
+            post("/api/v1/games/{gameId}/start", gameId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk());
+
+    for (int frameNumber = 1; frameNumber <= 4; frameNumber++) {
+      boolean primaryPlayersThrow = frameNumber % 2 == 1;
+      int winningBagsIn = frameNumber == 1 ? 4 : 1;
+      RecordFrameRequest request =
+          new RecordFrameRequest(
+              teamOneWins ? winningBagsIn : 0,
+              0,
+              teamOneWins ? 0 : winningBagsIn,
+              0,
+              primaryPlayersThrow ? teamOnePlayer : teamOnePartner,
+              primaryPlayersThrow ? teamTwoPlayer : teamTwoPartner);
+      mockMvc
+          .perform(
+              post("/api/v1/games/{gameId}/frames", gameId)
+                  .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(objectMapper.writeValueAsString(request)))
+          .andExpect(status().isCreated());
+    }
   }
 
   private void completeMatch(
