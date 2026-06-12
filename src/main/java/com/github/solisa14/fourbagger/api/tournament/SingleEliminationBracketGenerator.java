@@ -85,7 +85,6 @@ public class SingleEliminationBracketGenerator implements TournamentBracketGener
               .bracketType(BracketType.WINNERS)
               .roundNumber(roundNumber)
               .bestOf(1)
-              .scoringMode(ScoringMode.STANDARD)
               .build();
       tournament.getRounds().add(newRound);
     }

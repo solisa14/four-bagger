@@ -15,6 +15,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,6 +81,10 @@ public class Tournament {
   @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   private List<TournamentRound> rounds = new ArrayList<>();
+
+  @Version
+  @Column(name = "version", nullable = false)
+  private long version;
 
   @CreationTimestamp
   @Column(nullable = false, updatable = false)

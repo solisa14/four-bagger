@@ -3,29 +3,23 @@ package com.github.solisa14.fourbagger.api.tournament;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.github.solisa14.fourbagger.api.game.CreateGameCommand;
-import com.github.solisa14.fourbagger.api.game.Game;
-import com.github.solisa14.fourbagger.api.game.GameCreationService;
-import com.github.solisa14.fourbagger.api.game.GameRepository;
-import com.github.solisa14.fourbagger.api.game.GameScoringMode;
-import com.github.solisa14.fourbagger.api.game.GameStatus;
-import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,9 +27,10 @@ class TournamentMatchServiceTest {
 
   @Mock private TournamentRepository tournamentRepository;
   @Mock private MatchRepository matchRepository;
-  @Mock private GameRepository gameRepository;
-  @Mock private GameCreationService gameCreationService;
-  @Spy private TournamentGameCommandFactory tournamentGameCommandFactory;
+  @Mock private TournamentMatchAuthorizationService authorizationService;
+  @Mock private TournamentMapper tournamentMapper;
+  @Mock private TournamentGameResultRepository resultRepository;
+  @Mock private TournamentProgressionService progressionService;
 
   @InjectMocks private TournamentMatchService tournamentMatchService;
 
@@ -44,6 +39,7 @@ class TournamentMatchServiceTest {
     Tournament tournament = tournament(TournamentStatus.BRACKET_READY);
     Match match = match(tournament, false);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
     assertThatThrownBy(
             () ->
@@ -53,10 +49,14 @@ class TournamentMatchServiceTest {
   }
 
   @Test
-  void startMatch_whenUserIsNotOrganizer_throwsTournamentAccessDeniedException() {
+  void startMatch_whenUserIsNotAuthorized_throwsTournamentAccessDeniedException() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    doThrow(new TournamentAccessDeniedException(tournament.getId()))
+        .when(authorizationService)
+        .authorizeMatchMutation(any(), eq(tournament), eq(match));
 
     assertThatThrownBy(
             () ->
@@ -66,90 +66,72 @@ class TournamentMatchServiceTest {
   }
 
   @Test
-  void startMatch_whenNoGamesExist_createsFirstPendingGameAndMarksMatchInProgress() {
+  void startMatch_whenPending_marksMatchInProgressAndReturnsDetail() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
+    User starter = tournament.getOrganizer();
+    TournamentMatchDetailResponse detail = detailResponse(match);
+
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
-    when(gameRepository.findByTournamentMatchIdOrderByCreatedAtAsc(match.getId()))
-        .thenReturn(List.of());
-    Game created = Game.builder().id(UUID.randomUUID()).status(GameStatus.PENDING).build();
-    when(gameCreationService.createPendingGame(any(CreateGameCommand.class))).thenReturn(created);
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
+    when(progressionService.nextGameNumber(match)).thenReturn(1);
+    when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
+        .thenReturn(detail);
 
-    Game result =
-        tournamentMatchService.startMatch(
-            tournament.getId(), match.getId(), tournament.getOrganizer());
+    TournamentMatchDetailResponse result =
+        tournamentMatchService.startMatch(tournament.getId(), match.getId(), starter);
 
-    assertThat(result).isEqualTo(created);
+    assertThat(result).isEqualTo(detail);
     assertThat(match.getStatus()).isEqualTo(MatchStatus.IN_PROGRESS);
+    assertThat(match.getStartedAt()).isNotNull();
+    assertThat(match.getStartedBy()).isEqualTo(starter);
     verify(matchRepository).save(match);
-    ArgumentCaptor<CreateGameCommand> commandCaptor =
-        ArgumentCaptor.forClass(CreateGameCommand.class);
-    verify(gameCreationService).createPendingGame(commandCaptor.capture());
-    CreateGameCommand command = commandCaptor.getValue();
-    assertThat(command.tournamentMatchId()).isEqualTo(match.getId());
-    assertThat(command.participants().gameType()).isEqualTo(GameType.SINGLES);
-    assertThat(command.participants().teamOne().player())
-        .isEqualTo(match.getTeamOne().getPlayerOne());
-    assertThat(command.participants().teamTwo().player())
-        .isEqualTo(match.getTeamTwo().getPlayerOne());
   }
 
   @Test
-  void startMatch_whenTeamsAreDoubles_createsDoublesGameParticipants() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, true);
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
-    when(gameRepository.findByTournamentMatchIdOrderByCreatedAtAsc(match.getId()))
-        .thenReturn(List.of());
-    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
-        .thenReturn(Game.builder().id(UUID.randomUUID()).status(GameStatus.PENDING).build());
-
-    tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer());
-
-    ArgumentCaptor<CreateGameCommand> commandCaptor =
-        ArgumentCaptor.forClass(CreateGameCommand.class);
-    verify(gameCreationService).createPendingGame(commandCaptor.capture());
-    assertThat(commandCaptor.getValue().participants().gameType()).isEqualTo(GameType.DOUBLES);
-  }
-
-  @Test
-  void startMatch_whenRoundUsesExactScoring_mapsToExactGameScoringMode() {
+  void startMatch_whenParticipantStarts_authorizesAndMarksInProgress() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    match.getRound().setScoringMode(ScoringMode.EXACT);
+    User participant = match.getTeamOne().getPlayerOne();
+    TournamentMatchDetailResponse detail = detailResponse(match);
+
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
-    when(gameRepository.findByTournamentMatchIdOrderByCreatedAtAsc(match.getId()))
-        .thenReturn(List.of());
-    when(gameCreationService.createPendingGame(any(CreateGameCommand.class)))
-        .thenReturn(Game.builder().id(UUID.randomUUID()).status(GameStatus.PENDING).build());
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
+    when(progressionService.nextGameNumber(match)).thenReturn(1);
+    when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
+        .thenReturn(detail);
 
-    tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer());
+    tournamentMatchService.startMatch(tournament.getId(), match.getId(), participant);
 
-    ArgumentCaptor<CreateGameCommand> commandCaptor =
-        ArgumentCaptor.forClass(CreateGameCommand.class);
-    verify(gameCreationService).createPendingGame(commandCaptor.capture());
-    assertThat(commandCaptor.getValue().resolvedScoringMode()).isEqualTo(GameScoringMode.EXACT);
+    verify(authorizationService).authorizeMatchMutation(participant, tournament, match);
+    verify(matchRepository).save(match);
   }
 
   @Test
-  void startMatch_whenGameAlreadyExists_returnsExistingGameWithoutCreatingAnother() {
+  void startMatch_whenAlreadyInProgressWithStartedAt_isIdempotentAndDoesNotSaveAgain() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    Game existingGame = Game.builder().id(UUID.randomUUID()).build();
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
-    when(gameRepository.findByTournamentMatchIdOrderByCreatedAtAsc(match.getId()))
-        .thenReturn(List.of(existingGame));
+    Instant startedAt = Instant.parse("2026-01-01T12:00:00Z");
+    match.setStatus(MatchStatus.IN_PROGRESS);
+    match.setStartedAt(startedAt);
+    match.setStartedBy(tournament.getOrganizer());
+    TournamentMatchDetailResponse detail = detailResponse(match);
 
-    Game result =
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
+    when(progressionService.nextGameNumber(match)).thenReturn(1);
+    when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
+        .thenReturn(detail);
+
+    TournamentMatchDetailResponse result =
         tournamentMatchService.startMatch(
             tournament.getId(), match.getId(), tournament.getOrganizer());
 
-    assertThat(result).isEqualTo(existingGame);
-    verify(gameCreationService, never()).createPendingGame(any(CreateGameCommand.class));
+    assertThat(result).isEqualTo(detail);
+    verify(matchRepository, never()).save(match);
   }
 
   @Test
@@ -158,7 +140,7 @@ class TournamentMatchServiceTest {
     Match match = match(tournament, false);
     match.setBye(true);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
     assertThatThrownBy(
             () ->
@@ -173,7 +155,7 @@ class TournamentMatchServiceTest {
     Match match = match(tournament, false);
     match.setTeamTwo(null);
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
     assertThatThrownBy(
             () ->
@@ -189,13 +171,32 @@ class TournamentMatchServiceTest {
     Match match = match(ownerTournament, false);
     when(tournamentRepository.findById(requestedTournament.getId()))
         .thenReturn(Optional.of(requestedTournament));
-    when(matchRepository.findById(match.getId())).thenReturn(Optional.of(match));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
     assertThatThrownBy(
             () ->
                 tournamentMatchService.startMatch(
                     requestedTournament.getId(), match.getId(), requestedTournament.getOrganizer()))
         .isInstanceOf(InvalidTournamentStateException.class);
+  }
+
+  @Test
+  void getMatchDetail_whenFound_returnsDetail() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    Match match = match(tournament, false);
+    TournamentMatchDetailResponse detail = detailResponse(match);
+
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
+    when(progressionService.nextGameNumber(match)).thenReturn(1);
+    when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
+        .thenReturn(detail);
+
+    TournamentMatchDetailResponse result =
+        tournamentMatchService.getMatchDetail(tournament.getId(), match.getId());
+
+    assertThat(result).isEqualTo(detail);
   }
 
   @Test
@@ -231,6 +232,29 @@ class TournamentMatchServiceTest {
         .isInstanceOf(MatchNotFoundException.class);
   }
 
+  private TournamentMatchDetailResponse detailResponse(Match match) {
+    return new TournamentMatchDetailResponse(
+        match.getId(),
+        match.getMatchNumber(),
+        match.getStatus(),
+        match.isBye(),
+        null,
+        null,
+        match.getTeamOneWins(),
+        match.getTeamTwoWins(),
+        null,
+        null,
+        null,
+        null,
+        null,
+        match.getStartedAt(),
+        match.getStartedBy() != null ? match.getStartedBy().getId() : null,
+        match.getRound().getBestOf(),
+        1,
+        1,
+        List.of());
+  }
+
   private Tournament tournament(TournamentStatus status) {
     return Tournament.builder()
         .id(UUID.randomUUID())
@@ -249,7 +273,6 @@ class TournamentMatchServiceTest {
             .bracketType(BracketType.WINNERS)
             .roundNumber(1)
             .bestOf(1)
-            .scoringMode(ScoringMode.STANDARD)
             .build();
     TournamentTeam teamOne =
         TournamentTeam.builder()
@@ -279,7 +302,6 @@ class TournamentMatchServiceTest {
   }
 
   private User user(String suffix) {
-    return TestDataFactory.user(
-        UUID.randomUUID(), suffix, "encoded", Role.USER);
+    return TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER);
   }
 }

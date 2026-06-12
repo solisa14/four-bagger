@@ -18,23 +18,29 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Test
-  void gameFlow_whenPlayedToTargetScore_completesWithWinner() throws Exception {
+  void gameFlow_whenResultSubmitted_completesWithWinner() throws Exception {
     String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
     String p1Token = registerAndGetToken("p1" + suffix);
     String p2Token = registerAndGetToken("p2" + suffix);
 
-    // Get player 2's ID
+    MvcResult p1Profile =
+        mockMvc
+            .perform(get("/api/v1/user/me").cookie(TestCookieHelper.cookie("accessToken", p1Token)))
+            .andExpect(status().isOk())
+            .andReturn();
     MvcResult p2Profile =
         mockMvc
             .perform(get("/api/v1/user/me").cookie(TestCookieHelper.cookie("accessToken", p2Token)))
             .andExpect(status().isOk())
             .andReturn();
 
+    String p1Id =
+        objectMapper.readTree(p1Profile.getResponse().getContentAsString()).get("id").asText();
     String p2Id =
         objectMapper.readTree(p2Profile.getResponse().getContentAsString()).get("id").asText();
 
-    // Create game (player 1 creates)
-    CreateGameRequest createRequest = new CreateGameRequest(java.util.UUID.fromString(p2Id), 21);
+    CreateGameRequest createRequest =
+        new CreateGameRequest(java.util.UUID.fromString(p2Id));
     MvcResult createResult =
         mockMvc
             .perform(
@@ -49,7 +55,6 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
     String gameId =
         objectMapper.readTree(createResult.getResponse().getContentAsString()).get("id").asText();
 
-    // Start game
     mockMvc
         .perform(
             post("/api/v1/games/{gameId}/start", gameId)
@@ -57,32 +62,24 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
 
-    // Record frames until player 1 wins (7 frames × 3pts = 21)
-    RecordFrameRequest fourBagger = new RecordFrameRequest(4, 0, 0, 0); // p1 nets 12
-    RecordFrameRequest threePoints = new RecordFrameRequest(1, 0, 0, 0); // p1 nets 3
+    SubmitGameResultRequest resultRequest =
+        new SubmitGameResultRequest(
+            java.util.UUID.fromString(p1Id), 21, 15);
 
-    // Frame 1: p1 four-bagger = 12pts
     mockMvc
         .perform(
-            post("/api/v1/games/{gameId}/frames", gameId)
+            post("/api/v1/games/{gameId}/result", gameId)
                 .cookie(TestCookieHelper.cookie("accessToken", p1Token))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(fourBagger)))
-        .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.playerOneScore").value(12));
+                .content(objectMapper.writeValueAsString(resultRequest)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COMPLETED"))
+        .andExpect(jsonPath("$.playerOneScore").value(21))
+        .andExpect(jsonPath("$.playerTwoScore").value(15))
+        .andExpect(jsonPath("$.winner.id").value(p1Id))
+        .andExpect(jsonPath("$.submittedBy.id").value(p1Id))
+        .andExpect(jsonPath("$.completedAt").exists());
 
-    // Frames 2-4: p1 gets 3 each = 9 more (total 21)
-    for (int i = 0; i < 3; i++) {
-      mockMvc
-          .perform(
-              post("/api/v1/games/{gameId}/frames", gameId)
-                  .cookie(TestCookieHelper.cookie("accessToken", p1Token))
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(objectMapper.writeValueAsString(threePoints)))
-          .andExpect(status().isCreated());
-    }
-
-    // Verify final state
     MvcResult finalState =
         mockMvc
             .perform(
@@ -94,8 +91,8 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
 
     var finalGame = objectMapper.readTree(finalState.getResponse().getContentAsString());
     assertThat(finalGame.get("playerOneScore").asInt()).isEqualTo(21);
-    assertThat(finalGame.get("winner").get("id").asText()).isNotBlank();
-    assertThat(finalGame.get("frames").size()).isEqualTo(4);
+    assertThat(finalGame.get("winner").get("id").asText()).isEqualTo(p1Id);
+    assertThat(finalGame.has("frames")).isFalse();
   }
 
   @Test
@@ -112,7 +109,8 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
     String p2Id =
         objectMapper.readTree(p2Profile.getResponse().getContentAsString()).get("id").asText();
 
-    CreateGameRequest createRequest = new CreateGameRequest(java.util.UUID.fromString(p2Id), null);
+    CreateGameRequest createRequest =
+        new CreateGameRequest(java.util.UUID.fromString(p2Id));
     MvcResult createResult =
         mockMvc
             .perform(
@@ -141,15 +139,23 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
     String p2Token = registerAndGetToken("authz2" + suffix);
     String outsiderToken = registerAndGetToken("authz3" + suffix);
 
+    MvcResult p1Profile =
+        mockMvc
+            .perform(get("/api/v1/user/me").cookie(TestCookieHelper.cookie("accessToken", p1Token)))
+            .andExpect(status().isOk())
+            .andReturn();
     MvcResult p2Profile =
         mockMvc
             .perform(get("/api/v1/user/me").cookie(TestCookieHelper.cookie("accessToken", p2Token)))
             .andExpect(status().isOk())
             .andReturn();
+    String p1Id =
+        objectMapper.readTree(p1Profile.getResponse().getContentAsString()).get("id").asText();
     String p2Id =
         objectMapper.readTree(p2Profile.getResponse().getContentAsString()).get("id").asText();
 
-    CreateGameRequest createRequest = new CreateGameRequest(java.util.UUID.fromString(p2Id), null);
+    CreateGameRequest createRequest =
+        new CreateGameRequest(java.util.UUID.fromString(p2Id));
     MvcResult createResult =
         mockMvc
             .perform(
@@ -176,12 +182,16 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
 
+    SubmitGameResultRequest resultRequest =
+        new SubmitGameResultRequest(
+            java.util.UUID.fromString(p1Id), 21, 15);
+
     mockMvc
         .perform(
-            post("/api/v1/games/{gameId}/frames", gameId)
+            post("/api/v1/games/{gameId}/result", gameId)
                 .cookie(TestCookieHelper.cookie("accessToken", outsiderToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0))))
+                .content(objectMapper.writeValueAsString(resultRequest)))
         .andExpect(status().isForbidden());
 
     mockMvc
@@ -205,9 +215,9 @@ class GameFlowIntegrationTest extends AbstractIntegrationTest {
     String p2Id =
         objectMapper.readTree(p2Profile.getResponse().getContentAsString()).get("id").asText();
 
-    CreateGameRequest createRequest = new CreateGameRequest(java.util.UUID.fromString(p2Id), null);
+    CreateGameRequest createRequest =
+        new CreateGameRequest(java.util.UUID.fromString(p2Id));
 
-    // Create two games
     for (int i = 0; i < 2; i++) {
       mockMvc
           .perform(

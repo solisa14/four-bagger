@@ -1,5 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import com.github.solisa14.fourbagger.api.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
@@ -22,11 +24,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-/**
- * Represents a single contest between two teams within a tournament round. A match may consist of
- * one or more games depending on the round's "best of" configuration. It tracks the wins for each
- * team and routes the winner and loser to their configured next matches in the bracket graph.
- */
+/** Represents a single contest between two teams within a tournament round. */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -95,6 +93,17 @@ public class Match {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "winner_id")
   private TournamentTeam winner;
+
+  @Column(name = "started_at")
+  private Instant startedAt;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "started_by_id")
+  private User startedBy;
+
+  @Version
+  @Column(name = "version", nullable = false)
+  private long version;
 
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)

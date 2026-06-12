@@ -223,21 +223,16 @@ public class TournamentService {
   }
 
   /**
-   * Updates the rules (best-of series count and scoring mode) for a specific round.
+   * Updates the best-of series count for a specific round.
    *
    * @param tournamentId the UUID of the tournament
    * @param roundNumber the number of the round to configure
    * @param bestOf the number of games required to win a match in this round (must be 1, 3, 5, or 7)
-   * @param scoringMode the scoring mode rules for the round
    * @throws InvalidRoundConfigurationException if the parameters are invalid
    * @throws InvalidTournamentStateException if the tournament is not in the BRACKET_READY state
    */
   public void updateRoundSettings(
-      UUID tournamentId,
-      User currentUser,
-      int roundNumber,
-      Integer bestOf,
-      ScoringMode scoringMode) {
+      UUID tournamentId, User currentUser, int roundNumber, Integer bestOf) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
     authorizeOrganizer(currentUser, tournament);
@@ -251,8 +246,8 @@ public class TournamentService {
       throw new InvalidRoundConfigurationException("Round number must be greater than 0");
     }
 
-    if (bestOf == null && scoringMode == null) {
-      throw new InvalidRoundConfigurationException("At least one round setting must be provided");
+    if (bestOf == null) {
+      throw new InvalidRoundConfigurationException("bestOf must be provided");
     }
 
     List<TournamentRound> matchingRounds =
@@ -264,16 +259,10 @@ public class TournamentService {
       throw new TournamentRoundNotFoundException();
     }
 
-    if (bestOf != null) {
-      if (!isValidBestOf(bestOf)) {
-        throw new InvalidRoundConfigurationException("bestOf must be one of: 1, 3, 5, or 7");
-      }
-      matchingRounds.forEach(round -> round.setBestOf(bestOf));
+    if (!isValidBestOf(bestOf)) {
+      throw new InvalidRoundConfigurationException("bestOf must be one of: 1, 3, 5, or 7");
     }
-
-    if (scoringMode != null) {
-      matchingRounds.forEach(round -> round.setScoringMode(scoringMode));
-    }
+    matchingRounds.forEach(round -> round.setBestOf(bestOf));
 
     tournamentRepository.save(tournament);
   }

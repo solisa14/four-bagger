@@ -121,7 +121,6 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.brackets.winners[0].bracketType").value("WINNERS"))
         .andExpect(jsonPath("$.brackets.winners[0].roundNumber").value(1))
         .andExpect(jsonPath("$.brackets.winners[0].bestOf").value(1))
-        .andExpect(jsonPath("$.brackets.winners[0].scoringMode").value("STANDARD"))
         .andExpect(jsonPath("$.brackets.winners[0].matches").isArray())
         .andExpect(jsonPath("$.brackets.winners[0].matches.length()").value(2))
         .andExpect(jsonPath("$.brackets.winners[1].bracketType").value("WINNERS"))

@@ -573,9 +573,7 @@ class TournamentControllerWebMvcTest {
   void updateRoundSettings_whenValid_returnsOkWithTournament() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doNothing()
-        .when(tournamentService)
-        .updateRoundSettings(eq(id), any(), eq(1), eq(3), eq(ScoringMode.STANDARD));
+    doNothing().when(tournamentService).updateRoundSettings(eq(id), any(), eq(1), eq(3));
     when(tournamentService.getTournament(id)).thenReturn(bracketReadyTournament(id, principal));
 
     mockMvc
@@ -583,9 +581,7 @@ class TournamentControllerWebMvcTest {
             patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", id, 1)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    objectMapper.writeValueAsString(
-                        new UpdateRoundSettingsRequest(3, ScoringMode.STANDARD))))
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(id.toString()))
         .andExpect(jsonPath("$.status").value("BRACKET_READY"));
@@ -599,16 +595,14 @@ class TournamentControllerWebMvcTest {
             new InvalidTournamentStateException(
                 "Round settings can only be changed when tournament is BRACKET_READY"))
         .when(tournamentService)
-        .updateRoundSettings(eq(id), any(), eq(1), eq(3), eq(ScoringMode.STANDARD));
+        .updateRoundSettings(eq(id), any(), eq(1), eq(3));
 
     mockMvc
         .perform(
             patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", id, 1)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    objectMapper.writeValueAsString(
-                        new UpdateRoundSettingsRequest(3, ScoringMode.STANDARD))))
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.message")
@@ -621,14 +615,14 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(new InvalidRoundConfigurationException("bestOf must be one of: 1, 3, 5, or 7"))
         .when(tournamentService)
-        .updateRoundSettings(eq(id), any(), eq(1), eq(2), any());
+        .updateRoundSettings(eq(id), any(), eq(1), eq(2));
 
     mockMvc
         .perform(
             patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", id, 1)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(2, null))))
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(2))))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message").value("bestOf must be one of: 1, 3, 5, or 7"));
   }
@@ -639,14 +633,14 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(new TournamentRoundNotFoundException())
         .when(tournamentService)
-        .updateRoundSettings(eq(id), any(), eq(99), any(), any());
+        .updateRoundSettings(eq(id), any(), eq(99), any());
 
     mockMvc
         .perform(
             patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", id, 99)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3, null))))
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").value("Tournament round not found"));
   }
@@ -657,35 +651,34 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(new TournamentNotFoundException())
         .when(tournamentService)
-        .updateRoundSettings(eq(id), any(), eq(1), any(), any());
+        .updateRoundSettings(eq(id), any(), eq(1), any());
 
     mockMvc
         .perform(
             patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", id, 1)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3, null))))
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").value("Tournament not found"));
   }
 
   @Test
-  void updateRoundSettings_whenNoFieldsProvided_returnsBadRequest() throws Exception {
+  void updateRoundSettings_whenBestOfNotProvided_returnsBadRequest() throws Exception {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
-    doThrow(new InvalidRoundConfigurationException("At least one round setting must be provided"))
+    doThrow(new InvalidRoundConfigurationException("bestOf must be provided"))
         .when(tournamentService)
-        .updateRoundSettings(eq(id), any(), eq(1), eq(null), eq(null));
+        .updateRoundSettings(eq(id), any(), eq(1), eq(null));
 
     mockMvc
         .perform(
             patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", id, 1)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(null, null))))
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(null))))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message").value("At least one round setting must be provided"));
+        .andExpect(jsonPath("$.message").value("bestOf must be provided"));
   }
 
   @Test
@@ -694,16 +687,14 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(new TournamentAccessDeniedException(id))
         .when(tournamentService)
-        .updateRoundSettings(eq(id), any(), eq(1), eq(3), eq(ScoringMode.STANDARD));
+        .updateRoundSettings(eq(id), any(), eq(1), eq(3));
 
     mockMvc
         .perform(
             patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", id, 1)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    objectMapper.writeValueAsString(
-                        new UpdateRoundSettingsRequest(3, ScoringMode.STANDARD))))
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.message").value("You are not allowed to modify tournament: " + id));
   }

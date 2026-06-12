@@ -1,7 +1,6 @@
 package com.github.solisa14.fourbagger.api.game;
 
 import com.github.solisa14.fourbagger.api.user.User;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,12 +11,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,10 +23,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-/**
- * Entity representing a cornhole game, either standalone or as part of a tournament match. Tracks
- * participants, scoring rules, current score, and the sequence of frames played.
- */
+/** Entity representing a standalone cornhole game with final-result scoring. */
 @Entity
 @Table(name = "games")
 @NoArgsConstructor
@@ -65,11 +58,6 @@ public class Game {
   @Builder.Default
   private GameType gameType = GameType.SINGLES;
 
-  @Enumerated(EnumType.STRING)
-  @Column(name = "scoring_mode", nullable = false, length = 50)
-  @Builder.Default
-  private GameScoringMode scoringMode = GameScoringMode.STANDARD;
-
   @Column(name = "player_one_score", nullable = false)
   @Builder.Default
   private int playerOneScore = 0;
@@ -77,10 +65,6 @@ public class Game {
   @Column(name = "player_two_score", nullable = false)
   @Builder.Default
   private int playerTwoScore = 0;
-
-  @Column(name = "target_score", nullable = false)
-  @Builder.Default
-  private int targetScore = 21;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 50)
@@ -90,6 +74,13 @@ public class Game {
   @JoinColumn(name = "winner_id")
   private User winner;
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "submitted_by_id")
+  private User submittedBy;
+
+  @Column(name = "completed_at")
+  private Instant completedAt;
+
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "created_by_id", nullable = false)
   private User createdBy;
@@ -97,10 +88,9 @@ public class Game {
   @Column(name = "tournament_match_id")
   private UUID tournamentMatchId;
 
-  @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
-  @OrderBy("frameNumber ASC")
-  @Builder.Default
-  private List<Frame> frames = new ArrayList<>();
+  @Version
+  @Column(name = "version", nullable = false)
+  private long version;
 
   @CreationTimestamp
   @Column(name = "created_at", updatable = false)

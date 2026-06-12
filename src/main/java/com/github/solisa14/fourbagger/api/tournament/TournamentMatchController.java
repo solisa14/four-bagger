@@ -1,74 +1,56 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.github.solisa14.fourbagger.api.game.Game;
-import com.github.solisa14.fourbagger.api.game.GameResponse;
 import com.github.solisa14.fourbagger.api.user.User;
+import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * REST controller for tournament match operations. Provides endpoints to start matches, retrieve
- * match details, and process completed games within a tournament bracket.
- */
+/** REST controller for tournament match operations. */
 @RestController
 @RequestMapping("/api/v1/tournaments/{tournamentId}/matches")
 class TournamentMatchController {
 
   private final TournamentMatchService tournamentMatchService;
-  private final com.github.solisa14.fourbagger.api.game.GameMapper gameMapper;
-  private final TournamentMapper tournamentMapper;
+  private final TournamentMatchResultService tournamentMatchResultService;
 
-  /**
-   * Constructs a new TournamentMatchController.
-   *
-   * @param tournamentMatchService the service for match-related business logic
-   * @param gameMapper the game mapper for conversion between game DTOs and domain objects
-   * @param tournamentMapper the tournament mapper for conversion between tournament DTOs and domain
-   *     objects
-   */
   TournamentMatchController(
       TournamentMatchService tournamentMatchService,
-      com.github.solisa14.fourbagger.api.game.GameMapper gameMapper,
-      TournamentMapper tournamentMapper) {
+      TournamentMatchResultService tournamentMatchResultService) {
     this.tournamentMatchService = tournamentMatchService;
-    this.gameMapper = gameMapper;
-    this.tournamentMapper = tournamentMapper;
+    this.tournamentMatchResultService = tournamentMatchResultService;
   }
 
-  /**
-   * Starts a tournament match by creating its first game. If a game already exists for this match,
-   * returns the existing game.
-   *
-   * @param tournamentId the tournament containing the match
-   * @param matchId the match to start
-   * @return the created or existing game for this match
-   */
   @PostMapping("/{matchId}/start")
-  ResponseEntity<GameResponse> startMatch(
+  ResponseEntity<TournamentMatchDetailResponse> startMatch(
       @AuthenticationPrincipal User currentUser,
       @PathVariable UUID tournamentId,
       @PathVariable UUID matchId) {
-    Game game = tournamentMatchService.startMatch(tournamentId, matchId, currentUser);
-    return ResponseEntity.ok(gameMapper.toGameResponse(game));
+    return ResponseEntity.ok(tournamentMatchService.startMatch(tournamentId, matchId, currentUser));
   }
 
-  /**
-   * Retrieves the current state of a tournament match including team summaries and win counts.
-   *
-   * @param tournamentId the tournament containing the match
-   * @param matchId the match to retrieve
-   * @return the match details
-   */
   @GetMapping("/{matchId}")
-  ResponseEntity<MatchResponse> getMatch(
+  ResponseEntity<TournamentMatchDetailResponse> getMatch(
       @PathVariable UUID tournamentId, @PathVariable UUID matchId) {
-    Match match = tournamentMatchService.getMatch(tournamentId, matchId);
-    return ResponseEntity.ok(tournamentMapper.toMatchResponse(match));
+    return ResponseEntity.ok(tournamentMatchService.getMatchDetail(tournamentId, matchId));
+  }
+
+  @PostMapping("/{matchId}/games/{gameNumber}/result")
+  ResponseEntity<TournamentMatchDetailResponse> submitResult(
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable UUID tournamentId,
+      @PathVariable UUID matchId,
+      @PathVariable int gameNumber,
+      @Valid @RequestBody SubmitTournamentGameResultRequest request) {
+    return ResponseEntity.status(201)
+        .body(
+            tournamentMatchResultService.submitResult(
+                tournamentId, matchId, gameNumber, currentUser, request));
   }
 }

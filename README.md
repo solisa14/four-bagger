@@ -3,7 +3,7 @@
 
 Four Bagger is a Spring Boot backend for organizing cornhole games and single- and double-elimination tournaments. It
 supports user authentication, standalone singles and doubles games, tournament registration via join codes, bracket
-generation, round-level rule configuration, and automatic match progression as games are completed.
+generation, round-level best-of configuration, and automatic bracket progression as final match results are submitted.
 
 I built this project because I wanted something my family could actually use during cornhole tournaments at family
 functions, and I wanted a backend project that pushed me beyond basic CRUD. The goal was to practice backend engineering
@@ -16,8 +16,9 @@ in a project with real domain rules and real state transitions.
 - Single- and double-elimination tournament lifecycle from registration through bracket generation to live match
   progression
 - Graph-based bracket routing — matches are wired as nodes with winner and loser edges that drive automatic advancement
-- Configurable round rules with `bestOf` series support and multiple scoring modes
-- Event-driven tournament advancement when a game completes
+- Configurable round rules with `bestOf` series support
+- Final-result scoring for standalone games and tournament physical games (winner + both scores)
+- Immutable tournament result submission with duplicate-submission protection
 - Flyway-managed schema changes with Hibernate validation and PostgreSQL persistence
 
 ## Tech Stack
@@ -40,20 +41,17 @@ The project uses a layered, package-by-feature structure:
 
 - `auth` handles registration, login, logout, refresh-token rotation, and persisted refresh tokens
 - `user` handles profile reads and account updates
-- `game` handles standalone game creation, frame recording, scoring, and game state transitions
+- `game` handles standalone game creation, final-result submission, and game state transitions
 - `tournament` handles tournament lifecycle, bracket generation, round configuration, and match progression
 - `security` contains JWT parsing, authentication filters, and Spring Security configuration
 - `common` contains shared exception handling and validation utilities
 
 Some of the main engineering decisions in the codebase:
 
-- Scoring rules use a strategy-style design through `GameScoringPolicy`, allowing different scoring modes to be selected
-  from `Game.scoringMode`
 - Controllers use mapper classes to translate request DTOs into domain commands or responses (for example `GameMapper`,
   `TournamentMapper`), which keeps service boundaries explicit
-- Tournament progression is event-driven: when a tournament-linked game reaches `COMPLETED`, `GameService` publishes
-  `GameCompletedEvent`; `TournamentMatchService` listens and runs match/tournament progression (advancing winners,
-  best-of series, etc.)
+- Tournament progression is result-driven: `TournamentMatchResultService` persists `TournamentGameResult` rows and
+  `TournamentProgressionService` applies best-of series wins and bracket advancement
 - Database changes are managed through Flyway migrations, while Hibernate runs in `validate` mode to prevent the schema
   from drifting away from the entity model
 
@@ -75,7 +73,7 @@ At bracket generation time, `SingleEliminationBracketGenerator` and `DoubleElimi
 graph — creating rounds, seeding first-round matchups, assigning byes, and wiring winner (and, for double elimination,
 loser) routes between matches.
 
-When a linked game finishes, `TournamentProgressionService` handles series wins and best-of logic, then delegates to the
+When a tournament physical-game result is submitted, `TournamentProgressionService` handles series wins and best-of logic, then delegates to the
 format-specific handler:
 
 - `SingleEliminationProgressionHandler` routes the winner along the winner edge; when there is no next match, the
@@ -159,9 +157,9 @@ All endpoints are served under `/api/v1`. Authenticated routes expect a JWT in t
 |------|-----------|
 | Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh-token`, `POST /auth/logout` |
 | User | `GET /user/me`, `PATCH /user/me`, `PUT /user/me/password` |
-| Games | `POST /games`, `POST /games/{gameId}/start`, `POST /games/{gameId}/frames`, `GET /games/{gameId}`, `GET /games/me`, `POST /games/{gameId}/cancel` |
+| Games | `POST /games`, `POST /games/{gameId}/start`, `POST /games/{gameId}/result`, `GET /games/{gameId}`, `GET /games/me`, `POST /games/{gameId}/cancel` |
 | Tournaments | `POST /tournaments`, `GET /tournaments/{id}`, `POST /tournaments/join`, `POST /tournaments/{id}/bracket`, `PATCH /tournaments/{id}/rounds/{roundNumber}`, `POST /tournaments/{id}/start`, `DELETE /tournaments/{id}/participants/{participantId}`, `DELETE /tournaments/{id}` |
-| Tournament Matches | `POST /tournaments/{tournamentId}/matches/{matchId}/start`, `GET /tournaments/{tournamentId}/matches/{matchId}` |
+| Tournament Matches | `POST /tournaments/{tournamentId}/matches/{matchId}/start`, `GET /tournaments/{tournamentId}/matches/{matchId}`, `POST /tournaments/{tournamentId}/matches/{matchId}/games/{gameNumber}/result` |
 
 ### Validation and rules (quick reference)
 
@@ -171,8 +169,11 @@ All endpoints are served under `/api/v1`. Authenticated routes expect a JWT in t
   `format` may be `SINGLE_ELIMINATION` or `DOUBLE_ELIMINATION` (defaults to single elimination).
 - **Bracket generation**: singles requires **more than two** registered participants; doubles requires an **even** count
   of **at least six** participants.
-- **Game mutations** (`start`, `frames`, `cancel`): the caller must be a **participant** on the game or the user who
-  **created** the game (tournament games are typically created with the organizer as `createdBy`).
+- **Standalone game mutations** (`start`, `result`, `cancel`): the caller must be a **participant** on the game or the
+  user who **created** the game.
+- **Tournament match start and result submission**: the **organizer** or any **assigned player** on either match team
+  may start a match and submit physical-game results. Accepted results are **immutable** during the MVP.
+- **Final results**: scores must be nonnegative, non-tied, and the declared winner must have the higher score.
 
 ### Auth example
 

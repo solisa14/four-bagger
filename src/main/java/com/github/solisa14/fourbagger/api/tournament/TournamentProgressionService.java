@@ -1,108 +1,68 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.github.solisa14.fourbagger.api.game.CreateGameCommand;
-import com.github.solisa14.fourbagger.api.game.Game;
-import com.github.solisa14.fourbagger.api.game.GameCreationService;
-import com.github.solisa14.fourbagger.api.game.GameRepository;
-import com.github.solisa14.fourbagger.api.game.GameStatus;
-import com.github.solisa14.fourbagger.api.game.InvalidGameStateException;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Advances tournament state after a tournament-backed game completes. This service owns series
- * wins, bracket advancement, and final tournament completion.
- */
+/** Advances tournament state after a tournament game result is applied. */
 @Service
 class TournamentProgressionService {
 
   private final MatchRepository matchRepository;
-  private final GameRepository gameRepository;
-  private final GameCreationService gameCreationService;
-  private final TournamentGameCommandFactory tournamentGameCommandFactory;
   private final SingleEliminationProgressionHandler singleEliminationProgressionHandler;
   private final DoubleEliminationProgressionHandler doubleEliminationProgressionHandler;
 
   TournamentProgressionService(
       MatchRepository matchRepository,
-      GameRepository gameRepository,
-      GameCreationService gameCreationService,
-      TournamentGameCommandFactory tournamentGameCommandFactory,
       SingleEliminationProgressionHandler singleEliminationProgressionHandler,
       DoubleEliminationProgressionHandler doubleEliminationProgressionHandler) {
     this.matchRepository = matchRepository;
-    this.gameRepository = gameRepository;
-    this.gameCreationService = gameCreationService;
-    this.tournamentGameCommandFactory = tournamentGameCommandFactory;
     this.singleEliminationProgressionHandler = singleEliminationProgressionHandler;
     this.doubleEliminationProgressionHandler = doubleEliminationProgressionHandler;
   }
 
-  /**
-   * Processes a completed game and advances its linked tournament match or tournament bracket.
-   *
-   * @param gameId the UUID of the completed game
-   * @throws InvalidGameStateException if the game is not completed or not linked to a match
-   */
   @Transactional
-  void processCompletedGame(UUID gameId) {
-    Game game =
-        gameRepository
-            .findById(gameId)
-            .orElseThrow(() -> new InvalidGameStateException("Game not found"));
-    if (game.getTournamentMatchId() == null) {
-      throw new InvalidGameStateException("Game is not linked to a tournament match");
-    }
-
-    if (game.getStatus() != GameStatus.COMPLETED || game.getWinner() == null) {
-      throw new InvalidGameStateException(
-          "Game must be completed before processing tournament progression");
-    }
-
-    Match match =
-        matchRepository
-            .findById(game.getTournamentMatchId())
-            .orElseThrow(() -> new MatchNotFoundException(game.getTournamentMatchId()));
+  void applyGameResult(TournamentGameResult result) {
+    Match match = result.getMatch();
     if (match.getStatus() == MatchStatus.COMPLETED) {
       return;
     }
 
-    TournamentTeam winningTeam = resolveWinningTeam(match, game);
-    TournamentTeam losingTeam = resolveLosingTeam(match, winningTeam);
+    TournamentTeam winningTeam = result.getWinnerTeam();
+    validateWinnerTeam(match, winningTeam);
     incrementWins(match, winningTeam);
 
     if (isSeriesClinched(match)) {
+      TournamentTeam losingTeam = resolveLosingTeam(match, winningTeam);
       completeMatch(match, winningTeam, losingTeam);
-      return;
+    } else {
+      match.setStatus(MatchStatus.IN_PROGRESS);
+      matchRepository.save(match);
     }
-
-    CreateGameCommand command =
-        tournamentGameCommandFactory.createCommand(
-            match, match.getRound().getTournament().getOrganizer());
-    gameCreationService.createPendingGame(command);
-    match.setStatus(MatchStatus.IN_PROGRESS);
-    matchRepository.save(match);
   }
 
-  private TournamentTeam resolveWinningTeam(Match match, Game game) {
-    UUID winnerId = game.getWinner().getId();
-    TournamentTeam teamOne = match.getTeamOne();
-    TournamentTeam teamTwo = match.getTeamTwo();
-    if (teamOne != null
-        && (teamOne.getPlayerOne().getId().equals(winnerId)
-            || (teamOne.getPlayerTwo() != null
-                && teamOne.getPlayerTwo().getId().equals(winnerId)))) {
-      return teamOne;
+  int winsToClinch(Match match) {
+    return (match.getRound().getBestOf() / 2) + 1;
+  }
+
+  boolean isSeriesClinched(Match match) {
+    int winsToClinch = winsToClinch(match);
+    return match.getTeamOneWins() >= winsToClinch || match.getTeamTwoWins() >= winsToClinch;
+  }
+
+  Integer nextGameNumber(Match match) {
+    if (match.getStatus() == MatchStatus.COMPLETED || isSeriesClinched(match)) {
+      return null;
     }
-    if (teamTwo != null
-        && (teamTwo.getPlayerOne().getId().equals(winnerId)
-            || (teamTwo.getPlayerTwo() != null
-                && teamTwo.getPlayerTwo().getId().equals(winnerId)))) {
-      return teamTwo;
+    return match.getTeamOneWins() + match.getTeamTwoWins() + 1;
+  }
+
+  private void validateWinnerTeam(Match match, TournamentTeam winningTeam) {
+    UUID winnerId = winningTeam.getId();
+    if ((match.getTeamOne() == null || !match.getTeamOne().getId().equals(winnerId))
+        && (match.getTeamTwo() == null || !match.getTeamTwo().getId().equals(winnerId))) {
+      throw new InvalidTournamentStateException("Winner team is not a participant in the linked match");
     }
-    throw new InvalidTournamentStateException(
-        "Game winner is not a participant in the linked match");
   }
 
   private void incrementWins(Match match, TournamentTeam winningTeam) {
@@ -112,11 +72,7 @@ class TournamentProgressionService {
         && winningTeam.getId().equals(match.getTeamTwo().getId())) {
       match.setTeamTwoWins(match.getTeamTwoWins() + 1);
     }
-  }
-
-  private boolean isSeriesClinched(Match match) {
-    int winsToClinch = (match.getRound().getBestOf() / 2) + 1;
-    return match.getTeamOneWins() >= winsToClinch || match.getTeamTwoWins() >= winsToClinch;
+    matchRepository.save(match);
   }
 
   private TournamentTeam resolveLosingTeam(Match match, TournamentTeam winningTeam) {

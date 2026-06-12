@@ -223,11 +223,8 @@ class DoubleEliminationBracketGeneratorTest {
     assertThat(tournament.getRounds()).contains(winnerRound, loserRound, finalRound, grandFinal);
     assertThat(tournament.getRounds()).doesNotContain(extraWinnerRound);
     assertThat(winnerRound.getBestOf()).isEqualTo(3);
-    assertThat(winnerRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
     assertThat(loserRound.getBestOf()).isEqualTo(5);
-    assertThat(loserRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
     assertThat(finalRound.getBestOf()).isEqualTo(7);
-    assertThat(finalRound.getScoringMode()).isEqualTo(ScoringMode.EXACT);
     assertThat(tournament.getRounds()).hasSize(6);
   }
 
@@ -451,7 +448,6 @@ class DoubleEliminationBracketGeneratorTest {
         .bracketType(bracketType)
         .roundNumber(roundNumber)
         .bestOf(bestOf)
-        .scoringMode(ScoringMode.EXACT)
         .build();
   }
 

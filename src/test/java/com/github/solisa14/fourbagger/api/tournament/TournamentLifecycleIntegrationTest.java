@@ -90,7 +90,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
             patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", tournamentId, 1)
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3, null))))
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("BRACKET_READY"));
 
@@ -205,7 +205,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
             patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", tournamentId, 1)
                 .cookie(TestCookieHelper.cookie("accessToken", outsiderToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3, null))))
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
         .andExpect(status().isForbidden());
 
     mockMvc

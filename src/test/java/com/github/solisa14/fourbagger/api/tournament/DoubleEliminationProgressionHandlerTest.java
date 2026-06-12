@@ -101,7 +101,7 @@ class DoubleEliminationProgressionHandlerTest {
   }
 
   @Test
-  void progress_whenOneLossFinalistWinsFirstFinal_activatesResetAndCopiesRules() {
+  void progress_whenOneLossFinalistWinsFirstFinal_activatesResetAndCopiesBestOf() {
     Tournament tournament = tournament();
     TournamentTeam oneLossWinner = team(tournament);
     oneLossWinner.setLosses(1);
@@ -109,7 +109,6 @@ class DoubleEliminationProgressionHandlerTest {
     Match reset = match(tournament, BracketType.GRAND_FINAL, null, null);
     Match firstFinal = match(tournament, BracketType.FINAL, undefeatedLoser, oneLossWinner);
     firstFinal.getRound().setBestOf(5);
-    firstFinal.getRound().setScoringMode(ScoringMode.EXACT);
     firstFinal.setWinnerNextMatch(reset);
     firstFinal.setWinnerNextMatchPosition(2);
     firstFinal.setLoserNextMatch(reset);
@@ -122,7 +121,6 @@ class DoubleEliminationProgressionHandlerTest {
     assertThat(reset.getTeamOne()).isSameAs(undefeatedLoser);
     assertThat(reset.getTeamTwo()).isSameAs(oneLossWinner);
     assertThat(reset.getRound().getBestOf()).isEqualTo(5);
-    assertThat(reset.getRound().getScoringMode()).isEqualTo(ScoringMode.EXACT);
     assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
     verify(matchRepository).save(reset);
     verify(tournamentRepository, never()).save(tournament);
@@ -156,7 +154,6 @@ class DoubleEliminationProgressionHandlerTest {
             .bracketType(bracketType)
             .roundNumber(1)
             .bestOf(1)
-            .scoringMode(ScoringMode.STANDARD)
             .build();
     return Match.builder()
         .id(UUID.randomUUID())

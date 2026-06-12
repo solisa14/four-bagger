@@ -15,11 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-/**
- * REST controller for managing game resources.
- *
- * <p>Provides endpoints for creating, starting, recording frames, and retrieving game details.
- */
+/** REST controller for standalone game resources. */
 @RestController
 @RequestMapping("/api/v1/games")
 public class GameController {
@@ -27,24 +23,11 @@ public class GameController {
   private final GameService gameService;
   private final GameMapper gameMapper;
 
-  /**
-   * Constructs a new GameController.
-   *
-   * @param gameService the game service for business logic
-   * @param gameMapper the game mapper for conversion between DTOs and domain objects
-   */
   public GameController(GameService gameService, GameMapper gameMapper) {
     this.gameService = gameService;
     this.gameMapper = gameMapper;
   }
 
-  /**
-   * Creates a new game.
-   *
-   * @param currentUser The currently authenticated user creating the game.
-   * @param request The request payload containing game configuration.
-   * @return A response containing the newly created game details.
-   */
   @PostMapping
   public ResponseEntity<GameResponse> createGame(
       @AuthenticationPrincipal User currentUser, @Valid @RequestBody CreateGameRequest request) {
@@ -58,13 +41,6 @@ public class GameController {
     return ResponseEntity.created(location).body(gameMapper.toGameResponse(game));
   }
 
-  /**
-   * Starts an existing pending game.
-   *
-   * @param currentUser the currently authenticated user
-   * @param gameId The ID of the game to start.
-   * @return A response containing the updated game details.
-   */
   @PostMapping("/{gameId}/start")
   public ResponseEntity<GameResponse> startGame(
       @AuthenticationPrincipal User currentUser, @PathVariable UUID gameId) {
@@ -72,30 +48,15 @@ public class GameController {
     return ResponseEntity.ok(gameMapper.toGameResponse(game));
   }
 
-  /**
-   * Records a new frame for an in-progress game.
-   *
-   * @param currentUser the currently authenticated user
-   * @param gameId The ID of the game.
-   * @param request The request payload containing frame details.
-   * @return A response containing the updated game details.
-   */
-  @PostMapping("/{gameId}/frames")
-  public ResponseEntity<GameResponse> recordFrame(
+  @PostMapping("/{gameId}/result")
+  public ResponseEntity<GameResponse> submitResult(
       @AuthenticationPrincipal User currentUser,
       @PathVariable UUID gameId,
-      @Valid @RequestBody RecordFrameRequest request) {
-    gameService.recordFrame(currentUser, gameId, request);
-    Game game = gameService.getGameForUser(currentUser, gameId);
-    return ResponseEntity.status(201).body(gameMapper.toGameResponse(game));
+      @Valid @RequestBody SubmitGameResultRequest request) {
+    Game game = gameService.submitResult(currentUser, gameId, request);
+    return ResponseEntity.ok(gameMapper.toGameResponse(game));
   }
 
-  /**
-   * Retrieves the details of a specific game.
-   *
-   * @param gameId The ID of the game to retrieve.
-   * @return A response containing the game details.
-   */
   @GetMapping("/{gameId}")
   public ResponseEntity<GameResponse> getGame(
       @AuthenticationPrincipal User currentUser, @PathVariable UUID gameId) {
@@ -103,12 +64,6 @@ public class GameController {
     return ResponseEntity.ok(gameMapper.toGameResponse(game));
   }
 
-  /**
-   * Lists the games played by the currently authenticated user.
-   *
-   * @param currentUser The currently authenticated user.
-   * @return A response containing a list of summary views of the user's games.
-   */
   @GetMapping("/me")
   public ResponseEntity<List<GameSummaryResponse>> listMyGames(
       @AuthenticationPrincipal User currentUser) {
@@ -119,13 +74,6 @@ public class GameController {
     return ResponseEntity.ok(games);
   }
 
-  /**
-   * Cancels an existing game.
-   *
-   * @param currentUser the currently authenticated user
-   * @param gameId The ID of the game to cancel.
-   * @return A response containing the cancelled game details.
-   */
   @PostMapping("/{gameId}/cancel")
   public ResponseEntity<GameResponse> cancelGame(
       @AuthenticationPrincipal User currentUser, @PathVariable UUID gameId) {
