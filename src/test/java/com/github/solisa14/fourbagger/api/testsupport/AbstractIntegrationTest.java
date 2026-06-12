@@ -27,7 +27,6 @@ public abstract class AbstractIntegrationTest {
     var request =
         TestDataFactory.registerUserRequest(
             usernamePrefix + "user",
-            usernamePrefix + "user@example.com",
             TestDataFactory.DEFAULT_PASSWORD);
 
     MvcResult result =

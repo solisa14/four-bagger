@@ -48,7 +48,7 @@ public class AuthenticationService {
   /**
    * Processes new user registration and prepares response with account details.
    *
-   * @param command registration details including credentials and required profile fields
+   * @param command registration details including credentials and optional profile fields
    * @return the created user entity
    */
   public User registerUser(CreateUserCommand command) {

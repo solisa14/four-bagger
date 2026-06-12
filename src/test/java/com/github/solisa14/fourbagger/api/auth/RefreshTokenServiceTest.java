@@ -40,7 +40,7 @@ class RefreshTokenServiceTest {
   @Test
   void issueRefreshToken_whenUserHasNoExistingToken_createsSession() {
     UUID userId = UUID.randomUUID();
-    User user = TestDataFactory.user(userId, "user1", "user1@example.com", "encoded", Role.USER);
+    User user = TestDataFactory.user(userId, "user1", "encoded", Role.USER);
     when(userRepository.findById(userId)).thenReturn(Optional.of(user));
     when(refreshTokenRepository.findByUserId(userId)).thenReturn(Optional.empty());
     when(refreshTokenRepository.save(any(RefreshToken.class)))
@@ -64,7 +64,7 @@ class RefreshTokenServiceTest {
   @Test
   void issueRefreshToken_whenUserHasExistingToken_replacesSession() {
     UUID userId = UUID.randomUUID();
-    User user = TestDataFactory.user(userId, "user1", "user1@example.com", "encoded", Role.USER);
+    User user = TestDataFactory.user(userId, "user1", "encoded", Role.USER);
     RefreshToken existing =
         RefreshToken.builder()
             .user(user)
@@ -88,7 +88,7 @@ class RefreshTokenServiceTest {
   @Test
   void rotateRefreshToken_whenTokenIsValid_rotatesSession() {
     User user =
-        TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "e", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "user1", "e", Role.USER);
     String oldToken = "old-token";
     RefreshToken existing =
         RefreshToken.builder()
@@ -126,7 +126,7 @@ class RefreshTokenServiceTest {
   @Test
   void rotateRefreshToken_whenTokenIsExpired_throwsTokenRefreshException() {
     User user =
-        TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "e", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "user1", "e", Role.USER);
     String oldToken = "old-token";
     RefreshToken existing =
         RefreshToken.builder()

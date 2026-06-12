@@ -28,7 +28,7 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
   private User savedUser(String suffix) {
     return userRepository.saveAndFlush(
         TestDataFactory.user(
-            null, "user" + suffix, "user" + suffix + "@example.com", "encoded", Role.USER));
+            null, "user" + suffix, "encoded", Role.USER));
   }
 
   @Test

@@ -11,7 +11,6 @@ import java.util.UUID;
  *
  * @param id auto-generated unique identifier for the user account
  * @param username the unique username chosen during registration
- * @param email the email address associated with the account
  * @param role access level assigned to the account (typically USER for new registrations)
  */
-public record RegisterUserResponse(UUID id, String username, String email, Role role) {}
+public record RegisterUserResponse(UUID id, String username, Role role) {}

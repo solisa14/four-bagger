@@ -36,7 +36,7 @@ class UserServiceTest {
   @Test
   void createUser_whenUsernameExists_throwsUserAlreadyExistsException() {
     CreateUserCommand command =
-        new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
+        new CreateUserCommand("user1", "Password1!", "Test", "User");
     when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.of(new User()));
 
     assertThatThrownBy(() -> userService.createUser(command))
@@ -44,22 +44,10 @@ class UserServiceTest {
   }
 
   @Test
-  void createUser_whenEmailExists_throwsEmailAlreadyExistsException() {
-    CreateUserCommand command =
-        new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
-    when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.<User>empty());
-    when(userRepository.findUserByEmail(command.email())).thenReturn(Optional.of(new User()));
-
-    assertThatThrownBy(() -> userService.createUser(command))
-        .isInstanceOf(EmailAlreadyExistsException.class);
-  }
-
-  @Test
   void createUser_whenRequestIsValid_savesUserWithEncodedPasswordAndRole() {
     CreateUserCommand command =
-        new CreateUserCommand("user1", "user@example.com", "Password1!", "Test", "User");
+        new CreateUserCommand("user1", "Password1!", "Test", "User");
     when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.<User>empty());
-    when(userRepository.findUserByEmail(command.email())).thenReturn(Optional.<User>empty());
     when(userRepository.save(any(User.class)))
         .thenAnswer(
             invocation -> {
@@ -74,7 +62,6 @@ class UserServiceTest {
     verify(userRepository).save(captor.capture());
     User saved = captor.getValue();
     assertThat(saved.getUsername()).isEqualTo(command.username());
-    assertThat(saved.getEmail()).isEqualTo(command.email());
     assertThat(saved.getPassword()).isNotEqualTo(command.password());
     assertThat(passwordEncoder.matches(command.password(), saved.getPassword())).isTrue();
     assertThat(saved.getRole()).isEqualTo(Role.USER);
@@ -92,7 +79,7 @@ class UserServiceTest {
   @Test
   void updateProfile_whenRequestHasNames_updatesNames() {
     UUID id = UUID.randomUUID();
-    User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
+    User user = TestDataFactory.user(id, "user1", "encoded", Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
     when(userRepository.save(any(User.class)))
         .thenAnswer(invocation -> invocation.getArgument(0, User.class));
@@ -119,7 +106,7 @@ class UserServiceTest {
     UUID id = UUID.randomUUID();
     User user =
         TestDataFactory.user(
-            id, "user1", "user1@example.com", passwordEncoder.encode("current"), Role.USER);
+            id, "user1", passwordEncoder.encode("current"), Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
 
     assertThatThrownBy(
@@ -132,7 +119,7 @@ class UserServiceTest {
     UUID id = UUID.randomUUID();
     String currentPasswordHash = passwordEncoder.encode("current");
     User user =
-        TestDataFactory.user(id, "user1", "user1@example.com", currentPasswordHash, Role.USER);
+        TestDataFactory.user(id, "user1", currentPasswordHash, Role.USER);
     when(userRepository.findById(id)).thenReturn(Optional.of(user));
     when(userRepository.save(any(User.class)))
         .thenAnswer(invocation -> invocation.getArgument(0, User.class));

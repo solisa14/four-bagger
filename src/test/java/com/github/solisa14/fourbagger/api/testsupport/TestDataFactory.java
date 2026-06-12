@@ -28,13 +28,12 @@ public final class TestDataFactory {
 
   public static RegisterUserRequest registerUserRequest() {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
-    return registerUserRequest("user" + suffix, "user" + suffix + "@example.com", DEFAULT_PASSWORD);
+    return registerUserRequest("user" + suffix, DEFAULT_PASSWORD);
   }
 
-  public static RegisterUserRequest registerUserRequest(
-      String username, String email, String password) {
+  public static RegisterUserRequest registerUserRequest(String username, String password) {
     return new RegisterUserRequest(
-        username, email, password, DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME);
+        username, password, DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME);
   }
 
   public static LoginRequest loginRequest(String username, String password) {
@@ -49,11 +48,10 @@ public final class TestDataFactory {
     return new UpdatePasswordRequest(currentPassword, DEFAULT_PASSWORD);
   }
 
-  public static User user(UUID id, String username, String email, String password, Role role) {
+  public static User user(UUID id, String username, String password, Role role) {
     return User.builder()
         .id(id)
         .username(username)
-        .email(email)
         .password(password)
         .firstName(DEFAULT_FIRST_NAME)
         .lastName(DEFAULT_LAST_NAME)
@@ -106,7 +104,6 @@ public final class TestDataFactory {
                         user(
                             UUID.randomUUID(),
                             "p" + seed,
-                            "p" + seed + "@example.com",
                             "encoded",
                             Role.USER))
                     .seed(seed)

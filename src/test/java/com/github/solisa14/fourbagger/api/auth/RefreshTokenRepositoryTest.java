@@ -19,7 +19,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
 
   @Test
   void findByTokenHash_whenTokenExists_returnsToken() {
-    User user = userRepository.saveAndFlush(createUser("user1", "user1@example.com"));
+    User user = userRepository.saveAndFlush(createUser("user1"));
     RefreshToken token =
         refreshTokenRepository.saveAndFlush(
             createToken(user, "hash-1", Instant.now().plusSeconds(60)));
@@ -29,7 +29,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
 
   @Test
   void deleteByTokenHash_whenTokenExists_removesToken() {
-    User user = userRepository.saveAndFlush(createUser("user2", "user2@example.com"));
+    User user = userRepository.saveAndFlush(createUser("user2"));
     refreshTokenRepository.saveAndFlush(createToken(user, "hash-2", Instant.now().plusSeconds(60)));
 
     refreshTokenRepository.deleteByTokenHash("hash-2");
@@ -39,7 +39,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
 
   @Test
   void deleteByExpiryDateLessThan_whenTokensAreExpired_removesExpiredTokens() {
-    User user = userRepository.saveAndFlush(createUser("user4", "user4@example.com"));
+    User user = userRepository.saveAndFlush(createUser("user4"));
     refreshTokenRepository.saveAndFlush(
         createToken(user, "hash-4", Instant.now().minusSeconds(60)));
 
@@ -50,7 +50,7 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
 
   @Test
   void save_whenUserAlreadyHasActiveSession_throwsDataIntegrityViolationException() {
-    User user = userRepository.saveAndFlush(createUser("user5", "user5@example.com"));
+    User user = userRepository.saveAndFlush(createUser("user5"));
     refreshTokenRepository.saveAndFlush(createToken(user, "hash-5", Instant.now().plusSeconds(60)));
 
     assertThatThrownBy(
@@ -60,10 +60,9 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
         .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
   }
 
-  private User createUser(String username, String email) {
+  private User createUser(String username) {
     return User.builder()
         .username(username)
-        .email(email)
         .password("encoded")
         .firstName("Test")
         .lastName("User")

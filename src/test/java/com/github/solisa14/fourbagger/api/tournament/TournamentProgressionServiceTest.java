@@ -219,6 +219,6 @@ class TournamentProgressionServiceTest {
 
   private User user(String suffix) {
     return TestDataFactory.user(
-        UUID.randomUUID(), suffix, suffix + "@example.com", "encoded", Role.USER);
+        UUID.randomUUID(), suffix, "encoded", Role.USER);
   }
 }
