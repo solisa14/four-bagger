@@ -211,8 +211,7 @@ For full end-to-end flows (standalone games, tournament lifecycle, bracket progr
 ## Project Status
 
 The backend implements auth, standalone games, and single/double-elimination tournaments with graph-based progression.
-It is actively developed and fully runnable locally. Production deployment is not currently maintained — an earlier
-Azure deployment was retired after underestimating ongoing hosting complexity.
+It is actively developed and fully runnable locally.
 
 A companion frontend is planned so the project can be demonstrated through a complete user flow instead of API calls
 alone.
