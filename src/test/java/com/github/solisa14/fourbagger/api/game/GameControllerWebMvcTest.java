@@ -38,7 +38,7 @@ class GameControllerWebMvcTest {
 
   private User authenticatedUser() {
     return TestDataFactory.user(
-        UUID.randomUUID(), "testuser", "test@example.com", "encoded", Role.USER);
+        UUID.randomUUID(), "testuser", "encoded", Role.USER);
   }
 
   @Test

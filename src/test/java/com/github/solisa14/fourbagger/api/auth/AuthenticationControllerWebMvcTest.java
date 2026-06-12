@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
 import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
-import com.github.solisa14.fourbagger.api.user.EmailAlreadyExistsException;
 import com.github.solisa14.fourbagger.api.user.UserAlreadyExistsException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +39,7 @@ class AuthenticationControllerWebMvcTest {
   @Test
   void register_whenUsernameTooShort_returnsBadRequest() throws Exception {
     RegisterUserRequest request =
-        new RegisterUserRequest("abc", "user@example.com", "Password1!", "Test", "User");
+        new RegisterUserRequest("abc", "Password1!", "Test", "User");
 
     mockMvc
         .perform(
@@ -68,7 +67,7 @@ class AuthenticationControllerWebMvcTest {
   @Test
   void register_whenDataIntegrityViolationBubblesUp_returnsConflict() throws Exception {
     RegisterUserRequest request =
-        new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
+        new RegisterUserRequest("validuser", "Password1!", "Test", "User");
     when(authenticationService.registerUser(any(CreateUserCommand.class)))
         .thenThrow(new DataIntegrityViolationException("uk_users_username"));
 
@@ -84,7 +83,7 @@ class AuthenticationControllerWebMvcTest {
   @Test
   void register_whenUsernameAlreadyExists_returnsConflict() throws Exception {
     RegisterUserRequest request =
-        new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
+        new RegisterUserRequest("validuser", "Password1!", "Test", "User");
     when(authenticationService.registerUser(any(CreateUserCommand.class)))
         .thenThrow(new UserAlreadyExistsException(request.username()));
 
@@ -103,7 +102,7 @@ class AuthenticationControllerWebMvcTest {
   void register_whenUnexpectedExceptionBubblesUp_returnsInternalServerErrorWithGenericMessage()
       throws Exception {
     RegisterUserRequest request =
-        new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
+        new RegisterUserRequest("validuser", "Password1!", "Test", "User");
     when(authenticationService.registerUser(any(CreateUserCommand.class)))
         .thenThrow(
             new IllegalStateException(
@@ -117,22 +116,6 @@ class AuthenticationControllerWebMvcTest {
         .andExpect(status().isInternalServerError())
         .andExpect(jsonPath("$.message").value("An unexpected error occurred"))
         .andExpect(jsonPath("$.status").value(500));
-  }
-
-  @Test
-  void register_whenEmailAlreadyExists_returnsConflict() throws Exception {
-    RegisterUserRequest request =
-        new RegisterUserRequest("validuser", "user@example.com", "Password1!", "Test", "User");
-    when(authenticationService.registerUser(any(CreateUserCommand.class)))
-        .thenThrow(new EmailAlreadyExistsException(request.email()));
-
-    mockMvc
-        .perform(
-            post("/api/v1/auth/register")
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(request)))
-        .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.message").value("An account with this email may already exist."));
   }
 
   @Test

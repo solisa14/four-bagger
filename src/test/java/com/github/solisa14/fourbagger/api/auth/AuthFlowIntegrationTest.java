@@ -2,6 +2,7 @@ package com.github.solisa14.fourbagger.api.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,7 +40,6 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
                     .content(objectMapper.writeValueAsString(registerRequest)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.username").value(registerRequest.username()))
-            .andExpect(jsonPath("$.email").value(registerRequest.email()))
             .andReturn();
 
     List<String> registerCookies = registerResult.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
@@ -52,7 +52,8 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
         .perform(get("/api/v1/user/me").cookie(TestCookieHelper.cookie("accessToken", accessToken)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.username").value(registerRequest.username()))
-        .andExpect(jsonPath("$.email").value(registerRequest.email()));
+        .andExpect(jsonPath("$.firstName").value(registerRequest.firstName()))
+        .andExpect(jsonPath("$.lastName").value(registerRequest.lastName()));
 
     MvcResult refreshResult =
         mockMvc
@@ -86,6 +87,34 @@ class AuthFlowIntegrationTest extends AbstractIntegrationTest {
             post("/api/v1/auth/refresh-token")
                 .cookie(TestCookieHelper.cookie("refreshToken", newRefreshToken)))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void register_whenNamesAreOmitted_createsAccountWithNullNames() throws Exception {
+    String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
+    RegisterUserRequest request =
+        new RegisterUserRequest("user" + suffix, TestDataFactory.DEFAULT_PASSWORD, null, null);
+
+    MvcResult registerResult =
+        mockMvc
+            .perform(
+                post("/api/v1/auth/register")
+                    .contentType("application/json")
+                    .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.username").value(request.username()))
+            .andReturn();
+
+    String accessToken =
+        TestCookieHelper.extractCookieValue(
+            registerResult.getResponse().getHeaders(HttpHeaders.SET_COOKIE), "accessToken");
+
+    mockMvc
+        .perform(get("/api/v1/user/me").cookie(TestCookieHelper.cookie("accessToken", accessToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.username").value(request.username()))
+        .andExpect(jsonPath("$.firstName").value(nullValue()))
+        .andExpect(jsonPath("$.lastName").value(nullValue()));
   }
 
   @Test

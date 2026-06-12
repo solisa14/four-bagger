@@ -166,7 +166,7 @@ All endpoints are served under `/api/v1`. Authenticated routes expect a JWT in t
 ### Validation and rules (quick reference)
 
 - **Register**: username must be 5–30 alphanumeric characters or underscores; password must meet the strength rules
-  enforced by the API (mixed case, digit, special character).
+  enforced by the API (mixed case, digit, special character). First and last name are optional.
 - **Create tournament**: `title` is required; `gameType` may be `SINGLES` or `DOUBLES` (defaults to singles);
   `format` may be `SINGLE_ELIMINATION` or `DOUBLE_ELIMINATION` (defaults to single elimination).
 - **Bracket generation**: singles requires **more than two** registered participants; doubles requires an **even** count
@@ -185,7 +185,6 @@ curl -i -c cookies.txt \
   -H "Content-Type: application/json" \
   -d '{
     "username": "player_one",
-    "email": "player1@example.com",
     "password": "StrongPass1!",
     "firstName": "Player",
     "lastName": "One"

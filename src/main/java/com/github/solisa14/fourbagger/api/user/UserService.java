@@ -38,26 +38,21 @@ public class UserService {
   /**
    * Creates and persists a new user account with an encrypted password.
    *
-   * <p>Validates username and email uniqueness, encrypts the password using BCrypt, assigns the
-   * USER role, and saves to the database with auto-generated timestamps.
+   * <p>Validates username uniqueness, encrypts the password using BCrypt, assigns the USER role,
+   * and saves to the database with auto-generated timestamps.
    *
-   * @param command user creation command including credentials and required profile fields
+   * @param command user creation command including credentials and optional profile fields
    * @return the persisted user entity with generated ID and timestamps
    * @throws UserAlreadyExistsException if a user with the given username already exists
-   * @throws EmailAlreadyExistsException if a user with the given email already exists
    */
   @Transactional
   public User createUser(CreateUserCommand command) {
     if (userRepository.findUserByUsername(command.username()).isPresent()) {
       throw new UserAlreadyExistsException(command.username());
     }
-    if (userRepository.findUserByEmail(command.email()).isPresent()) {
-      throw new EmailAlreadyExistsException(command.email());
-    }
     User createdUser =
         User.builder()
             .username(command.username())
-            .email(command.email())
             .password(passwordEncoder.encode(command.password()))
             .firstName(command.firstName())
             .lastName(command.lastName())

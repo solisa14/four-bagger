@@ -37,12 +37,12 @@ class TournamentServiceTest {
 
   private User organizer() {
     return TestDataFactory.user(
-        UUID.randomUUID(), "organizer", "org@example.com", "encoded", Role.USER);
+        UUID.randomUUID(), "organizer", "encoded", Role.USER);
   }
 
   private User player() {
     return TestDataFactory.user(
-        UUID.randomUUID(), "player", "player@example.com", "encoded", Role.USER);
+        UUID.randomUUID(), "player", "encoded", Role.USER);
   }
 
   private Tournament registrationTournament() {

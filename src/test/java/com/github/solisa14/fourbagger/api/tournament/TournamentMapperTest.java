@@ -106,7 +106,6 @@ class TournamentMapperTest {
             user(
                 UUID.randomUUID(),
                 username,
-                username + "@example.com",
                 "encoded",
                 Role.USER))
         .build();

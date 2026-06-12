@@ -23,7 +23,6 @@ public class AuthMapper {
     }
     return new CreateUserCommand(
         request.username(),
-        request.email(),
         request.password(),
         request.firstName(),
         request.lastName());
@@ -52,7 +51,6 @@ public class AuthMapper {
     if (user == null) {
       return null;
     }
-    return new RegisterUserResponse(
-        user.getId(), user.getUsername(), user.getEmail(), user.getRole());
+    return new RegisterUserResponse(user.getId(), user.getUsername(), user.getRole());
   }
 }

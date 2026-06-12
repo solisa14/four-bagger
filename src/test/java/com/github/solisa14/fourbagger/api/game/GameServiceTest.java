@@ -30,16 +30,16 @@ class GameServiceTest {
   @InjectMocks private GameService gameService;
 
   private User playerOne() {
-    return TestDataFactory.user(UUID.randomUUID(), "p1", "p1@example.com", "encoded", Role.USER);
+    return TestDataFactory.user(UUID.randomUUID(), "p1", "encoded", Role.USER);
   }
 
   private User playerTwo() {
-    return TestDataFactory.user(UUID.randomUUID(), "p2", "p2@example.com", "encoded", Role.USER);
+    return TestDataFactory.user(UUID.randomUUID(), "p2", "encoded", Role.USER);
   }
 
   private User otherUser() {
     return TestDataFactory.user(
-        UUID.randomUUID(), "other", "other@example.com", "encoded", Role.USER);
+        UUID.randomUUID(), "other", "encoded", Role.USER);
   }
 
   private Game inProgressGame(User p1, User p2) {
@@ -452,9 +452,9 @@ class GameServiceTest {
     User p1 = playerOne();
     User p2 = playerTwo();
     User p1Partner =
-        TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "p1p", "encoded", Role.USER);
     User p2Partner =
-        TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "p2p", "encoded", Role.USER);
     Game game = inProgressGame(p1, p2);
     game.setGameType(GameType.DOUBLES);
     game.setPlayerOnePartner(p1Partner);
@@ -471,9 +471,9 @@ class GameServiceTest {
     User p1 = playerOne();
     User p2 = playerTwo();
     User p1Partner =
-        TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "p1p", "encoded", Role.USER);
     User p2Partner =
-        TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "p2p", "encoded", Role.USER);
     Game game = inProgressGame(p1, p2);
     game.setGameType(GameType.DOUBLES);
     game.setPlayerOnePartner(p1Partner);
@@ -492,9 +492,9 @@ class GameServiceTest {
     User p1 = playerOne();
     User p2 = playerTwo();
     User p1Partner =
-        TestDataFactory.user(UUID.randomUUID(), "p1p", "p1p@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "p1p", "encoded", Role.USER);
     User p2Partner =
-        TestDataFactory.user(UUID.randomUUID(), "p2p", "p2p@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "p2p", "encoded", Role.USER);
     Game game = inProgressGame(p1, p2);
     game.setGameType(GameType.DOUBLES);
     game.setPlayerOnePartner(p1Partner);

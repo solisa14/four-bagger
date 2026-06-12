@@ -40,9 +40,9 @@ class AuthenticationServiceTest {
   @Test
   void registerUser_whenRequestIsValid_returnsUserDetails() {
     UUID id = UUID.randomUUID();
-    User user = TestDataFactory.user(id, "user1", "user1@example.com", "encoded", Role.USER);
+    User user = TestDataFactory.user(id, "user1", "encoded", Role.USER);
     CreateUserCommand command =
-        new CreateUserCommand("user1", "user1@example.com", "Password1!", "Test", "User");
+        new CreateUserCommand("user1", "Password1!", "Test", "User");
 
     when(userService.createUser(command)).thenReturn(user);
 
@@ -50,14 +50,13 @@ class AuthenticationServiceTest {
 
     assertThat(response.getId()).isEqualTo(id);
     assertThat(response.getUsername()).isEqualTo(user.getUsername());
-    assertThat(response.getEmail()).isEqualTo(user.getEmail());
     assertThat(response.getRole()).isEqualTo(user.getRole());
   }
 
   @Test
   void authenticate_whenCredentialsAreValid_returnsTokens() {
     User user =
-        TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "user1", "encoded", Role.USER);
     LoginCommand command = new LoginCommand("user1", "Password1!");
     when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
         .thenReturn(
@@ -88,7 +87,7 @@ class AuthenticationServiceTest {
   @Test
   void refreshToken_whenTokenIsValid_rotatesTokens() {
     User user =
-        TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "user1", "encoded", Role.USER);
     when(refreshTokenService.rotateRefreshToken("old-refresh-token"))
         .thenReturn(new RefreshTokenSession(user, "new-refresh-token"));
     when(jwtService.generateToken(user)).thenReturn("jwt-token");

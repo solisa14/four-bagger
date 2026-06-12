@@ -20,7 +20,7 @@ class JwtServiceTest {
     JwtService jwtService = new JwtService(SECRET_KEY, 3600000L);
     User user =
         TestDataFactory.user(
-            UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.ADMIN);
+            UUID.randomUUID(), "user1", "encoded", Role.ADMIN);
 
     String token = jwtService.generateToken(user);
 
@@ -48,7 +48,7 @@ class JwtServiceTest {
   void isTokenValid_whenTokenIsExpired_returnsFalse() {
     JwtService jwtService = new JwtService(SECRET_KEY, -1000L);
     User user =
-        TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "user1", "encoded", Role.USER);
 
     String token = jwtService.generateToken(user);
 

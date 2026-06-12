@@ -45,7 +45,7 @@ class TournamentMatchControllerWebMvcTest {
 
   private User authenticatedUser() {
     return TestDataFactory.user(
-        UUID.randomUUID(), "testuser", "test@example.com", "encoded", Role.USER);
+        UUID.randomUUID(), "testuser", "encoded", Role.USER);
   }
 
   // ── Start Match ─────────────────────────────────────────────────
@@ -62,7 +62,7 @@ class TournamentMatchControllerWebMvcTest {
             .playerOne(principal)
             .playerTwo(
                 TestDataFactory.user(
-                    UUID.randomUUID(), "opponent", "opp@example.com", "encoded", Role.USER))
+                    UUID.randomUUID(), "opponent", "encoded", Role.USER))
             .status(GameStatus.PENDING)
             .targetScore(21)
             .build();
@@ -275,7 +275,7 @@ class TournamentMatchControllerWebMvcTest {
   private Tournament tournament(UUID id) {
     User organizer =
         TestDataFactory.user(
-            UUID.randomUUID(), "organizer", "org@example.com", "encoded", Role.USER);
+            UUID.randomUUID(), "organizer", "encoded", Role.USER);
     return Tournament.builder()
         .id(id)
         .organizer(organizer)
@@ -322,6 +322,6 @@ class TournamentMatchControllerWebMvcTest {
 
   private User testUser(String suffix) {
     return TestDataFactory.user(
-        UUID.randomUUID(), suffix, suffix + "@example.com", "encoded", Role.USER);
+        UUID.randomUUID(), suffix, "encoded", Role.USER);
   }
 }

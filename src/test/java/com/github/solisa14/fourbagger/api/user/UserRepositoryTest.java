@@ -22,44 +22,25 @@ class UserRepositoryTest extends AbstractDataJpaTest {
 
   @Test
   void findUserByUsername_whenUserExists_returnsUser() {
-    User user = createUser("user1", "user1@example.com");
+    User user = createUser("user1");
     userRepository.saveAndFlush(user);
 
     assertThat(userRepository.findUserByUsername("user1")).contains(user);
   }
 
   @Test
-  void findUserByEmail_whenUserExists_returnsUser() {
-    User user = createUser("user2", "user2@example.com");
-    userRepository.saveAndFlush(user);
-
-    assertThat(userRepository.findUserByEmail("user2@example.com")).contains(user);
-  }
-
-  @Test
   void save_whenUsernameAlreadyExists_throwsDataIntegrityViolationException() {
-    User user1 = createUser("duplicate", "one@example.com");
-    User user2 = createUser("duplicate", "two@example.com");
+    User user1 = createUser("duplicate");
+    User user2 = createUser("duplicate");
     userRepository.saveAndFlush(user1);
 
     assertThatThrownBy(() -> userRepository.saveAndFlush(user2))
         .isInstanceOf(DataIntegrityViolationException.class);
   }
 
-  @Test
-  void save_whenEmailAlreadyExists_throwsDataIntegrityViolationException() {
-    User user1 = createUser("user3", "duplicate@example.com");
-    User user2 = createUser("user4", "duplicate@example.com");
-    userRepository.saveAndFlush(user1);
-
-    assertThatThrownBy(() -> userRepository.saveAndFlush(user2))
-        .isInstanceOf(DataIntegrityViolationException.class);
-  }
-
-  private User createUser(String username, String email) {
+  private User createUser(String username) {
     return User.builder()
         .username(username)
-        .email(email)
         .password("encoded")
         .firstName("Test")
         .lastName("User")

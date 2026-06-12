@@ -36,7 +36,7 @@ class UserControllerWebMvcTest {
   @Test
   void updateProfile_whenPayloadIsEmpty_returnsBadRequest() throws Exception {
     User principal =
-        TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "user1", "encoded", Role.USER);
 
     UsernamePasswordAuthenticationToken authentication =
         new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
@@ -65,7 +65,7 @@ class UserControllerWebMvcTest {
   @Test
   void updatePassword_whenNewPasswordMissing_returnsBadRequest() throws Exception {
     User principal =
-        TestDataFactory.user(UUID.randomUUID(), "user1", "user1@example.com", "encoded", Role.USER);
+        TestDataFactory.user(UUID.randomUUID(), "user1", "encoded", Role.USER);
     Map<String, String> payload = Map.of("currentPassword", "current");
 
     mockMvc
