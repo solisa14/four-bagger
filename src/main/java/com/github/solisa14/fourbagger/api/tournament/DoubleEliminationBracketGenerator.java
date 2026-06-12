@@ -94,7 +94,6 @@ public class DoubleEliminationBracketGenerator implements TournamentBracketGener
                   .bracketType(bracketType)
                   .roundNumber(roundNumber)
                   .bestOf(1)
-                  .scoringMode(ScoringMode.STANDARD)
                   .build());
     }
   }

@@ -4,6 +4,8 @@ import static com.github.solisa14.fourbagger.api.testsupport.TestDataFactory.use
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.solisa14.fourbagger.api.user.Role;
+import com.github.solisa14.fourbagger.api.user.User;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,42 @@ class TournamentMapperTest {
     assertThat(firstFinalResponse.winnerNextMatchPosition()).isNull();
     assertThat(firstFinalResponse.loserNextMatchId()).isNull();
     assertThat(firstFinalResponse.loserNextMatchPosition()).isNull();
+  }
+
+  @Test
+  void toMatchDetailResponse_mapsResultHistoryWithoutCorrectionFields() {
+    Tournament tournament = tournament();
+    TournamentTeam teamOne = team(tournament, "one");
+    TournamentTeam teamTwo = team(tournament, "two");
+    TournamentRound round = round(tournament, BracketType.WINNERS);
+    Match match = match(round, teamOne, teamTwo);
+    User submitter = teamOne.getPlayerOne();
+    TournamentGameResult result =
+        TournamentGameResult.builder()
+            .id(UUID.randomUUID())
+            .match(match)
+            .gameNumber(1)
+            .winnerTeam(teamOne)
+            .teamOneScore(21)
+            .teamTwoScore(15)
+            .submittedBy(submitter)
+            .submittedAt(Instant.parse("2026-01-01T12:00:00Z"))
+            .build();
+
+    TournamentMatchDetailResponse response =
+        mapper.toMatchDetailResponse(match, List.of(result), 2);
+
+    assertThat(response.results()).hasSize(1);
+    TournamentGameResultResponse mapped = response.results().getFirst();
+    assertThat(mapped.gameNumber()).isEqualTo(1);
+    assertThat(mapped.winnerTeamId()).isEqualTo(teamOne.getId());
+    assertThat(mapped.teamOneScore()).isEqualTo(21);
+    assertThat(mapped.teamTwoScore()).isEqualTo(15);
+    assertThat(mapped.submittedBy()).isEqualTo(submitter.getId());
+    assertThat(mapped.submittedAt()).isEqualTo(Instant.parse("2026-01-01T12:00:00Z"));
+    assertThat(response.nextGameNumber()).isEqualTo(2);
+    assertThat(response.bestOf()).isEqualTo(1);
+    assertThat(response.winsToClinch()).isEqualTo(1);
   }
 
   @Test
@@ -82,7 +120,6 @@ class TournamentMapperTest {
         .bracketType(bracketType)
         .roundNumber(1)
         .bestOf(1)
-        .scoringMode(ScoringMode.STANDARD)
         .build();
   }
 

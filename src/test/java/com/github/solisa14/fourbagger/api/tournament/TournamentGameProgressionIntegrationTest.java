@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.game.GameType;
-import com.github.solisa14.fourbagger.api.game.RecordFrameRequest;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
 import com.github.solisa14.fourbagger.api.user.User;
@@ -21,8 +20,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
- * Integration tests verifying that completing a tournament-backed game automatically triggers match
- * progression — no separate HTTP call required.
+ * Integration tests verifying tournament match progression driven by final score result
+ * submissions.
  */
 class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
 
@@ -33,7 +32,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
   @Autowired private UserRepository userRepository;
 
   @Test
-  void recordFrame_whenFourTeamDoubleEliminationBracketCompletes_progressesEntireGraph()
+  void submitResult_whenFourTeamDoubleEliminationBracketCompletes_progressesEntireGraph()
       throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     String orgToken = registerAndGetToken("deorg" + suffix);
@@ -156,7 +155,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void recordFrame_whenFourTeamDoublesDoubleEliminationBracketCompletes_progressesEntireGraph()
+  void submitResult_whenFourTeamDoublesDoubleEliminationBracketCompletes_progressesEntireGraph()
       throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     String orgToken = registerAndGetToken("dedorg" + suffix);
@@ -291,7 +290,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void recordFrame_whenLosersBracketFinalistWinsFirstFinal_activatesAndCompletesReset()
+  void submitResult_whenLosersBracketFinalistWinsFirstFinal_activatesAndCompletesReset()
       throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     String orgToken = registerAndGetToken("resetorg" + suffix);
@@ -366,7 +365,6 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
     assertThat(resetFinal.getTeamOne().getLosses()).isEqualTo(1);
     assertThat(resetFinal.getTeamTwo().getLosses()).isEqualTo(1);
     assertThat(resetFinal.getRound().getBestOf()).isEqualTo(1);
-    assertThat(resetFinal.getRound().getScoringMode()).isEqualTo(ScoringMode.STANDARD);
 
     mockMvc
         .perform(
@@ -397,7 +395,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void recordFrame_whenAllMatchesComplete_completesSingleEliminationTournament()
+  void submitResult_whenAllMatchesComplete_completesSingleEliminationTournament()
       throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     String orgToken = registerAndGetToken("fullorg" + suffix);
@@ -480,7 +478,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void tournamentGameMutations_whenOrganizerIsNotPlayer_areStillAllowed() throws Exception {
+  void submitResult_whenOrganizerIsNotPlayer_areStillAllowed() throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     String orgToken = registerAndGetToken("mutorg" + suffix);
     registerAndGetToken("mutp1" + suffix);
@@ -525,46 +523,251 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
             .orElseThrow()
             .getId();
 
-    MvcResult startMatchResult =
+    mockMvc
+        .perform(
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                    tournamentId,
+                    matchId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.nextGameNumber").value(1));
+
+    MvcResult detailResult =
         mockMvc
             .perform(
-                post(
-                        "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
-                        tournamentId,
-                        matchId)
+                get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
                     .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
             .andExpect(status().isOk())
             .andReturn();
 
-    String gameId =
-        objectMapper
-            .readTree(startMatchResult.getResponse().getContentAsString())
-            .get("id")
-            .asText();
+    var detailJson = objectMapper.readTree(detailResult.getResponse().getContentAsString());
+    UUID teamOneId = UUID.fromString(detailJson.get("teamOne").get("id").asText());
 
     mockMvc
         .perform(
-            post("/api/v1/games/{gameId}/start", gameId)
-                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value("IN_PROGRESS"));
-
-    mockMvc
-        .perform(
-            post("/api/v1/games/{gameId}/frames", gameId)
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/games/{gameNumber}/result",
+                    tournamentId,
+                    matchId,
+                    1)
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0))))
+                .content(
+                    objectMapper.writeValueAsString(
+                        new SubmitTournamentGameResultRequest(teamOneId, 21, 15))))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.playerOneScore").value(3));
+        .andExpect(jsonPath("$.results[0].teamOneScore").value(21))
+        .andExpect(jsonPath("$.results[0].teamTwoScore").value(15));
   }
 
   @Test
-  void recordFrame_whenTournamentGameCompletes_matchAutoCompletes() throws Exception {
+  void submitResult_whenExactRetry_returnsSuccessWithoutDoubleProgression() throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
-    // Organizer creates the tournament; tournament games are created with organizer as
-    // createdBy,
-    // so the organizer token authorizes all game mutations regardless of seeding randomness.
+    String orgToken = registerAndGetToken("retryorg" + suffix);
+    registerAndGetToken("retryp1" + suffix);
+    registerAndGetToken("retryp2" + suffix);
+    registerAndGetToken("retryp3" + suffix);
+
+    User organizer = userRepository.findUserByUsername("retryorg" + suffix + "user").orElseThrow();
+    User player1 = userRepository.findUserByUsername("retryp1" + suffix + "user").orElseThrow();
+    User player2 = userRepository.findUserByUsername("retryp2" + suffix + "user").orElseThrow();
+    User player3 = userRepository.findUserByUsername("retryp3" + suffix + "user").orElseThrow();
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Retry Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(tournamentJson.get("id").asText());
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    tournamentService.joinTournament(joinCode, player1);
+    tournamentService.joinTournament(joinCode, player2);
+    tournamentService.joinTournament(joinCode, player3);
+    tournamentService.generateBracket(tournamentId, organizer);
+    tournamentService.startTournament(tournamentId, organizer);
+
+    UUID matchId =
+        matchRepository
+            .findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(tournamentId)
+            .stream()
+            .filter(match -> !match.isBye())
+            .findFirst()
+            .orElseThrow()
+            .getId();
+
+    mockMvc
+        .perform(
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                    tournamentId,
+                    matchId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk());
+
+    MvcResult detailResult =
+        mockMvc
+            .perform(
+                get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    var detailJson = objectMapper.readTree(detailResult.getResponse().getContentAsString());
+    UUID teamOneId = UUID.fromString(detailJson.get("teamOne").get("id").asText());
+    SubmitTournamentGameResultRequest request =
+        new SubmitTournamentGameResultRequest(teamOneId, 21, 15);
+
+    mockMvc
+        .perform(
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/games/{gameNumber}/result",
+                    tournamentId,
+                    matchId,
+                    1)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.teamOneWins").value(1))
+        .andExpect(jsonPath("$.results").isArray())
+        .andExpect(jsonPath("$.results.length()").value(1));
+
+    mockMvc
+        .perform(
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/games/{gameNumber}/result",
+                    tournamentId,
+                    matchId,
+                    1)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.teamOneWins").value(1))
+        .andExpect(jsonPath("$.results.length()").value(1));
+
+    Match persistedMatch = matchRepository.findById(matchId).orElseThrow();
+    assertThat(persistedMatch.getTeamOneWins()).isEqualTo(1);
+    assertThat(persistedMatch.getTeamTwoWins()).isEqualTo(0);
+  }
+
+  @Test
+  void submitResult_whenConflictingRetry_returnsConflict() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken("conflictorg" + suffix);
+    registerAndGetToken("conflictp1" + suffix);
+    registerAndGetToken("conflictp2" + suffix);
+    registerAndGetToken("conflictp3" + suffix);
+
+    User organizer =
+        userRepository.findUserByUsername("conflictorg" + suffix + "user").orElseThrow();
+    User player1 =
+        userRepository.findUserByUsername("conflictp1" + suffix + "user").orElseThrow();
+    User player2 =
+        userRepository.findUserByUsername("conflictp2" + suffix + "user").orElseThrow();
+    User player3 =
+        userRepository.findUserByUsername("conflictp3" + suffix + "user").orElseThrow();
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Conflict Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(tournamentJson.get("id").asText());
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    tournamentService.joinTournament(joinCode, player1);
+    tournamentService.joinTournament(joinCode, player2);
+    tournamentService.joinTournament(joinCode, player3);
+    tournamentService.generateBracket(tournamentId, organizer);
+    tournamentService.startTournament(tournamentId, organizer);
+
+    UUID matchId =
+        matchRepository
+            .findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(tournamentId)
+            .stream()
+            .filter(match -> !match.isBye())
+            .findFirst()
+            .orElseThrow()
+            .getId();
+
+    mockMvc
+        .perform(
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                    tournamentId,
+                    matchId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk());
+
+    MvcResult detailResult =
+        mockMvc
+            .perform(
+                get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    var detailJson = objectMapper.readTree(detailResult.getResponse().getContentAsString());
+    UUID teamOneId = UUID.fromString(detailJson.get("teamOne").get("id").asText());
+    UUID teamTwoId = UUID.fromString(detailJson.get("teamTwo").get("id").asText());
+
+    mockMvc
+        .perform(
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/games/{gameNumber}/result",
+                    tournamentId,
+                    matchId,
+                    1)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        new SubmitTournamentGameResultRequest(teamOneId, 21, 15))))
+        .andExpect(status().isCreated());
+
+    mockMvc
+        .perform(
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/games/{gameNumber}/result",
+                    tournamentId,
+                    matchId,
+                    1)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        new SubmitTournamentGameResultRequest(teamTwoId, 18, 21))))
+        .andExpect(status().isConflict());
+
+    Match persistedMatch = matchRepository.findById(matchId).orElseThrow();
+    assertThat(persistedMatch.getTeamOneWins()).isEqualTo(1);
+    assertThat(persistedMatch.getTeamTwoWins()).isEqualTo(0);
+  }
+
+  @Test
+  void submitResult_whenBestOfOneMatchCompletes_matchCompletes() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
     String orgToken = registerAndGetToken("org" + suffix);
     registerAndGetToken("p1" + suffix);
     registerAndGetToken("p2" + suffix);
@@ -609,62 +812,20 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
             tournamentId);
     UUID matchId = matches.stream().filter(m -> !m.isBye()).findFirst().orElseThrow().getId();
 
-    // Start match via HTTP — lazily creates first game
-    MvcResult startMatchResult =
-        mockMvc
-            .perform(
-                post(
-                        "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
-                        tournamentId,
-                        matchId)
-                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-            .andExpect(status().isOk())
-            .andReturn();
+    completeMatchWithTeamOneWin(tournamentId, matchId, orgToken);
 
-    String gameId =
-        objectMapper
-            .readTree(startMatchResult.getResponse().getContentAsString())
-            .get("id")
-            .asText();
-
-    // Start game
-    mockMvc
-        .perform(
-            post("/api/v1/games/{gameId}/start", gameId)
-                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-        .andExpect(status().isOk());
-
-    // Record frames until team one wins: 4-bagger (12 pts) + three 1-bag frames (9 pts) = 21
-    mockMvc
-        .perform(
-            post("/api/v1/games/{gameId}/frames", gameId)
-                .cookie(TestCookieHelper.cookie("accessToken", orgToken))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new RecordFrameRequest(4, 0, 0, 0))))
-        .andExpect(status().isCreated());
-
-    for (int i = 0; i < 3; i++) {
-      mockMvc
-          .perform(
-              post("/api/v1/games/{gameId}/frames", gameId)
-                  .cookie(TestCookieHelper.cookie("accessToken", orgToken))
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0))))
-          .andExpect(status().isCreated());
-    }
-
-    // Match should be auto-completed with teamOneWins=1 — no manual /complete-game call
     mockMvc
         .perform(
             get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("COMPLETED"))
-        .andExpect(jsonPath("$.teamOneWins").value(1));
+        .andExpect(jsonPath("$.teamOneWins").value(1))
+        .andExpect(jsonPath("$.results").isNotEmpty());
   }
 
   @Test
-  void recordFrame_whenBestOfThreeFirstGameCompletes_nextGameCreatedAutomatically()
+  void submitResult_whenBestOfThreeFirstGameCompletes_nextGameNumberIncrements()
       throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     String orgToken = registerAndGetToken("bo3org" + suffix);
@@ -703,8 +864,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
         tournamentId,
         userRepository.findUserByUsername("bo3org" + suffix + "user").orElseThrow(),
         1,
-        3,
-        ScoringMode.STANDARD);
+        3);
     tournamentService.startTournament(
         tournamentId, userRepository.findUserByUsername("bo3org" + suffix + "user").orElseThrow());
 
@@ -713,78 +873,36 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
             tournamentId);
     UUID matchId = matches.stream().filter(m -> !m.isBye()).findFirst().orElseThrow().getId();
 
-    // Start the match and get game 1
-    MvcResult startMatchResult =
-        mockMvc
-            .perform(
-                post(
-                        "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
-                        tournamentId,
-                        matchId)
-                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-            .andExpect(status().isOk())
-            .andReturn();
-
-    String game1Id =
-        objectMapper
-            .readTree(startMatchResult.getResponse().getContentAsString())
-            .get("id")
-            .asText();
-
-    // Start and complete game 1
     mockMvc
         .perform(
-            post("/api/v1/games/{gameId}/start", game1Id)
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                    tournamentId,
+                    matchId)
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
         .andExpect(status().isOk());
 
-    mockMvc
-        .perform(
-            post("/api/v1/games/{gameId}/frames", game1Id)
-                .cookie(TestCookieHelper.cookie("accessToken", orgToken))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(new RecordFrameRequest(4, 0, 0, 0))))
-        .andExpect(status().isCreated());
+    submitNextGameResult(tournamentId, matchId, orgToken, true);
 
-    for (int i = 0; i < 3; i++) {
-      mockMvc
-          .perform(
-              post("/api/v1/games/{gameId}/frames", game1Id)
-                  .cookie(TestCookieHelper.cookie("accessToken", orgToken))
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0))))
-          .andExpect(status().isCreated());
-    }
-
-    // Match should still be IN_PROGRESS (series not yet decided)
     mockMvc
         .perform(
             get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
-        .andExpect(jsonPath("$.teamOneWins").value(1));
+        .andExpect(jsonPath("$.teamOneWins").value(1))
+        .andExpect(jsonPath("$.nextGameNumber").value(2))
+        .andExpect(jsonPath("$.results").isNotEmpty());
 
-    // Start the match again — should return game 2 (auto-created by progression)
-    MvcResult startMatch2Result =
-        mockMvc
-            .perform(
-                post(
-                        "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
-                        tournamentId,
-                        matchId)
-                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-            .andExpect(status().isOk())
-            .andReturn();
-
-    String game2Id =
-        objectMapper
-            .readTree(startMatch2Result.getResponse().getContentAsString())
-            .get("id")
-            .asText();
-
-    // Game 2 must be a different entity from game 1
-    assert !game2Id.equals(game1Id);
+    mockMvc
+        .perform(
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                    tournamentId,
+                    matchId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.nextGameNumber").value(2));
   }
 
   private void completeMatchWithTeamOneWin(UUID tournamentId, UUID matchId, String orgToken)
@@ -799,104 +917,82 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
 
   private void completeDoublesMatch(
       UUID tournamentId, UUID matchId, String orgToken, boolean teamOneWins) throws Exception {
-    MvcResult startMatchResult =
-        mockMvc
-            .perform(
-                post(
-                        "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
-                        tournamentId,
-                        matchId)
-                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.gameType").value("DOUBLES"))
-            .andExpect(jsonPath("$.playerOnePartner").isNotEmpty())
-            .andExpect(jsonPath("$.playerTwoPartner").isNotEmpty())
-            .andReturn();
-
-    var gameJson = objectMapper.readTree(startMatchResult.getResponse().getContentAsString());
-    String gameId = gameJson.get("id").asText();
-    UUID teamOnePlayer = UUID.fromString(gameJson.get("playerOne").get("id").asText());
-    UUID teamOnePartner = UUID.fromString(gameJson.get("playerOnePartner").get("id").asText());
-    UUID teamTwoPlayer = UUID.fromString(gameJson.get("playerTwo").get("id").asText());
-    UUID teamTwoPartner = UUID.fromString(gameJson.get("playerTwoPartner").get("id").asText());
-
-    mockMvc
-        .perform(
-            post("/api/v1/games/{gameId}/start", gameId)
-                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-        .andExpect(status().isOk());
-
-    for (int frameNumber = 1; frameNumber <= 4; frameNumber++) {
-      boolean primaryPlayersThrow = frameNumber % 2 == 1;
-      int winningBagsIn = frameNumber == 1 ? 4 : 1;
-      RecordFrameRequest request =
-          new RecordFrameRequest(
-              teamOneWins ? winningBagsIn : 0,
-              0,
-              teamOneWins ? 0 : winningBagsIn,
-              0,
-              primaryPlayersThrow ? teamOnePlayer : teamOnePartner,
-              primaryPlayersThrow ? teamTwoPlayer : teamTwoPartner);
-      mockMvc
-          .perform(
-              post("/api/v1/games/{gameId}/frames", gameId)
-                  .cookie(TestCookieHelper.cookie("accessToken", orgToken))
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(objectMapper.writeValueAsString(request)))
-          .andExpect(status().isCreated());
-    }
+    completeMatch(tournamentId, matchId, orgToken, teamOneWins);
   }
 
   private void completeMatch(
       UUID tournamentId, UUID matchId, String orgToken, boolean teamOneWins) throws Exception {
-    MvcResult startMatchResult =
-        mockMvc
-            .perform(
-                post(
-                        "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
-                        tournamentId,
-                        matchId)
-                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-            .andExpect(status().isOk())
-            .andReturn();
-
-    String gameId =
-        objectMapper
-            .readTree(startMatchResult.getResponse().getContentAsString())
-            .get("id")
-            .asText();
-
     mockMvc
         .perform(
-            post("/api/v1/games/{gameId}/start", gameId)
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/start",
+                    tournamentId,
+                    matchId)
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
         .andExpect(status().isOk());
 
+    while (true) {
+      MvcResult detailResult =
+          mockMvc
+              .perform(
+                  get(
+                          "/api/v1/tournaments/{tournamentId}/matches/{matchId}",
+                          tournamentId,
+                          matchId)
+                      .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+              .andExpect(status().isOk())
+              .andReturn();
+
+      var detailJson = objectMapper.readTree(detailResult.getResponse().getContentAsString());
+      if ("COMPLETED".equals(detailJson.get("status").asText())) {
+        break;
+      }
+      submitNextGameResult(tournamentId, matchId, orgToken, teamOneWins, detailJson);
+    }
+  }
+
+  private void submitNextGameResult(
+      UUID tournamentId, UUID matchId, String orgToken, boolean teamOneWins) throws Exception {
+    MvcResult detailResult =
+        mockMvc
+            .perform(
+                get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+            .andExpect(status().isOk())
+            .andReturn();
+    submitNextGameResult(
+        tournamentId, matchId, orgToken, teamOneWins,
+        objectMapper.readTree(detailResult.getResponse().getContentAsString()));
+  }
+
+  private void submitNextGameResult(
+      UUID tournamentId,
+      UUID matchId,
+      String orgToken,
+      boolean teamOneWins,
+      com.fasterxml.jackson.databind.JsonNode detailJson)
+      throws Exception {
+    int gameNumber = detailJson.get("nextGameNumber").asInt();
+    UUID teamOneId = UUID.fromString(detailJson.get("teamOne").get("id").asText());
+    UUID teamTwoId = UUID.fromString(detailJson.get("teamTwo").get("id").asText());
+    UUID winnerTeamId = teamOneWins ? teamOneId : teamTwoId;
+    int teamOneScore = teamOneWins ? 21 : 15;
+    int teamTwoScore = teamOneWins ? 15 : 21;
+
     mockMvc
         .perform(
-            post("/api/v1/games/{gameId}/frames", gameId)
+            post(
+                    "/api/v1/tournaments/{tournamentId}/matches/{matchId}/games/{gameNumber}/result",
+                    tournamentId,
+                    matchId,
+                    gameNumber)
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        teamOneWins
-                            ? new RecordFrameRequest(4, 0, 0, 0)
-                            : new RecordFrameRequest(0, 0, 4, 0))))
+                        new SubmitTournamentGameResultRequest(
+                            winnerTeamId, teamOneScore, teamTwoScore))))
         .andExpect(status().isCreated());
-
-    for (int i = 0; i < 3; i++) {
-      mockMvc
-          .perform(
-              post("/api/v1/games/{gameId}/frames", gameId)
-                  .cookie(TestCookieHelper.cookie("accessToken", orgToken))
-                  .contentType(MediaType.APPLICATION_JSON)
-                  .content(
-                      objectMapper.writeValueAsString(
-                          teamOneWins
-                              ? new RecordFrameRequest(1, 0, 0, 0)
-                              : new RecordFrameRequest(0, 0, 1, 0))))
-          .andExpect(status().isCreated());
-    }
   }
 
   private List<Match> tournamentMatches(UUID tournamentId) {

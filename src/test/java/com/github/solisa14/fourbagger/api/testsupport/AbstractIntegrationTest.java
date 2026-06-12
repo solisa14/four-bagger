@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.solisa14.fourbagger.api.auth.RegisterUserRequest;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,7 +25,7 @@ public abstract class AbstractIntegrationTest {
   @Autowired protected MockMvc mockMvc;
 
   protected List<String> registerUserAndGetTokens(String usernamePrefix) throws Exception {
-    var request =
+    RegisterUserRequest request =
         TestDataFactory.registerUserRequest(
             usernamePrefix + "user",
             TestDataFactory.DEFAULT_PASSWORD);

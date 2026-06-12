@@ -1,6 +1,7 @@
 package com.github.solisa14.fourbagger.api;
 
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.output.MigrateResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -53,7 +54,7 @@ public class FourBaggerApiApplication {
             .locations("classpath:db/migration")
             .baselineOnMigrate(true)
             .load();
-    var result = flyway.migrate();
+    MigrateResult result = flyway.migrate();
     log.info(
         "Flyway migration complete: {} migration(s) applied, schema version now {}",
         result.migrationsExecuted,

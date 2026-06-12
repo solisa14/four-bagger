@@ -1,67 +1,37 @@
 package com.github.solisa14.fourbagger.api.game;
 
+import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
+import com.github.solisa14.fourbagger.api.tournament.FinalScoreValidator;
 import com.github.solisa14.fourbagger.api.user.User;
-import java.util.EnumMap;
+import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Core service containing business logic for game management. Handles creating games, recording
- * frames, and applying scoring rules.
- *
- * <p>Coordinates between the repository and scoring policies to manage the full lifecycle of a
- * game.
- */
+/** Core service for standalone game lifecycle and final-result submission. */
 @Service
 public class GameService {
 
   private final GameRepository gameRepository;
   private final GameCreationService gameCreationService;
-  private final ApplicationEventPublisher eventPublisher;
-  private final Map<GameScoringMode, GameScoringPolicy> scoringPolicies =
-      new EnumMap<>(GameScoringMode.class);
+  private final FinalScoreValidator finalScoreValidator;
 
-  /**
-   * Constructs a new GameService with required dependencies.
-   *
-   * @param gameRepository the repository for game data access
-   * @param gameCreationService the service for handling complex game creation logic
-   * @param eventPublisher the Spring event publisher used to notify listeners of game completion
-   */
   public GameService(
       GameRepository gameRepository,
       GameCreationService gameCreationService,
-      ApplicationEventPublisher eventPublisher) {
+      FinalScoreValidator finalScoreValidator) {
     this.gameRepository = gameRepository;
     this.gameCreationService = gameCreationService;
-    this.eventPublisher = eventPublisher;
-    scoringPolicies.put(GameScoringMode.STANDARD, new StandardGameScoringPolicy());
-    scoringPolicies.put(GameScoringMode.EXACT, new ExactGameScoringPolicy());
+    this.finalScoreValidator = finalScoreValidator;
   }
 
-  /**
-   * Creates a new game from a domain command.
-   *
-   * @param command The command to create the game.
-   * @return The created game.
-   */
   public Game createGame(CreateGameCommand command) {
     return gameCreationService.createPendingGame(command);
   }
 
-  /**
-   * Transitions a game from PENDING to IN_PROGRESS.
-   *
-   * @param currentUser the user attempting to start the game
-   * @param gameId The ID of the game to start.
-   * @return The updated game.
-   * @throws InvalidGameStateException if the game is not PENDING.
-   * @throws GameAccessDeniedException if the user is not authorized to start the game
-   */
   @Transactional
   public Game startGame(User currentUser, UUID gameId) {
     Game game = getGame(gameId);
@@ -78,65 +48,41 @@ public class GameService {
     return savedGame;
   }
 
-  /**
-   * Records a new frame for an in-progress game and applies scoring. In doubles, validates that the
-   * throwers are alternating correctly.
-   *
-   * @param currentUser the user recording the frame
-   * @param gameId The ID of the game.
-   * @param request The frame details including bags in/on and thrower IDs.
-   * @return The newly recorded frame.
-   * @throws InvalidGameStateException if the game is not IN_PROGRESS.
-   * @throws InvalidFrameException if bag counts are invalid or throwers are out of turn.
-   * @throws GameAccessDeniedException if the user is not authorized to record frames for the game
-   */
   @Transactional
-  public Frame recordFrame(User currentUser, UUID gameId, RecordFrameRequest request) {
+  public Game submitResult(User currentUser, UUID gameId, SubmitGameResultRequest request) {
     Game game = getGame(gameId);
     authorizeMutation(currentUser, game);
 
+    if (game.getTournamentMatchId() != null) {
+      throw new InvalidGameStateException("Tournament games must use tournament result endpoints");
+    }
+    if (game.getCompletedAt() != null || game.getWinner() != null) {
+      throw new ResultAlreadySubmittedException();
+    }
     if (game.getStatus() != GameStatus.IN_PROGRESS) {
       throw new InvalidGameStateException(
-          "Cannot record a frame for a game that is not IN_PROGRESS. Current status: "
+          "Cannot submit a result for a game that is not IN_PROGRESS. Current status: "
               + game.getStatus());
     }
 
-    validateBagCounts(request);
-    int frameNumber = game.getFrames().size() + 1;
-    validateThrowersForFrame(game, frameNumber, request);
+    validateWinnerInGame(game, request.winnerUserId());
+    finalScoreValidator.validateScores(request.playerOneScore(), request.playerTwoScore());
+    validateWinnerScore(game, request);
 
-    int p1Points = 0;
-    int p2Points = 0;
-    int p1Raw = request.p1BagsIn() * 3 + request.p1BagsOn();
-    int p2Raw = request.p2BagsIn() * 3 + request.p2BagsOn();
-    if (p1Raw > p2Raw) {
-      p1Points = p1Raw - p2Raw;
-    } else if (p1Raw < p2Raw) {
-      p2Points = p2Raw - p1Raw;
+    game.setPlayerOneScore(request.playerOneScore());
+    game.setPlayerTwoScore(request.playerTwoScore());
+    game.setWinner(resolveWinnerUser(game, request.winnerUserId()));
+    game.setSubmittedBy(currentUser);
+    game.setCompletedAt(Instant.now());
+    game.setStatus(GameStatus.COMPLETED);
+
+    try {
+      Game saved = gameRepository.saveAndFlush(game);
+      initializeGameDetails(saved);
+      return saved;
+    } catch (ObjectOptimisticLockingFailureException ex) {
+      throw new ResultAlreadySubmittedException();
     }
-    applyScoringPolicy(game, p1Points, p2Points);
-
-    Frame frame =
-        Frame.builder()
-            .game(game)
-            .frameNumber(frameNumber)
-            .playerOneBagsIn(request.p1BagsIn())
-            .playerOneBagsOn(request.p1BagsOn())
-            .playerTwoBagsIn(request.p2BagsIn())
-            .playerTwoBagsOn(request.p2BagsOn())
-            .playerOneFramePoints(p1Points)
-            .playerTwoFramePoints(p2Points)
-            .build();
-
-    game.getFrames().add(frame);
-    gameRepository.save(game);
-
-    if (game.getStatus() == GameStatus.COMPLETED) {
-      eventPublisher.publishEvent(
-          new GameCompletedEvent(game.getId(), game.getTournamentMatchId()));
-    }
-
-    return frame;
   }
 
   @Transactional(readOnly = true)
@@ -149,23 +95,10 @@ public class GameService {
     return game;
   }
 
-  /**
-   * Retrieves a game by its ID.
-   *
-   * @param gameId The ID of the game.
-   * @return The game entity.
-   * @throws GameNotFoundException if the game does not exist.
-   */
   public Game getGame(UUID gameId) {
     return gameRepository.findById(gameId).orElseThrow(() -> new GameNotFoundException(gameId));
   }
 
-  /**
-   * Retrieves a list of games associated with a user.
-   *
-   * @param user The user.
-   * @return List of games where the user is a player.
-   */
   @Transactional(readOnly = true)
   public List<Game> listUserGames(User user) {
     List<Game> games = gameRepository.findByPlayer(user);
@@ -173,15 +106,6 @@ public class GameService {
     return games;
   }
 
-  /**
-   * Cancels a game, preventing any further updates.
-   *
-   * @param currentUser the user attempting to cancel the game
-   * @param gameId The ID of the game to cancel.
-   * @return The cancelled game.
-   * @throws InvalidGameStateException if the game is already completed or cancelled.
-   * @throws GameAccessDeniedException if the user is not authorized to cancel the game
-   */
   @Transactional
   public Game cancelGame(User currentUser, UUID gameId) {
     Game game = getGame(gameId);
@@ -203,7 +127,6 @@ public class GameService {
 
   private void initializeGameDetails(Game game) {
     initializeGameSummary(game);
-    game.getFrames().size(); // force initialization of frames
   }
 
   private void initializeGameSummary(Game game) {
@@ -218,83 +141,68 @@ public class GameService {
     if (game.getWinner() != null) {
       game.getWinner().getUsername();
     }
+    if (game.getSubmittedBy() != null) {
+      game.getSubmittedBy().getUsername();
+    }
   }
 
-  private void validateBagCounts(RecordFrameRequest request) {
-    if (request.p1BagsIn() + request.p1BagsOn() > 4) {
-      throw new InvalidFrameException(
-          "Player one's bags in ("
-              + request.p1BagsIn()
-              + ") + bags on ("
-              + request.p1BagsOn()
-              + ") cannot exceed 4");
+  private void validateWinnerInGame(Game game, UUID winnerUserId) {
+    if (!isGameParticipant(game, winnerUserId)) {
+      throw new BusinessException("Winner must be a game participant", HttpStatus.BAD_REQUEST);
     }
-    if (request.p2BagsIn() + request.p2BagsOn() > 4) {
-      throw new InvalidFrameException(
-          "Player two's bags in ("
-              + request.p2BagsIn()
-              + ") + bags on ("
-              + request.p2BagsOn()
-              + ") cannot exceed 4");
+  }
+
+  private void validateWinnerScore(Game game, SubmitGameResultRequest request) {
+    boolean winnerIsPlayerOne =
+        game.getPlayerOne().getId().equals(request.winnerUserId())
+            || (game.getPlayerOnePartner() != null
+                && game.getPlayerOnePartner().getId().equals(request.winnerUserId()));
+    if (winnerIsPlayerOne && request.playerOneScore() <= request.playerTwoScore()) {
+      throw new BusinessException("Winner must have the higher score", HttpStatus.BAD_REQUEST);
     }
+    boolean winnerIsPlayerTwo =
+        game.getPlayerTwo().getId().equals(request.winnerUserId())
+            || (game.getPlayerTwoPartner() != null
+                && game.getPlayerTwoPartner().getId().equals(request.winnerUserId()));
+    if (winnerIsPlayerTwo && request.playerTwoScore() <= request.playerOneScore()) {
+      throw new BusinessException("Winner must have the higher score", HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  private User resolveWinnerUser(Game game, UUID winnerUserId) {
+    if (game.getPlayerOne().getId().equals(winnerUserId)) {
+      return game.getPlayerOne();
+    }
+    if (game.getPlayerOnePartner() != null
+        && game.getPlayerOnePartner().getId().equals(winnerUserId)) {
+      return game.getPlayerOnePartner();
+    }
+    if (game.getPlayerTwo().getId().equals(winnerUserId)) {
+      return game.getPlayerTwo();
+    }
+    return game.getPlayerTwoPartner();
   }
 
   private void authorizeMutation(User currentUser, Game game) {
-    boolean isAuthorizedParticipant = canAccessGame(currentUser, game);
-    if (!isAuthorizedParticipant) {
+    if (!canAccessGame(currentUser, game)) {
       throw new GameAccessDeniedException();
     }
   }
 
   private boolean canAccessGame(User currentUser, Game game) {
-    if (currentUser == null) {
+    return isGameParticipant(game, currentUser != null ? currentUser.getId() : null)
+        || (currentUser != null && game.getCreatedBy().getId().equals(currentUser.getId()));
+  }
+
+  private boolean isGameParticipant(Game game, UUID userId) {
+    if (userId == null) {
       return false;
     }
-
-    UUID currentUserId = currentUser.getId();
-    return game.getCreatedBy().getId().equals(currentUserId)
-        || game.getPlayerOne().getId().equals(currentUserId)
-        || game.getPlayerTwo().getId().equals(currentUserId)
+    return game.getPlayerOne().getId().equals(userId)
+        || game.getPlayerTwo().getId().equals(userId)
         || (game.getPlayerOnePartner() != null
-            && game.getPlayerOnePartner().getId().equals(currentUserId))
+            && game.getPlayerOnePartner().getId().equals(userId))
         || (game.getPlayerTwoPartner() != null
-            && game.getPlayerTwoPartner().getId().equals(currentUserId));
-  }
-
-  private void applyScoringPolicy(Game game, int playerOneFramePoints, int playerTwoFramePoints) {
-    GameScoringMode scoringMode =
-        game.getScoringMode() != null ? game.getScoringMode() : GameScoringMode.STANDARD;
-    GameScoringPolicy scoringPolicy = scoringPolicies.get(scoringMode);
-    if (scoringPolicy == null) {
-      throw new InvalidGameConfigurationException("Unsupported game scoring mode: " + scoringMode);
-    }
-    scoringPolicy.applyFrame(game, playerOneFramePoints, playerTwoFramePoints);
-  }
-
-  private void validateThrowersForFrame(Game game, int frameNumber, RecordFrameRequest request) {
-    if (game.getGameType() != GameType.DOUBLES) {
-      return;
-    }
-
-    if (game.getPlayerOnePartner() == null || game.getPlayerTwoPartner() == null) {
-      throw new InvalidGameConfigurationException(
-          "Doubles game is missing partner assignments and cannot record frames");
-    }
-    if (request.playerOneThrowerId() == null || request.playerTwoThrowerId() == null) {
-      throw new InvalidFrameException("Doubles frames require both thrower IDs");
-    }
-
-    UUID expectedPlayerOneThrower =
-        frameNumber % 2 == 1 ? game.getPlayerOne().getId() : game.getPlayerOnePartner().getId();
-    UUID expectedPlayerTwoThrower =
-        frameNumber % 2 == 1 ? game.getPlayerTwo().getId() : game.getPlayerTwoPartner().getId();
-
-    if (!expectedPlayerOneThrower.equals(request.playerOneThrowerId())
-        || !expectedPlayerTwoThrower.equals(request.playerTwoThrowerId())) {
-      throw new InvalidFrameException(
-          "Invalid throwing pair for frame "
-              + frameNumber
-              + "; doubles pairs must alternate by frame");
-    }
+            && game.getPlayerTwoPartner().getId().equals(userId));
   }
 }

@@ -1,6 +1,8 @@
 package com.github.solisa14.fourbagger.api.auth;
 
 import com.github.solisa14.fourbagger.api.security.JwtService;
+import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
+import com.github.solisa14.fourbagger.api.user.User;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -65,8 +67,8 @@ public class AuthenticationController {
   @PostMapping("/register")
   public ResponseEntity<RegisterUserResponse> register(
       @Valid @RequestBody RegisterUserRequest request) {
-    var command = authMapper.toCommand(request);
-    var createdUser = authenticationService.registerUser(command);
+    CreateUserCommand command = authMapper.toCommand(request);
+    User createdUser = authenticationService.registerUser(command);
     RegisterUserResponse response = authMapper.toRegisterResponse(createdUser);
 
     TokenPair authResponse =

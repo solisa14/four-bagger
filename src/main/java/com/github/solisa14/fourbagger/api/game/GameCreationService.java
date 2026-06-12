@@ -13,12 +13,6 @@ public class GameCreationService {
     this.gameRepository = gameRepository;
   }
 
-  /**
-   * Creates a new pending game based on the provided command.
-   *
-   * @param command The command object containing game configuration and participants.
-   * @return The newly created and saved game.
-   */
   @Transactional
   public Game createPendingGame(CreateGameCommand command) {
     GameParticipants participants = command.participants();
@@ -29,8 +23,6 @@ public class GameCreationService {
             .playerTwo(participants.teamTwo().player())
             .playerTwoPartner(participants.teamTwo().partner())
             .gameType(participants.gameType())
-            .scoringMode(command.resolvedScoringMode())
-            .targetScore(command.resolvedTargetScore())
             .status(GameStatus.PENDING)
             .createdBy(command.createdBy())
             .tournamentMatchId(command.tournamentMatchId())

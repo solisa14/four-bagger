@@ -56,13 +56,14 @@ class GameControllerWebMvcTest {
   }
 
   @Test
-  void createGame_whenTargetScoreTooLow_returnsBadRequest() throws Exception {
+  void submitResult_whenWinnerUserIdMissing_returnsBadRequest() throws Exception {
     User principal = authenticatedUser();
-    String body = objectMapper.writeValueAsString(new CreateGameRequest(UUID.randomUUID(), 5));
+    UUID gameId = UUID.randomUUID();
+    String body = "{\"playerOneScore\":21,\"playerTwoScore\":15}";
 
     mockMvc
         .perform(
-            post("/api/v1/games")
+            post("/api/v1/games/{gameId}/result", gameId)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
@@ -70,15 +71,52 @@ class GameControllerWebMvcTest {
   }
 
   @Test
-  void recordFrame_whenBagsOutOfRange_returnsBadRequest() throws Exception {
+  void submitResult_whenPlayerOneScoreMissing_returnsBadRequest() throws Exception {
     User principal = authenticatedUser();
     UUID gameId = UUID.randomUUID();
-    // p1BagsIn = 5, which violates @Max(4)
-    String body = objectMapper.writeValueAsString(new RecordFrameRequest(5, 0, 0, 0));
+    String body =
+        "{\"winnerUserId\":\""
+            + principal.getId()
+            + "\",\"playerTwoScore\":15}";
 
     mockMvc
         .perform(
-            post("/api/v1/games/{gameId}/frames", gameId)
+            post("/api/v1/games/{gameId}/result", gameId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void submitResult_whenPlayerTwoScoreMissing_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+    UUID gameId = UUID.randomUUID();
+    String body =
+        "{\"winnerUserId\":\""
+            + principal.getId()
+            + "\",\"playerOneScore\":21}";
+
+    mockMvc
+        .perform(
+            post("/api/v1/games/{gameId}/result", gameId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void submitResult_whenScoreIsNegative_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+    UUID gameId = UUID.randomUUID();
+    String body =
+        objectMapper.writeValueAsString(
+            new SubmitGameResultRequest(UUID.randomUUID(), -1, 15));
+
+    mockMvc
+        .perform(
+            post("/api/v1/games/{gameId}/result", gameId)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
@@ -99,26 +137,52 @@ class GameControllerWebMvcTest {
   }
 
   @Test
-  void recordFrame_whenGameNotInProgress_returnsBadRequest() throws Exception {
+  void submitResult_whenGameNotInProgress_returnsBadRequest() throws Exception {
     User principal = authenticatedUser();
     UUID gameId = UUID.randomUUID();
-    when(gameService.recordFrame(
+    when(gameService.submitResult(
             org.mockito.ArgumentMatchers.nullable(User.class),
             eq(gameId),
-            any(RecordFrameRequest.class)))
+            any(SubmitGameResultRequest.class)))
         .thenThrow(
             new InvalidGameStateException(
-                "Cannot record a frame for a game that is not IN_PROGRESS"));
+                "Cannot submit a result for a game that is not IN_PROGRESS. Current status: PENDING"));
 
-    String body = objectMapper.writeValueAsString(new RecordFrameRequest(1, 0, 0, 0));
+    String body =
+        objectMapper.writeValueAsString(
+            new SubmitGameResultRequest(principal.getId(), 21, 15));
 
     mockMvc
         .perform(
-            post("/api/v1/games/{gameId}/frames", gameId)
+            post("/api/v1/games/{gameId}/result", gameId)
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
         .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void submitResult_whenResultAlreadySubmitted_returnsConflict() throws Exception {
+    User principal = authenticatedUser();
+    UUID gameId = UUID.randomUUID();
+    when(gameService.submitResult(
+            org.mockito.ArgumentMatchers.nullable(User.class),
+            eq(gameId),
+            any(SubmitGameResultRequest.class)))
+        .thenThrow(new ResultAlreadySubmittedException());
+
+    String body =
+        objectMapper.writeValueAsString(
+            new SubmitGameResultRequest(principal.getId(), 21, 15));
+
+    mockMvc
+        .perform(
+            post("/api/v1/games/{gameId}/result", gameId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.message").value("Game result has already been submitted"));
   }
 
   @Test

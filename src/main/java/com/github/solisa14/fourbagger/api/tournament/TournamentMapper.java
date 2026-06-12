@@ -9,31 +9,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class TournamentMapper {
 
-  /**
-   * Converts a tournament creation request to a creation command.
-   *
-   * @param organizer the user organizing the tournament
-   * @param request the creation request
-   * @return the creation command
-   */
   public CreateTournamentCommand toCreateCommand(User organizer, CreateTournamentRequest request) {
     return new CreateTournamentCommand(
         organizer, request.title(), request.gameType(), request.format());
   }
 
-  /**
-   * Converts a tournament entity to a tournament response.
-   *
-   * @param tournament the tournament entity
-   * @return the tournament response
-   */
-  /**
-   * Converts a tournament entity to a tournament response including nested rounds and matches.
-   * Assumes all lazy collections on the tournament have already been initialized.
-   *
-   * @param tournament the tournament entity
-   * @return the tournament response
-   */
   public TournamentResponse toTournamentResponse(Tournament tournament) {
     TournamentBracketsResponse brackets = toBracketsResponse(tournament.getRounds());
     return new TournamentResponse(
@@ -78,19 +58,9 @@ public class TournamentMapper {
   private TournamentRoundResponse toRoundResponse(TournamentRound round) {
     List<MatchResponse> matches = round.getMatches().stream().map(this::toMatchResponse).toList();
     return new TournamentRoundResponse(
-        round.getBracketType(),
-        round.getRoundNumber(),
-        round.getBestOf(),
-        round.getScoringMode(),
-        matches);
+        round.getBracketType(), round.getRoundNumber(), round.getBestOf(), matches);
   }
 
-  /**
-   * Converts a match entity to a match response.
-   *
-   * @param match the match entity
-   * @return the match response
-   */
   public MatchResponse toMatchResponse(Match match) {
     boolean winnerRouteVisible = isRouteVisible(match.getWinnerNextMatch());
     boolean loserRouteVisible = isRouteVisible(match.getLoserNextMatch());
@@ -110,6 +80,43 @@ public class TournamentMapper {
         loserRouteVisible ? match.getLoserNextMatchPosition() : null);
   }
 
+  public TournamentMatchDetailResponse toMatchDetailResponse(
+      Match match, List<TournamentGameResult> results, Integer nextGameNumber) {
+    MatchResponse base = toMatchResponse(match);
+    int bestOf = match.getRound().getBestOf();
+    int winsToClinch = (bestOf / 2) + 1;
+    return new TournamentMatchDetailResponse(
+        base.id(),
+        base.matchNumber(),
+        base.status(),
+        base.isBye(),
+        base.teamOne(),
+        base.teamTwo(),
+        base.teamOneWins(),
+        base.teamTwoWins(),
+        base.winner(),
+        base.winnerNextMatchId(),
+        base.winnerNextMatchPosition(),
+        base.loserNextMatchId(),
+        base.loserNextMatchPosition(),
+        match.getStartedAt(),
+        match.getStartedBy() != null ? match.getStartedBy().getId() : null,
+        bestOf,
+        winsToClinch,
+        nextGameNumber,
+        results.stream().map(this::toResultResponse).toList());
+  }
+
+  public TournamentGameResultResponse toResultResponse(TournamentGameResult result) {
+    return new TournamentGameResultResponse(
+        result.getGameNumber(),
+        result.getWinnerTeam().getId(),
+        result.getTeamOneScore(),
+        result.getTeamTwoScore(),
+        result.getSubmittedBy().getId(),
+        result.getSubmittedAt());
+  }
+
   private boolean isRouteVisible(Match destination) {
     if (destination == null) {
       return false;
@@ -118,12 +125,6 @@ public class TournamentMapper {
         || (destination.getTeamOne() != null && destination.getTeamTwo() != null);
   }
 
-  /**
-   * Converts a tournament team to a team summary DTO.
-   *
-   * @param team the tournament team
-   * @return the team summary DTO
-   */
   public MatchResponse.TeamSummary toTeamSummary(TournamentTeam team) {
     return new MatchResponse.TeamSummary(
         team.getId(),

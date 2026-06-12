@@ -27,10 +27,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-/**
- * Represents a specific round within a tournament bracket (e.g., Quarterfinals, Semifinals). It
- * dictates the scoring rules and the number of games required to win a match in this round.
- */
+/** Represents a specific round within a tournament bracket. */
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
@@ -64,11 +61,6 @@ public class TournamentRound {
   @Column(name = "best_of", nullable = false)
   @Builder.Default
   private Integer bestOf = 1;
-
-  @Enumerated(EnumType.STRING)
-  @Column(name = "scoring_mode", nullable = false)
-  @Builder.Default
-  private ScoringMode scoringMode = ScoringMode.STANDARD;
 
   @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
   @OrderBy("matchNumber ASC")

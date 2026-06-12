@@ -7,6 +7,7 @@ import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +58,6 @@ class GameRepositoryTest extends AbstractDataJpaTest {
             .playerTwo(p2)
             .playerTwoPartner(p2Partner)
             .gameType(GameType.DOUBLES)
-            .targetScore(21)
             .status(GameStatus.IN_PROGRESS)
             .createdBy(p1)
             .build();
@@ -75,23 +75,24 @@ class GameRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
-  void saveAndFlush_whenGameContainsFrames_persistsFramesViaCascade() {
+  void saveAndFlush_whenGameHasFinalResult_persistsScoresWinnerAndSubmittedBy() {
     User p1 = savedUser("d");
     User p2 = savedUser("e");
+    Instant completedAt = Instant.parse("2026-06-12T12:00:00Z");
 
-    Game game = TestDataFactory.game(p1, p2, GameStatus.IN_PROGRESS);
-    Frame frame =
-        Frame.builder()
-            .game(game)
-            .frameNumber(1)
-            .playerOneBagsIn(1)
-            .playerOneFramePoints(3)
-            .build();
-    game.getFrames().add(frame);
+    Game game = TestDataFactory.game(p1, p2, GameStatus.COMPLETED);
+    game.setPlayerOneScore(21);
+    game.setPlayerTwoScore(15);
+    game.setWinner(p1);
+    game.setSubmittedBy(p1);
+    game.setCompletedAt(completedAt);
 
     Game saved = gameRepository.saveAndFlush(game);
 
-    assertThat(saved.getFrames()).hasSize(1);
-    assertThat(saved.getFrames().get(0).getPlayerOneFramePoints()).isEqualTo(3);
+    assertThat(saved.getPlayerOneScore()).isEqualTo(21);
+    assertThat(saved.getPlayerTwoScore()).isEqualTo(15);
+    assertThat(saved.getWinner().getId()).isEqualTo(p1.getId());
+    assertThat(saved.getSubmittedBy().getId()).isEqualTo(p1.getId());
+    assertThat(saved.getCompletedAt()).isEqualTo(completedAt);
   }
 }

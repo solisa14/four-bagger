@@ -164,8 +164,7 @@ class TournamentController {
       @PathVariable UUID id,
       @PathVariable int roundNumber,
       @Valid @RequestBody UpdateRoundSettingsRequest request) {
-    tournamentService.updateRoundSettings(
-        id, currentUser, roundNumber, request.bestOf(), request.scoringMode());
+    tournamentService.updateRoundSettings(id, currentUser, roundNumber, request.bestOf());
     return ResponseEntity.ok(
         tournamentMapper.toTournamentResponse(tournamentService.getTournament(id)));
   }

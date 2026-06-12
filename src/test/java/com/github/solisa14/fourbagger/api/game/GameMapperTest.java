@@ -23,10 +23,10 @@ class GameMapperTest {
   @InjectMocks private GameMapper gameMapper;
 
   @Test
-  void toCreateCommand_whenNoOptionalValues_appliesDefaultsInMapper() {
+  void toCreateCommand_whenNoOptionalValues_appliesSinglesDefaults() {
     User currentUser = user("creator");
     User playerTwo = user("opponent");
-    CreateGameRequest request = new CreateGameRequest(playerTwo.getId(), null);
+    CreateGameRequest request = new CreateGameRequest(playerTwo.getId());
     when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
 
     CreateGameCommand command = gameMapper.toCreateCommand(currentUser, request, null);
@@ -34,8 +34,8 @@ class GameMapperTest {
     assertThat(command.participants().gameType()).isEqualTo(GameType.SINGLES);
     assertThat(command.participants().teamOne().player()).isEqualTo(currentUser);
     assertThat(command.participants().teamTwo().player()).isEqualTo(playerTwo);
-    assertThat(command.resolvedTargetScore()).isEqualTo(21);
-    assertThat(command.resolvedScoringMode()).isEqualTo(GameScoringMode.STANDARD);
+    assertThat(command.tournamentMatchId()).isNull();
+    assertThat(command.createdBy()).isEqualTo(currentUser);
   }
 
   @Test
@@ -46,12 +46,7 @@ class GameMapperTest {
     User playerTwoPartner = user("team2b");
     CreateGameRequest request =
         new CreateGameRequest(
-            playerTwo.getId(),
-            playerOnePartner.getId(),
-            playerTwoPartner.getId(),
-            null,
-            GameScoringMode.EXACT,
-            21);
+            playerTwo.getId(), playerOnePartner.getId(), playerTwoPartner.getId(), null);
     when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
     when(userService.getUser(playerOnePartner.getId())).thenReturn(playerOnePartner);
     when(userService.getUser(playerTwoPartner.getId())).thenReturn(playerTwoPartner);
@@ -61,7 +56,6 @@ class GameMapperTest {
     assertThat(command.participants().gameType()).isEqualTo(GameType.DOUBLES);
     assertThat(command.participants().teamOne().partner()).isEqualTo(playerOnePartner);
     assertThat(command.participants().teamTwo().partner()).isEqualTo(playerTwoPartner);
-    assertThat(command.resolvedScoringMode()).isEqualTo(GameScoringMode.EXACT);
   }
 
   @Test
@@ -69,11 +63,59 @@ class GameMapperTest {
     User currentUser = user("creator");
     User playerTwo = user("opponent");
     CreateGameRequest request =
-        new CreateGameRequest(playerTwo.getId(), null, null, GameType.DOUBLES, null, 21);
+        new CreateGameRequest(playerTwo.getId(), null, null, GameType.DOUBLES);
     when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
 
     assertThatThrownBy(() -> gameMapper.toCreateCommand(currentUser, request, null))
         .isInstanceOf(InvalidGameConfigurationException.class);
+  }
+
+  @Test
+  void toGameResponse_whenGameCompleted_includesSubmittedByAndCompletedAt() {
+    User playerOne = user("p1");
+    User playerTwo = user("p2");
+    java.time.Instant completedAt = java.time.Instant.parse("2026-06-12T12:00:00Z");
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(playerOne)
+            .playerTwo(playerTwo)
+            .playerOneScore(21)
+            .playerTwoScore(15)
+            .status(GameStatus.COMPLETED)
+            .winner(playerOne)
+            .submittedBy(playerOne)
+            .completedAt(completedAt)
+            .createdBy(playerOne)
+            .build();
+
+    GameResponse response = gameMapper.toGameResponse(game);
+
+    assertThat(response.playerOneScore()).isEqualTo(21);
+    assertThat(response.playerTwoScore()).isEqualTo(15);
+    assertThat(response.winner().id()).isEqualTo(playerOne.getId());
+    assertThat(response.submittedBy().id()).isEqualTo(playerOne.getId());
+    assertThat(response.completedAt()).isEqualTo(completedAt);
+  }
+
+  @Test
+  void toGameSummaryResponse_excludesSubmittedBy() {
+    User playerOne = user("p1");
+    User playerTwo = user("p2");
+    Game game =
+        Game.builder()
+            .id(UUID.randomUUID())
+            .playerOne(playerOne)
+            .playerTwo(playerTwo)
+            .status(GameStatus.PENDING)
+            .createdBy(playerOne)
+            .build();
+
+    GameSummaryResponse response = gameMapper.toGameSummaryResponse(game);
+
+    assertThat(response.id()).isEqualTo(game.getId());
+    assertThat(response.playerOne().id()).isEqualTo(playerOne.getId());
+    assertThat(response.status()).isEqualTo(GameStatus.PENDING);
   }
 
   private User user(String suffix) {

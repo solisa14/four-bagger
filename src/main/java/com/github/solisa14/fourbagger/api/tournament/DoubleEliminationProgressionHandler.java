@@ -30,8 +30,7 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
       return;
     }
 
-    routeTeam(
-        winningTeam, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
+    routeTeam(winningTeam, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
     routeTeam(losingTeam, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
 
     saveDestinationMatches(match);
@@ -51,7 +50,6 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
     routeTeam(winningTeam, resetFinal, match.getWinnerNextMatchPosition());
     routeTeam(losingTeam, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
     resetFinal.getRound().setBestOf(match.getRound().getBestOf());
-    resetFinal.getRound().setScoringMode(match.getRound().getScoringMode());
     matchRepository.save(resetFinal);
   }
 
