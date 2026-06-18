@@ -12,6 +12,7 @@ import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,6 +115,64 @@ class TournamentServiceTest {
     when(tournamentRepository.findById(any())).thenReturn(Optional.of(tournament));
     assertThatThrownBy(() -> tournamentService.getTournamentForUser(tournament.getId(), player()))
         .isInstanceOf(TournamentAccessDeniedException.class);
+  }
+
+  @Test
+  void listActiveTournamentsForUser_returnsHostingAndPlayingGroups() {
+    User currentUser = organizer();
+    Tournament hosting = registrationTournament();
+    hosting.setOrganizer(currentUser);
+    Tournament playing = registrationTournament();
+    playing.setId(UUID.randomUUID());
+    playing.setTitle("Playing Tournament");
+    when(tournamentRepository.findByOrganizer_IdAndStatusInOrderByUpdatedAtDesc(
+            currentUser.getId(),
+            List.of(
+                TournamentStatus.REGISTRATION,
+                TournamentStatus.BRACKET_READY,
+                TournamentStatus.IN_PROGRESS)))
+        .thenReturn(List.of(hosting));
+    when(tournamentRepository.findParticipatingActiveTournaments(
+            currentUser.getId(),
+            List.of(
+                TournamentStatus.REGISTRATION,
+                TournamentStatus.BRACKET_READY,
+                TournamentStatus.IN_PROGRESS)))
+        .thenReturn(List.of(playing));
+
+    ActiveTournaments result = tournamentService.listActiveTournamentsForUser(currentUser);
+
+    assertThat(result.hosting()).containsExactly(hosting);
+    assertThat(result.playing()).containsExactly(playing);
+  }
+
+  @Test
+  void listActiveTournamentsForUser_whenOrganizerAlsoParticipates_returnsTournamentOnlyInHosting() {
+    User currentUser = organizer();
+    Tournament hostedAndJoined = registrationTournament();
+    hostedAndJoined.setOrganizer(currentUser);
+    Tournament playing = registrationTournament();
+    playing.setId(UUID.randomUUID());
+    playing.setTitle("Playing Tournament");
+    when(tournamentRepository.findByOrganizer_IdAndStatusInOrderByUpdatedAtDesc(
+            currentUser.getId(),
+            List.of(
+                TournamentStatus.REGISTRATION,
+                TournamentStatus.BRACKET_READY,
+                TournamentStatus.IN_PROGRESS)))
+        .thenReturn(List.of(hostedAndJoined));
+    when(tournamentRepository.findParticipatingActiveTournaments(
+            currentUser.getId(),
+            List.of(
+                TournamentStatus.REGISTRATION,
+                TournamentStatus.BRACKET_READY,
+                TournamentStatus.IN_PROGRESS)))
+        .thenReturn(List.of(hostedAndJoined, playing));
+
+    ActiveTournaments result = tournamentService.listActiveTournamentsForUser(currentUser);
+
+    assertThat(result.hosting()).containsExactly(hostedAndJoined);
+    assertThat(result.playing()).containsExactly(playing);
   }
 
   // --- removeParticipant ---

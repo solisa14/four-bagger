@@ -61,6 +61,14 @@ class TournamentController {
     return ResponseEntity.created(location).body(tournamentMapper.toTournamentResponse(tournament));
   }
 
+  @GetMapping("/me")
+  ResponseEntity<TournamentListResponse> listMyTournaments(
+      @AuthenticationPrincipal User currentUser) {
+    return ResponseEntity.ok(
+        tournamentMapper.toTournamentListResponse(
+            tournamentService.listActiveTournamentsForUser(currentUser)));
+  }
+
   /**
    * Retrieves a tournament by its unique identifier.
    *
@@ -68,9 +76,11 @@ class TournamentController {
    * @return the tournament response
    */
   @GetMapping("/{id}")
-  ResponseEntity<TournamentResponse> getTournament(@PathVariable UUID id) {
+  ResponseEntity<TournamentResponse> getTournament(
+      @AuthenticationPrincipal User currentUser, @PathVariable UUID id) {
     return ResponseEntity.ok(
-        tournamentMapper.toTournamentResponse(tournamentService.getTournament(id)));
+        tournamentMapper.toTournamentResponse(
+            tournamentService.getTournamentForUser(id, currentUser)));
   }
 
   /**

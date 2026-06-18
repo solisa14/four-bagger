@@ -6,7 +6,9 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class TournamentService {
   private static final SecureRandom RANDOM = new SecureRandom();
   private static final int MAX_JOIN_CODE_ATTEMPTS = 10;
+  private static final List<TournamentStatus> ACTIVE_STATUSES =
+      List.of(
+          TournamentStatus.REGISTRATION,
+          TournamentStatus.BRACKET_READY,
+          TournamentStatus.IN_PROGRESS);
   private final TournamentRepository tournamentRepository;
   private final TournamentBracketService tournamentBracketService;
 
@@ -92,6 +99,21 @@ public class TournamentService {
     }
     initializeTournamentDetails(tournament);
     return tournament;
+  }
+
+  @Transactional(readOnly = true)
+  public ActiveTournaments listActiveTournamentsForUser(User currentUser) {
+    List<Tournament> hosting =
+        tournamentRepository.findByOrganizer_IdAndStatusInOrderByUpdatedAtDesc(
+            currentUser.getId(), ACTIVE_STATUSES);
+    Set<UUID> hostedIds = hosting.stream().map(Tournament::getId).collect(Collectors.toSet());
+    List<Tournament> playing =
+        tournamentRepository
+            .findParticipatingActiveTournaments(currentUser.getId(), ACTIVE_STATUSES)
+            .stream()
+            .filter(tournament -> !hostedIds.contains(tournament.getId()))
+            .toList();
+    return new ActiveTournaments(hosting, playing);
   }
 
   /**

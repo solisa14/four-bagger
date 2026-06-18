@@ -51,6 +51,53 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
+  void findByOrganizerIdAndStatusIn_whenActiveAndCompletedExist_returnsOnlyActiveHosted() {
+    User organizer = savedUser("active-host");
+    saveTournament(organizer, "Hosted Registration", "HOST01", TournamentStatus.REGISTRATION);
+    saveTournament(organizer, "Hosted Completed", "HOST02", TournamentStatus.COMPLETED);
+    entityManager.clear();
+
+    List<Tournament> result =
+        tournamentRepository.findByOrganizer_IdAndStatusInOrderByUpdatedAtDesc(
+            organizer.getId(),
+            List.of(
+                TournamentStatus.REGISTRATION,
+                TournamentStatus.BRACKET_READY,
+                TournamentStatus.IN_PROGRESS));
+
+    assertThat(result).extracting(Tournament::getTitle).containsExactly("Hosted Registration");
+  }
+
+  @Test
+  void findParticipatingActiveTournaments_whenActiveAndCompletedExist_returnsOnlyActivePlaying() {
+    User organizer = savedUser("playing-organizer");
+    User player = savedUser("active-player");
+    Tournament active =
+        saveTournament(organizer, "Playing Registration", "PLAY01", TournamentStatus.REGISTRATION);
+    Tournament completed =
+        saveTournament(organizer, "Playing Completed", "PLAY02", TournamentStatus.COMPLETED);
+    active
+        .getParticipants()
+        .add(TournamentParticipant.builder().tournament(active).user(player).build());
+    completed
+        .getParticipants()
+        .add(TournamentParticipant.builder().tournament(completed).user(player).build());
+    tournamentRepository.saveAndFlush(active);
+    tournamentRepository.saveAndFlush(completed);
+    entityManager.clear();
+
+    List<Tournament> result =
+        tournamentRepository.findParticipatingActiveTournaments(
+            player.getId(),
+            List.of(
+                TournamentStatus.REGISTRATION,
+                TournamentStatus.BRACKET_READY,
+                TournamentStatus.IN_PROGRESS));
+
+    assertThat(result).extracting(Tournament::getTitle).containsExactly("Playing Registration");
+  }
+
+  @Test
   void findByTournament_whenBracketGenerated_persistsWinnerRoutingEdges() {
     User organizer = savedUser("organizer");
     Tournament tournament =
@@ -138,5 +185,16 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
                     .seed(seed)
                     .build())
         .toList();
+  }
+
+  private Tournament saveTournament(
+      User organizer, String title, String joinCode, TournamentStatus status) {
+    return tournamentRepository.saveAndFlush(
+        Tournament.builder()
+            .organizer(organizer)
+            .title(title)
+            .joinCode(joinCode)
+            .status(status)
+            .build());
   }
 }

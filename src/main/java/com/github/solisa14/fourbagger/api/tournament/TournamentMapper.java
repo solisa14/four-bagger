@@ -26,6 +26,21 @@ public class TournamentMapper {
         brackets);
   }
 
+  public TournamentListResponse toTournamentListResponse(ActiveTournaments tournaments) {
+    return new TournamentListResponse(
+        tournaments.hosting().stream().map(this::toTournamentSummaryResponse).toList(),
+        tournaments.playing().stream().map(this::toTournamentSummaryResponse).toList());
+  }
+
+  public TournamentSummaryResponse toTournamentSummaryResponse(Tournament tournament) {
+    return new TournamentSummaryResponse(
+        tournament.getId(),
+        tournament.getTitle(),
+        tournament.getStatus(),
+        tournament.getFormat(),
+        tournament.getGameType());
+  }
+
   private TournamentBracketsResponse toBracketsResponse(List<TournamentRound> rounds) {
     return new TournamentBracketsResponse(
         roundsForBracket(rounds, BracketType.WINNERS),

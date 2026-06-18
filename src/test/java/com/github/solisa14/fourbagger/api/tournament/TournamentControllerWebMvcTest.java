@@ -166,7 +166,7 @@ class TournamentControllerWebMvcTest {
     User principal = authenticatedUser();
     UUID id = UUID.randomUUID();
     Tournament tournament = registrationTournament(id, principal);
-    when(tournamentService.getTournament(any())).thenReturn(tournament);
+    when(tournamentService.getTournamentForUser(any(), any())).thenReturn(tournament);
 
     mockMvc
         .perform(get("/api/v1/tournaments/{id}", id).with(user(principal)))
@@ -183,12 +183,58 @@ class TournamentControllerWebMvcTest {
   @Test
   void getTournament_whenNotFound_returnsNotFound() throws Exception {
     User principal = authenticatedUser();
-    when(tournamentService.getTournament(any())).thenThrow(new TournamentNotFoundException());
+    when(tournamentService.getTournamentForUser(any(), any()))
+        .thenThrow(new TournamentNotFoundException());
 
     mockMvc
         .perform(get("/api/v1/tournaments/{id}", UUID.randomUUID()).with(user(principal)))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.message").value("Tournament not found"));
+  }
+
+  @Test
+  void getTournament_whenUserCannotAccess_returnsForbidden() throws Exception {
+    User principal = authenticatedUser();
+    UUID id = UUID.randomUUID();
+    when(tournamentService.getTournamentForUser(any(), any()))
+        .thenThrow(new TournamentAccessDeniedException(id));
+
+    mockMvc
+        .perform(get("/api/v1/tournaments/{id}", id).with(user(principal)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.message").value("You are not allowed to modify tournament: " + id));
+  }
+
+  @Test
+  void listMyTournaments_returnsGroupedActiveTournamentSummaries() throws Exception {
+    User principal = authenticatedUser();
+    Tournament hosting = registrationTournament(UUID.randomUUID(), principal);
+    Tournament playing =
+        Tournament.builder()
+            .id(UUID.randomUUID())
+            .organizer(authenticatedUser())
+            .title("Playing Cup")
+            .joinCode("PLAY01")
+            .status(TournamentStatus.IN_PROGRESS)
+            .gameType(GameType.DOUBLES)
+            .format(TournamentFormat.DOUBLE_ELIMINATION)
+            .build();
+    when(tournamentService.listActiveTournamentsForUser(any()))
+        .thenReturn(new ActiveTournaments(java.util.List.of(hosting), java.util.List.of(playing)));
+
+    mockMvc
+        .perform(get("/api/v1/tournaments/me").with(user(principal)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.hosting[0].id").value(hosting.getId().toString()))
+        .andExpect(jsonPath("$.hosting[0].title").value("TestTournament"))
+        .andExpect(jsonPath("$.hosting[0].status").value("REGISTRATION"))
+        .andExpect(jsonPath("$.hosting[0].format").value("SINGLE_ELIMINATION"))
+        .andExpect(jsonPath("$.hosting[0].gameType").value("SINGLES"))
+        .andExpect(jsonPath("$.playing[0].id").value(playing.getId().toString()))
+        .andExpect(jsonPath("$.playing[0].title").value("Playing Cup"))
+        .andExpect(jsonPath("$.playing[0].status").value("IN_PROGRESS"))
+        .andExpect(jsonPath("$.playing[0].format").value("DOUBLE_ELIMINATION"))
+        .andExpect(jsonPath("$.playing[0].gameType").value("DOUBLES"));
   }
 
   // ── Delete Tournament ─────────────────────────────────────────
