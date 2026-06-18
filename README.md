@@ -120,7 +120,7 @@ createdb fourbagger
 |----------|---------|-------------|
 | `SPRING_PROFILES_ACTIVE` | Activate dev config | `dev` |
 | `JWT_SECRET` | JWT signing key | (required, no default) |
-| `ALLOWED_ORIGINS` | Comma-separated CORS origins | e.g. `http://localhost:3000` |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins | e.g. `http://localhost:5173` |
 | `DEV_DB_URL` | JDBC URL | `jdbc:postgresql://localhost:5432/fourbagger` |
 | `DEV_DB_USERNAME` | Database user | `postgres` |
 | `DEV_DB_PASSWORD` | Database password | `postgres` |
@@ -130,7 +130,7 @@ createdb fourbagger
 ```bash
 export SPRING_PROFILES_ACTIVE=dev
 export JWT_SECRET='your-256-bit-or-longer-secret'
-export ALLOWED_ORIGINS='http://localhost:3000,http://localhost:8080'
+export ALLOWED_ORIGINS='http://localhost:5173,http://localhost:8080'
 
 ./mvnw spring-boot:run
 ```
