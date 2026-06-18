@@ -33,7 +33,7 @@ in a project with real domain rules and real state transitions.
 - Testcontainers
 - JUnit 5 and Mockito
 - Maven (`./mvnw`)
-- Docker (multi-stage build via `Dockerfile`)
+- Docker Compose (local API + Postgres via `docker-compose.yml`)
 
 ## Architecture
 
@@ -102,43 +102,28 @@ Integration tests under `src/test/java/.../auth`, `game`, and `tournament` exerc
 
 ### Prerequisites
 
-- Java 25 JDK
-- PostgreSQL (local instance)
-- Docker (required for the full test suite — Testcontainers starts PostgreSQL for tests)
-
-### Database setup
-
-Create a local database matching the dev profile defaults:
-
-```bash
-createdb fourbagger
-```
-
-### Environment variables
-
-| Variable | Purpose | Dev default |
-|----------|---------|-------------|
-| `SPRING_PROFILES_ACTIVE` | Activate dev config | `dev` |
-| `JWT_SECRET` | JWT signing key | (required, no default) |
-| `ALLOWED_ORIGINS` | Comma-separated CORS origins | e.g. `http://localhost:5173` |
-| `DEV_DB_URL` | JDBC URL | `jdbc:postgresql://localhost:5432/fourbagger` |
-| `DEV_DB_USERNAME` | Database user | `postgres` |
-| `DEV_DB_PASSWORD` | Database password | `postgres` |
+- Docker Desktop (or Docker Engine + Compose)
 
 ### Run the application
 
-```bash
-export SPRING_PROFILES_ACTIVE=dev
-export JWT_SECRET='your-256-bit-or-longer-secret'
-export ALLOWED_ORIGINS='http://localhost:5173,http://localhost:8080'
+Start Postgres and the API with one command:
 
-./mvnw spring-boot:run
+```bash
+docker compose up --build
 ```
 
-The server listens on port `8080` by default. Flyway runs from `main()` before the Spring context starts, so there is
-no separate migration command.
+The API listens on `http://localhost:8080`. Flyway runs from `main()` before the Spring context starts, so there is no separate migration command.
+
+To reset local state after Docker cleanup or schema changes:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
 
 ### Run tests
+
+Tests run on the host with Maven and use Testcontainers for PostgreSQL, so Docker must be available:
 
 ```bash
 ./mvnw clean verify
