@@ -3,6 +3,7 @@ package com.github.solisa14.fourbagger.api.tournament;
 import static com.github.solisa14.fourbagger.api.testsupport.TestDataFactory.user;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import java.time.Instant;
@@ -12,7 +13,8 @@ import org.junit.jupiter.api.Test;
 
 class TournamentMapperTest {
 
-  private final TournamentMapper mapper = new TournamentMapper();
+  private final TournamentMapper mapper =
+      new TournamentMapper(new TournamentBracketEligibilityPolicy());
 
   @Test
   void toTournamentResponse_whenResetIsInactive_hidesRoundAndIncomingRoutes() {
@@ -102,6 +104,122 @@ class TournamentMapperTest {
     assertThat(firstFinalResponse.winnerNextMatchPosition()).isEqualTo(2);
     assertThat(firstFinalResponse.loserNextMatchId()).isEqualTo(reset.getId());
     assertThat(firstFinalResponse.loserNextMatchPosition()).isEqualTo(1);
+  }
+
+  @Test
+  void toTournamentDetailResponse_mapsParticipantsSortedCaseInsensitively() {
+    Tournament tournament = registrationTournament();
+    User organizer = user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
+    tournament.setOrganizer(organizer);
+    User alice = user(UUID.randomUUID(), "alice", "encoded", Role.USER);
+    User bob = user(UUID.randomUUID(), "Bob", "encoded", Role.USER);
+    tournament
+        .getParticipants()
+        .addAll(
+            List.of(
+                participant(tournament, bob, UUID.randomUUID()),
+                participant(tournament, alice, UUID.randomUUID())));
+
+    TournamentDetailResponse response = mapper.toTournamentDetailResponse(tournament, alice);
+
+    assertThat(response.participants()).hasSize(2);
+    assertThat(response.participants().get(0).username()).isEqualTo("alice");
+    assertThat(response.participants().get(0).currentViewer()).isTrue();
+    assertThat(response.participants().get(1).username()).isEqualTo("Bob");
+    assertThat(response.participants().get(1).currentViewer()).isFalse();
+  }
+
+  @Test
+  void toTournamentDetailResponse_organizerCapabilitiesDuringRegistration() {
+    Tournament tournament = registrationTournament();
+    User organizer = user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
+    tournament.setOrganizer(organizer);
+    for (int i = 0; i < 3; i++) {
+      tournament
+          .getParticipants()
+          .add(
+              participant(
+                  tournament,
+                  user(UUID.randomUUID(), "player" + i, "encoded", Role.USER),
+                  UUID.randomUUID()));
+    }
+
+    TournamentDetailResponse response = mapper.toTournamentDetailResponse(tournament, organizer);
+
+    assertThat(response.viewerCapabilities().canManageTournament()).isTrue();
+    assertThat(response.viewerCapabilities().canGenerateBracket()).isTrue();
+    assertThat(response.viewerCapabilities().canRemoveParticipants()).isTrue();
+    assertThat(response.viewerCapabilities().canLeaveRegistration()).isFalse();
+    assertThat(response.bracketEligibility().eligible()).isTrue();
+  }
+
+  @Test
+  void toTournamentDetailResponse_participantCapabilitiesDuringRegistration() {
+    Tournament tournament = registrationTournament();
+    User organizer = user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
+    tournament.setOrganizer(organizer);
+    User participantUser = user(UUID.randomUUID(), "player", "encoded", Role.USER);
+    tournament
+        .getParticipants()
+        .add(participant(tournament, participantUser, UUID.randomUUID()));
+
+    TournamentDetailResponse response =
+        mapper.toTournamentDetailResponse(tournament, participantUser);
+
+    assertThat(response.viewerCapabilities().canManageTournament()).isFalse();
+    assertThat(response.viewerCapabilities().canGenerateBracket()).isFalse();
+    assertThat(response.viewerCapabilities().canRemoveParticipants()).isFalse();
+    assertThat(response.viewerCapabilities().canLeaveRegistration()).isTrue();
+  }
+
+  @Test
+  void toTournamentDetailResponse_organizerParticipantCanLeaveRegistration() {
+    Tournament tournament = registrationTournament();
+    User organizer = user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
+    tournament.setOrganizer(organizer);
+    tournament.getParticipants().add(participant(tournament, organizer, UUID.randomUUID()));
+
+    TournamentDetailResponse response = mapper.toTournamentDetailResponse(tournament, organizer);
+
+    assertThat(response.viewerCapabilities().canLeaveRegistration()).isTrue();
+    assertThat(response.viewerCapabilities().canGenerateBracket()).isFalse();
+  }
+
+  @Test
+  void toTournamentDetailResponse_bracketReadyOrganizerCannotGenerateFromCapabilities() {
+    Tournament tournament = registrationTournament();
+    User organizer = user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
+    tournament.setOrganizer(organizer);
+    tournament.setStatus(TournamentStatus.BRACKET_READY);
+    for (int i = 0; i < 4; i++) {
+      tournament
+          .getParticipants()
+          .add(
+              participant(
+                  tournament,
+                  user(UUID.randomUUID(), "player" + i, "encoded", Role.USER),
+                  UUID.randomUUID()));
+    }
+
+    TournamentDetailResponse response = mapper.toTournamentDetailResponse(tournament, organizer);
+
+    assertThat(response.viewerCapabilities().canGenerateBracket()).isFalse();
+    assertThat(response.viewerCapabilities().canRemoveParticipants()).isFalse();
+  }
+
+  private Tournament registrationTournament() {
+    return Tournament.builder()
+        .id(UUID.randomUUID())
+        .title("Tournament")
+        .joinCode("ABC123")
+        .status(TournamentStatus.REGISTRATION)
+        .format(TournamentFormat.SINGLE_ELIMINATION)
+        .gameType(GameType.SINGLES)
+        .build();
+  }
+
+  private TournamentParticipant participant(Tournament tournament, User user, UUID id) {
+    return TournamentParticipant.builder().id(id).tournament(tournament).user(user).build();
   }
 
   private Tournament tournament() {

@@ -1,5 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -339,30 +340,143 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                 .content(objectMapper.writeValueAsString(new JoinTournamentRequest(joinCode))))
         .andExpect(status().isOk());
 
-    // Get tournament to find participant ID from the response
-    // The participant ID is not in the tournament response, so we need to query differently.
-    // We'll use the service directly for participant lookup since the API doesn't expose it
-    // yet.
-    // Instead, let's remove using the tournament repository approach — but we need the
-    // participant
-    // ID.
-    // For now, let's verify remove works by using a known participant from the service layer.
-    // Actually, participant IDs aren't exposed in the current TournamentResponse.
-    // We'll autowire the repository to get the participant ID for this test.
-    // But AbstractIntegrationTest doesn't have that. Let's use a different approach:
-    // We can test the 404 case for removeParticipant with a random UUID.
-    // The rejoin flow test would need participant IDs exposed — skip the full flow for now.
+    MvcResult detailResult =
+        mockMvc
+            .perform(
+                get("/api/v1/tournaments/{id}", tournamentId)
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.participants.length()").value(1))
+            .andExpect(jsonPath("$.bracketEligibility.participantCount").value(1))
+            .andReturn();
 
-    // Verify the participant-not-found path
+    String participantId =
+        objectMapper
+            .readTree(detailResult.getResponse().getContentAsString())
+            .get("participants")
+            .get(0)
+            .get("id")
+            .asText();
+
     mockMvc
         .perform(
             delete(
                     "/api/v1/tournaments/{id}/participants/{participantId}",
                     tournamentId,
-                    UUID.randomUUID())
+                    participantId)
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.message").value("Tournament participant not found"));
+        .andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.participants").isEmpty())
+        .andExpect(jsonPath("$.bracketEligibility.participantCount").value(0));
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/join")
+                .cookie(TestCookieHelper.cookie("accessToken", playerToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new JoinTournamentRequest(joinCode))))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void leaveTournament_removesParticipantAccessForNonOrganizer() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken("lvorg" + suffix);
+    String playerToken = registerAndGetToken("lvpl" + suffix);
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Leave Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var json = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    String tournamentId = json.get("id").asText();
+    String joinCode = json.get("joinCode").asText();
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/join")
+                .cookie(TestCookieHelper.cookie("accessToken", playerToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new JoinTournamentRequest(joinCode))))
+        .andExpect(status().isOk());
+
+    mockMvc
+        .perform(
+            delete("/api/v1/tournaments/{id}/participants/me", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", playerToken)))
+        .andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", playerToken)))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void generateBracket_whenIneligible_returnsBadRequestWithoutPersistedTeams() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken("inelorg" + suffix);
+    String p1Token = registerAndGetToken("inelp1" + suffix);
+    String p2Token = registerAndGetToken("inelp2" + suffix);
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Ineligible Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var json = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(json.get("id").asText());
+    String joinCode = json.get("joinCode").asText();
+
+    for (String playerToken : new String[] {p1Token, p2Token}) {
+      mockMvc
+          .perform(
+              post("/api/v1/tournaments/join")
+                  .cookie(TestCookieHelper.cookie("accessToken", playerToken))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(objectMapper.writeValueAsString(new JoinTournamentRequest(joinCode))))
+          .andExpect(status().isOk());
+    }
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("At least 3 participants are required."));
+
+    transactionTemplate.executeWithoutResult(
+        status -> {
+          Tournament tournament =
+              tournamentRepository.findById(tournamentId).orElseThrow();
+          assertThat(tournament.getTeams()).isEmpty();
+          assertThat(tournament.getRounds()).isEmpty();
+          assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.REGISTRATION);
+        });
   }
 
   @Test

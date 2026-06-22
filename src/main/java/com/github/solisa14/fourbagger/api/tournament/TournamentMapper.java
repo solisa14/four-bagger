@@ -3,11 +3,18 @@ package com.github.solisa14.fourbagger.api.tournament;
 import com.github.solisa14.fourbagger.api.user.User;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /** Mapper for tournament-related requests, commands, and responses. */
 @Component
 public class TournamentMapper {
+
+  private final TournamentBracketEligibilityPolicy bracketEligibilityPolicy;
+
+  public TournamentMapper(TournamentBracketEligibilityPolicy bracketEligibilityPolicy) {
+    this.bracketEligibilityPolicy = bracketEligibilityPolicy;
+  }
 
   public CreateTournamentCommand toCreateCommand(User organizer, CreateTournamentRequest request) {
     return new CreateTournamentCommand(
@@ -26,6 +33,26 @@ public class TournamentMapper {
         brackets);
   }
 
+  public TournamentDetailResponse toTournamentDetailResponse(
+      Tournament tournament, User currentViewer) {
+    TournamentBracketsResponse brackets = toBracketsResponse(tournament.getRounds());
+    BracketEligibility eligibility = bracketEligibilityPolicy.evaluate(tournament);
+    boolean isOrganizer = isOrganizer(currentViewer, tournament);
+    boolean isParticipant = isParticipant(currentViewer, tournament);
+    return new TournamentDetailResponse(
+        tournament.getId(),
+        tournament.getTitle(),
+        tournament.getJoinCode(),
+        tournament.getStatus(),
+        tournament.getGameType(),
+        tournament.getFormat(),
+        brackets,
+        toParticipantResponses(tournament, currentViewer),
+        toBracketEligibilityResponse(eligibility),
+        toViewerCapabilitiesResponse(
+            tournament, isOrganizer, isParticipant, eligibility.eligible()));
+  }
+
   public TournamentListResponse toTournamentListResponse(ActiveTournaments tournaments) {
     return new TournamentListResponse(
         tournaments.hosting().stream().map(this::toTournamentSummaryResponse).toList(),
@@ -39,6 +66,60 @@ public class TournamentMapper {
         tournament.getStatus(),
         tournament.getFormat(),
         tournament.getGameType());
+  }
+
+  private List<TournamentParticipantResponse> toParticipantResponses(
+      Tournament tournament, User currentViewer) {
+    UUID currentViewerId = currentViewer != null ? currentViewer.getId() : null;
+    return tournament.getParticipants().stream()
+        .sorted(
+            Comparator.comparing(
+                participant -> participant.getUser().getUsername(), String.CASE_INSENSITIVE_ORDER))
+        .map(
+            participant ->
+                new TournamentParticipantResponse(
+                    participant.getId(),
+                    participant.getUser().getUsername(),
+                    currentViewerId != null
+                        && currentViewerId.equals(participant.getUser().getId())))
+        .toList();
+  }
+
+  private TournamentBracketEligibilityResponse toBracketEligibilityResponse(
+      BracketEligibility eligibility) {
+    return new TournamentBracketEligibilityResponse(
+        eligibility.eligible(),
+        eligibility.participantCount(),
+        eligibility.minimumParticipantCount(),
+        eligibility.requiresEvenParticipantCount(),
+        eligibility.message());
+  }
+
+  private TournamentViewerCapabilitiesResponse toViewerCapabilitiesResponse(
+      Tournament tournament,
+      boolean isOrganizer,
+      boolean isParticipant,
+      boolean bracketEligible) {
+    boolean registration = tournament.getStatus() == TournamentStatus.REGISTRATION;
+    return new TournamentViewerCapabilitiesResponse(
+        isOrganizer,
+        isOrganizer && registration && bracketEligible,
+        isOrganizer && registration,
+        isParticipant && registration);
+  }
+
+  private boolean isOrganizer(User currentViewer, Tournament tournament) {
+    return currentViewer != null
+        && tournament.getOrganizer().getId().equals(currentViewer.getId());
+  }
+
+  private boolean isParticipant(User currentViewer, Tournament tournament) {
+    if (currentViewer == null) {
+      return false;
+    }
+    UUID currentViewerId = currentViewer.getId();
+    return tournament.getParticipants().stream()
+        .anyMatch(participant -> participant.getUser().getId().equals(currentViewerId));
   }
 
   private TournamentBracketsResponse toBracketsResponse(List<TournamentRound> rounds) {

@@ -76,11 +76,11 @@ class TournamentController {
    * @return the tournament response
    */
   @GetMapping("/{id}")
-  ResponseEntity<TournamentResponse> getTournament(
+  ResponseEntity<TournamentDetailResponse> getTournament(
       @AuthenticationPrincipal User currentUser, @PathVariable UUID id) {
     return ResponseEntity.ok(
-        tournamentMapper.toTournamentResponse(
-            tournamentService.getTournamentForUser(id, currentUser)));
+        tournamentMapper.toTournamentDetailResponse(
+            tournamentService.getTournamentForUser(id, currentUser), currentUser));
   }
 
   /**
@@ -156,6 +156,19 @@ class TournamentController {
       @PathVariable UUID id,
       @PathVariable UUID participantId) {
     tournamentService.removeParticipant(id, currentUser, participantId);
+    return ResponseEntity.noContent().build();
+  }
+
+  /**
+   * Withdraws the authenticated user from a tournament during the registration phase.
+   *
+   * @param id the UUID of the tournament
+   * @return 204 No Content on success
+   */
+  @DeleteMapping("/{id}/participants/me")
+  ResponseEntity<Void> leaveTournament(
+      @AuthenticationPrincipal User currentUser, @PathVariable UUID id) {
+    tournamentService.leaveTournament(id, currentUser);
     return ResponseEntity.noContent().build();
   }
 

@@ -29,18 +29,22 @@ public class TournamentService {
           TournamentStatus.IN_PROGRESS);
   private final TournamentRepository tournamentRepository;
   private final TournamentBracketService tournamentBracketService;
+  private final TournamentBracketEligibilityPolicy bracketEligibilityPolicy;
 
   /**
    * Constructs a new TournamentService with required dependencies.
    *
    * @param tournamentRepository the repository for tournament data access
    * @param tournamentBracketService the service for generating tournament brackets
+   * @param bracketEligibilityPolicy the policy for bracket participant eligibility
    */
   public TournamentService(
       TournamentRepository tournamentRepository,
-      TournamentBracketService tournamentBracketService) {
+      TournamentBracketService tournamentBracketService,
+      TournamentBracketEligibilityPolicy bracketEligibilityPolicy) {
     this.tournamentRepository = tournamentRepository;
     this.tournamentBracketService = tournamentBracketService;
+    this.bracketEligibilityPolicy = bracketEligibilityPolicy;
   }
 
   /**
@@ -93,7 +97,7 @@ public class TournamentService {
   @Transactional(readOnly = true)
   public Tournament getTournamentForUser(UUID id, User currentUser) {
     Tournament tournament =
-        tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
+        tournamentRepository.findDetailById(id).orElseThrow(TournamentNotFoundException::new);
     if (!canAccessTournament(currentUser, tournament)) {
       throw new TournamentAccessDeniedException(tournament.getId());
     }
@@ -178,7 +182,38 @@ public class TournamentService {
   }
 
   private void initializeTournamentDetails(Tournament tournament) {
-    tournament.getRounds().forEach(round -> round.getMatches().size());
+    tournament
+        .getRounds()
+        .forEach(
+            round -> {
+              round.getMatches().size();
+              round.getMatches().forEach(this::initializeMatchDetails);
+            });
+  }
+
+  private void initializeMatchDetails(Match match) {
+    initializeTeam(match.getTeamOne());
+    initializeTeam(match.getTeamTwo());
+    initializeTeam(match.getWinner());
+    initializeRoute(match.getWinnerNextMatch());
+    initializeRoute(match.getLoserNextMatch());
+  }
+
+  private void initializeTeam(TournamentTeam team) {
+    if (team == null) {
+      return;
+    }
+    team.getSeed();
+    team.getPlayerOne().getUsername();
+    if (team.getPlayerTwo() != null) {
+      team.getPlayerTwo().getUsername();
+    }
+  }
+
+  private void initializeRoute(Match destination) {
+    if (destination != null) {
+      destination.getRound().getBracketType();
+    }
   }
 
   /**
@@ -202,16 +237,14 @@ public class TournamentService {
           "Cannot generate or reshuffle bracket unless tournament is in REGISTRATION or BRACKET_READY");
     }
 
+    bracketEligibilityPolicy.validateForBracketGeneration(tournament);
+
     List<TournamentParticipant> shuffledParticipants =
         new ArrayList<>(tournament.getParticipants());
     Collections.shuffle(shuffledParticipants, RANDOM);
 
     tournament.getTeams().clear();
     if (tournament.getGameType() == GameType.DOUBLES) {
-      if (shuffledParticipants.size() < 6 || shuffledParticipants.size() % 2 != 0) {
-        throw new InvalidTournamentStateException(
-            "Doubles tournament requires an even number of participants, minimum 6");
-      }
       for (int i = 0; i < shuffledParticipants.size(); i += 2) {
         TournamentTeam team =
             TournamentTeam.builder()
@@ -223,10 +256,6 @@ public class TournamentService {
         tournament.getTeams().add(team);
       }
     } else {
-      if (shuffledParticipants.size() <= 2) {
-        throw new InvalidTournamentStateException(
-            "Cannot generate bracket with 2 or fewer participants");
-      }
       for (int i = 0; i < shuffledParticipants.size(); i++) {
         TournamentTeam team =
             TournamentTeam.builder()
@@ -341,6 +370,39 @@ public class TournamentService {
         tournament
             .getParticipants()
             .removeIf(participant -> participantId.equals(participant.getId()));
+    if (!removed) {
+      throw new TournamentParticipantNotFoundException();
+    }
+
+    tournamentRepository.save(tournament);
+  }
+
+  /**
+   * Removes the current user's participant registration during the registration phase.
+   *
+   * @param tournamentId the UUID of the tournament
+   * @param currentUser the user withdrawing from the tournament
+   * @throws TournamentNotFoundException if the tournament does not exist
+   * @throws TournamentAccessDeniedException if the user cannot access the tournament
+   * @throws InvalidTournamentStateException if registration has closed
+   * @throws TournamentParticipantNotFoundException if the user is not a participant
+   */
+  public void leaveTournament(UUID tournamentId, User currentUser) {
+    Tournament tournament =
+        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    if (!canAccessTournament(currentUser, tournament)) {
+      throw new TournamentAccessDeniedException(tournament.getId());
+    }
+
+    if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
+      throw new InvalidTournamentStateException("Cannot leave tournament after registration");
+    }
+
+    UUID currentUserId = currentUser.getId();
+    boolean removed =
+        tournament
+            .getParticipants()
+            .removeIf(participant -> participant.getUser().getId().equals(currentUserId));
     if (!removed) {
       throw new TournamentParticipantNotFoundException();
     }

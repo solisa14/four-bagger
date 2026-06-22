@@ -21,6 +21,23 @@ public interface TournamentRepository extends JpaRepository<Tournament, UUID> {
    */
   Optional<Tournament> findByJoinCode(String joinCode);
 
+  /**
+   * Retrieves the tournament detail access graph without joining the separate bracket collections.
+   *
+   * <p>Participants and their users are fetched together because registration detail pages poll
+   * while open. Keeping rounds out of this query avoids joining multiple list-valued associations.
+   */
+  @Query(
+      """
+      select distinct tournament
+      from Tournament tournament
+      join fetch tournament.organizer
+      left join fetch tournament.participants participant
+      left join fetch participant.user
+      where tournament.id = :id
+      """)
+  Optional<Tournament> findDetailById(@Param("id") UUID id);
+
   List<Tournament> findByOrganizer_IdAndStatusInOrderByUpdatedAtDesc(
       UUID organizerId, Collection<TournamentStatus> statuses);
 

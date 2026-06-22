@@ -51,6 +51,28 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
+  void findDetailById_fetchesParticipantUsersBeforeEntityManagerIsCleared() {
+    User organizer = savedUser("detail-organizer");
+    User player = savedUser("detail-player");
+    Tournament tournament =
+        saveTournament(
+            organizer, "Detail Tournament", "DETAIL", TournamentStatus.REGISTRATION);
+    tournament
+        .getParticipants()
+        .add(TournamentParticipant.builder().tournament(tournament).user(player).build());
+    UUID tournamentId = tournamentRepository.saveAndFlush(tournament).getId();
+    entityManager.clear();
+
+    Tournament detail = tournamentRepository.findDetailById(tournamentId).orElseThrow();
+    entityManager.clear();
+
+    assertThat(detail.getOrganizer().getUsername()).isEqualTo(organizer.getUsername());
+    assertThat(detail.getParticipants())
+        .extracting(participant -> participant.getUser().getUsername())
+        .containsExactly(player.getUsername());
+  }
+
+  @Test
   void findByOrganizerIdAndStatusIn_whenActiveAndCompletedExist_returnsOnlyActiveHosted() {
     User organizer = savedUser("active-host");
     saveTournament(organizer, "Hosted Registration", "HOST01", TournamentStatus.REGISTRATION);
@@ -166,7 +188,8 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
 
     Match detachedMatch = matchRepository.findForResponseById(firstFinalId).orElseThrow();
     entityManager.clear();
-    MatchResponse response = new TournamentMapper().toMatchResponse(detachedMatch);
+    MatchResponse response =
+        new TournamentMapper(new TournamentBracketEligibilityPolicy()).toMatchResponse(detachedMatch);
 
     assertThat(response.id()).isEqualTo(firstFinalId);
     assertThat(response.winnerNextMatchId()).isNull();

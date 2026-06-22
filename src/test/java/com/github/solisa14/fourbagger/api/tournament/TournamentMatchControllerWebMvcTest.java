@@ -31,6 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @Import({
   GlobalExceptionHandler.class,
   TournamentMapper.class,
+  TournamentBracketEligibilityPolicy.class,
   com.github.solisa14.fourbagger.api.game.GameMapper.class
 })
 class TournamentMatchControllerWebMvcTest {

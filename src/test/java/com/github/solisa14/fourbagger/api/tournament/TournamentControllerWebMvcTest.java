@@ -20,6 +20,7 @@ import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -35,14 +36,38 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @WebMvcTest(TournamentController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import({GlobalExceptionHandler.class, TournamentMapper.class})
+@Import({GlobalExceptionHandler.class})
 class TournamentControllerWebMvcTest {
+
+  private final TournamentMapper detailMapper =
+      new TournamentMapper(new TournamentBracketEligibilityPolicy());
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Autowired private MockMvc mockMvc;
   @MockitoBean private TournamentService tournamentService;
+  @MockitoBean private TournamentMapper tournamentMapper;
   @MockitoBean private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
+
+  @BeforeEach
+  void setUpMapperStubs() {
+    when(tournamentMapper.toTournamentResponse(any()))
+        .thenAnswer(invocation -> detailMapper.toTournamentResponse(invocation.getArgument(0)));
+    when(tournamentMapper.toTournamentListResponse(any()))
+        .thenAnswer(
+            invocation -> detailMapper.toTournamentListResponse(invocation.getArgument(0)));
+    when(tournamentMapper.toCreateCommand(any(), any()))
+        .thenAnswer(
+            invocation ->
+                detailMapper.toCreateCommand(
+                    invocation.getArgument(0), invocation.getArgument(1)));
+  }
+
+  private void stubTournamentDetailResponse(Tournament tournament, User viewer) {
+    when(tournamentMapper.toTournamentDetailResponse(any(), any()))
+        .thenAnswer(
+            invocation -> detailMapper.toTournamentDetailResponse(tournament, viewer));
+  }
 
   private User authenticatedUser() {
     return TestDataFactory.user(
@@ -167,6 +192,7 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     Tournament tournament = registrationTournament(id, principal);
     when(tournamentService.getTournamentForUser(any(), any())).thenReturn(tournament);
+    stubTournamentDetailResponse(tournament, principal);
 
     mockMvc
         .perform(get("/api/v1/tournaments/{id}", id).with(user(principal)))
@@ -177,7 +203,68 @@ class TournamentControllerWebMvcTest {
         .andExpect(jsonPath("$.status").value("REGISTRATION"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
         .andExpect(jsonPath("$.brackets.winners").isArray())
+        .andExpect(jsonPath("$.participants").isArray())
+        .andExpect(jsonPath("$.bracketEligibility.participantCount").value(0))
+        .andExpect(jsonPath("$.bracketEligibility.eligible").value(false))
+        .andExpect(jsonPath("$.viewerCapabilities.canManageTournament").value(true))
+        .andExpect(jsonPath("$.viewerCapabilities.canGenerateBracket").value(false))
         .andExpect(jsonPath("$.rounds").doesNotExist());
+  }
+
+  @Test
+  void getTournament_whenOrganizerWithEligibleParticipants_returnsManagementCapabilities()
+      throws Exception {
+    User principal = authenticatedUser();
+    UUID id = UUID.randomUUID();
+    Tournament tournament = registrationTournament(id, principal);
+    for (int i = 0; i < 3; i++) {
+      tournament
+          .getParticipants()
+          .add(
+              TournamentParticipant.builder()
+                  .id(UUID.randomUUID())
+                  .tournament(tournament)
+                  .user(
+                      TestDataFactory.user(
+                          UUID.randomUUID(), "player" + i, "encoded", Role.USER))
+                  .build());
+    }
+    when(tournamentService.getTournamentForUser(any(), any())).thenReturn(tournament);
+    stubTournamentDetailResponse(tournament, principal);
+
+    mockMvc
+        .perform(get("/api/v1/tournaments/{id}", id).with(user(principal)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.participants.length()").value(3))
+        .andExpect(jsonPath("$.bracketEligibility.eligible").value(true))
+        .andExpect(jsonPath("$.viewerCapabilities.canGenerateBracket").value(true))
+        .andExpect(jsonPath("$.viewerCapabilities.canRemoveParticipants").value(true));
+  }
+
+  @Test
+  void getTournament_whenParticipant_returnsLimitedCapabilities() throws Exception {
+    User principal = authenticatedUser();
+    User organizer = TestDataFactory.user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
+    UUID id = UUID.randomUUID();
+    Tournament tournament = registrationTournament(id, organizer);
+    tournament
+        .getParticipants()
+        .add(
+            TournamentParticipant.builder()
+                .id(UUID.randomUUID())
+                .tournament(tournament)
+                .user(principal)
+                .build());
+    when(tournamentService.getTournamentForUser(any(), any())).thenReturn(tournament);
+    stubTournamentDetailResponse(tournament, principal);
+
+    mockMvc
+        .perform(get("/api/v1/tournaments/{id}", id).with(user(principal)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.participants[0].currentViewer").value(true))
+        .andExpect(jsonPath("$.viewerCapabilities.canManageTournament").value(false))
+        .andExpect(jsonPath("$.viewerCapabilities.canGenerateBracket").value(false))
+        .andExpect(jsonPath("$.viewerCapabilities.canLeaveRegistration").value(true));
   }
 
   @Test
@@ -362,7 +449,7 @@ class TournamentControllerWebMvcTest {
     UUID id = UUID.randomUUID();
     doThrow(
             new InvalidTournamentStateException(
-                "Cannot generate bracket with 2 or fewer participants"))
+                "At least 3 participants are required."))
         .when(tournamentService)
         .generateBracket(eq(id), any());
 
@@ -370,7 +457,7 @@ class TournamentControllerWebMvcTest {
         .perform(post("/api/v1/tournaments/{id}/bracket", id).with(user(principal)))
         .andExpect(status().isBadRequest())
         .andExpect(
-            jsonPath("$.message").value("Cannot generate bracket with 2 or fewer participants"));
+            jsonPath("$.message").value("At least 3 participants are required."));
   }
 
   @Test
@@ -606,6 +693,71 @@ class TournamentControllerWebMvcTest {
                     "/api/v1/tournaments/{id}/participants/{participantId}",
                     tournamentId,
                     participantId)
+                .with(user(principal)))
+        .andExpect(status().isForbidden())
+        .andExpect(
+            jsonPath("$.message")
+                .value("You are not allowed to modify tournament: " + tournamentId));
+  }
+
+  // ── Leave Tournament ──────────────────────────────────────────
+
+  @Test
+  void leaveTournament_whenValid_returnsNoContent() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    doNothing().when(tournamentService).leaveTournament(eq(tournamentId), any());
+
+    mockMvc
+        .perform(
+            delete("/api/v1/tournaments/{id}/participants/me", tournamentId)
+                .with(user(principal)))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
+  void leaveTournament_whenRegistrationClosed_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    doThrow(new InvalidTournamentStateException("Cannot leave tournament after registration"))
+        .when(tournamentService)
+        .leaveTournament(eq(tournamentId), any());
+
+    mockMvc
+        .perform(
+            delete("/api/v1/tournaments/{id}/participants/me", tournamentId)
+                .with(user(principal)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("Cannot leave tournament after registration"));
+  }
+
+  @Test
+  void leaveTournament_whenParticipantNotFound_returnsNotFound() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    doThrow(new TournamentParticipantNotFoundException())
+        .when(tournamentService)
+        .leaveTournament(eq(tournamentId), any());
+
+    mockMvc
+        .perform(
+            delete("/api/v1/tournaments/{id}/participants/me", tournamentId)
+                .with(user(principal)))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("Tournament participant not found"));
+  }
+
+  @Test
+  void leaveTournament_whenUserCannotAccess_returnsForbidden() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    doThrow(new TournamentAccessDeniedException(tournamentId))
+        .when(tournamentService)
+        .leaveTournament(eq(tournamentId), any());
+
+    mockMvc
+        .perform(
+            delete("/api/v1/tournaments/{id}/participants/me", tournamentId)
                 .with(user(principal)))
         .andExpect(status().isForbidden())
         .andExpect(
