@@ -243,7 +243,12 @@ public class TournamentService {
         new ArrayList<>(tournament.getParticipants());
     Collections.shuffle(shuffledParticipants, RANDOM);
 
-    tournament.getTeams().clear();
+    if (tournament.getStatus() == TournamentStatus.BRACKET_READY) {
+      prepareBracketForRegeneration(tournament);
+    } else {
+      tournament.getTeams().clear();
+    }
+
     if (tournament.getGameType() == GameType.DOUBLES) {
       for (int i = 0; i < shuffledParticipants.size(); i += 2) {
         TournamentTeam team =
@@ -271,6 +276,26 @@ public class TournamentService {
 
     tournament.setStatus(TournamentStatus.BRACKET_READY);
     tournamentRepository.save(tournament);
+  }
+
+  private void prepareBracketForRegeneration(Tournament tournament) {
+    List<Match> existingMatches =
+        tournament.getRounds().stream().flatMap(round -> round.getMatches().stream()).toList();
+
+    existingMatches.forEach(
+        match -> {
+          match.setWinnerNextMatch(null);
+          match.setWinnerNextMatchPosition(null);
+          match.setLoserNextMatch(null);
+          match.setLoserNextMatchPosition(null);
+        });
+    tournamentRepository.flush();
+
+    tournament.getRounds().forEach(round -> round.getMatches().clear());
+    tournamentRepository.flush();
+
+    tournament.getTeams().clear();
+    tournamentRepository.flush();
   }
 
   /**

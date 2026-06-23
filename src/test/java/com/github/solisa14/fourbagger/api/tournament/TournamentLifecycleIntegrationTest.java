@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired private TournamentRepository tournamentRepository;
   @Autowired private MatchRepository matchRepository;
+  @Autowired private TournamentTeamRepository tournamentTeamRepository;
   @Autowired private TransactionTemplate transactionTemplate;
 
   @Test
@@ -480,6 +482,71 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void reshuffleBracket_whenSingleElimination_replacesPersistedAssignmentsAndPreservesSettings()
+      throws Exception {
+    TournamentSetup setup =
+        createTournamentWithPlayers(
+            "Single Reshuffle Test", GameType.SINGLES, TournamentFormat.SINGLE_ELIMINATION, 4);
+
+    generateBracket(setup);
+    mockMvc
+        .perform(
+            patch("/api/v1/tournaments/{id}/rounds/{roundNumber}", setup.tournamentId(), 1)
+                .cookie(TestCookieHelper.cookie("accessToken", setup.organizerToken()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
+        .andExpect(status().isOk());
+    PersistedBracketSnapshot before = bracketSnapshot(setup.tournamentId());
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", setup.tournamentId())
+                .cookie(TestCookieHelper.cookie("accessToken", setup.organizerToken())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("BRACKET_READY"))
+        .andExpect(jsonPath("$.brackets.winners[0].bestOf").value(3))
+        .andExpect(jsonPath("$.brackets.winners[0].matches").isNotEmpty());
+
+    PersistedBracketSnapshot after = bracketSnapshot(setup.tournamentId());
+    assertRegenerated(before, after);
+    assertThat(after.seeds()).containsExactlyInAnyOrder(1, 2, 3, 4);
+    assertThat(after.bracketTypes()).containsOnly(BracketType.WINNERS);
+  }
+
+  @Test
+  void reshuffleBracket_whenDoubleElimination_replacesPersistedAssignmentsAndRoutes()
+      throws Exception {
+    TournamentSetup setup =
+        createTournamentWithPlayers(
+            "Double Reshuffle Test", GameType.SINGLES, TournamentFormat.DOUBLE_ELIMINATION, 4);
+
+    generateBracket(setup);
+    PersistedBracketSnapshot before = bracketSnapshot(setup.tournamentId());
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", setup.tournamentId())
+                .cookie(TestCookieHelper.cookie("accessToken", setup.organizerToken())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("BRACKET_READY"))
+        .andExpect(jsonPath("$.brackets.winners").isNotEmpty())
+        .andExpect(jsonPath("$.brackets.losers").isNotEmpty())
+        .andExpect(jsonPath("$.brackets.finalRounds").isNotEmpty());
+
+    PersistedBracketSnapshot after = bracketSnapshot(setup.tournamentId());
+    assertRegenerated(before, after);
+    assertThat(after.seeds()).containsExactlyInAnyOrder(1, 2, 3, 4);
+    assertThat(after.bracketTypes())
+        .containsExactlyInAnyOrder(
+            BracketType.WINNERS,
+            BracketType.WINNERS,
+            BracketType.LOSERS,
+            BracketType.LOSERS,
+            BracketType.FINAL,
+            BracketType.GRAND_FINAL);
+  }
+
+  @Test
   void deleteTournament_whenNotFound_returnsNotFound() throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     String token = registerAndGetToken("delnf" + suffix);
@@ -604,4 +671,89 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
         .andExpect(
             jsonPath("$.message").value("Tournament can only be started when bracket is ready"));
   }
+
+  private TournamentSetup createTournamentWithPlayers(
+      String title, GameType gameType, TournamentFormat format, int participantCount)
+      throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String organizerToken = registerAndGetToken("rshorg" + suffix);
+    String[] playerTokens = new String[participantCount];
+    for (int i = 0; i < participantCount; i++) {
+      playerTokens[i] = registerAndGetToken("rshp" + i + suffix);
+    }
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", organizerToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(title, gameType, format))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(tournamentJson.get("id").asText());
+    String joinCode = tournamentJson.get("joinCode").asText();
+    for (String playerToken : playerTokens) {
+      mockMvc
+          .perform(
+              post("/api/v1/tournaments/join")
+                  .cookie(TestCookieHelper.cookie("accessToken", playerToken))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(objectMapper.writeValueAsString(new JoinTournamentRequest(joinCode))))
+          .andExpect(status().isOk());
+    }
+
+    return new TournamentSetup(organizerToken, tournamentId);
+  }
+
+  private void generateBracket(TournamentSetup setup) throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", setup.tournamentId())
+                .cookie(TestCookieHelper.cookie("accessToken", setup.organizerToken())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("BRACKET_READY"));
+  }
+
+  private PersistedBracketSnapshot bracketSnapshot(UUID tournamentId) {
+    return transactionTemplate.execute(
+        status -> {
+          Tournament tournament = tournamentRepository.findById(tournamentId).orElseThrow();
+          List<UUID> teamIds =
+              tournament.getTeams().stream().map(TournamentTeam::getId).toList();
+          List<Integer> seeds =
+              tournament.getTeams().stream().map(TournamentTeam::getSeed).toList();
+          List<BracketType> bracketTypes =
+              tournament.getRounds().stream().map(TournamentRound::getBracketType).toList();
+          List<UUID> matchIds =
+              matchRepository
+                  .findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(tournamentId)
+                  .stream()
+                  .map(Match::getId)
+                  .toList();
+          return new PersistedBracketSnapshot(teamIds, matchIds, seeds, bracketTypes);
+        });
+  }
+
+  private void assertRegenerated(
+      PersistedBracketSnapshot before, PersistedBracketSnapshot after) {
+    assertThat(after.teamIds()).hasSameSizeAs(before.teamIds());
+    assertThat(after.matchIds()).hasSameSizeAs(before.matchIds());
+    assertThat(after.teamIds()).doesNotContainAnyElementsOf(before.teamIds());
+    assertThat(after.matchIds()).doesNotContainAnyElementsOf(before.matchIds());
+    assertThat(tournamentTeamRepository.findAllById(before.teamIds())).isEmpty();
+    assertThat(matchRepository.findAllById(before.matchIds())).isEmpty();
+  }
+
+  private record TournamentSetup(String organizerToken, UUID tournamentId) {}
+
+  private record PersistedBracketSnapshot(
+      List<UUID> teamIds,
+      List<UUID> matchIds,
+      List<Integer> seeds,
+      List<BracketType> bracketTypes) {}
 }
