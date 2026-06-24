@@ -179,6 +179,19 @@ class TournamentServiceTest {
     assertThat(result.playing()).containsExactly(playing);
   }
 
+  @Test
+  void listCompletedTournamentsForUser_returnsCompletedTournaments() {
+    User currentUser = organizer();
+    Tournament completed = registrationTournament();
+    completed.setStatus(TournamentStatus.COMPLETED);
+    when(tournamentRepository.findCompletedTournamentsForUser(currentUser.getId()))
+        .thenReturn(List.of(completed));
+
+    List<Tournament> result = tournamentService.listCompletedTournamentsForUser(currentUser);
+
+    assertThat(result).containsExactly(completed);
+  }
+
   // --- removeParticipant ---
   @Test
   void removeParticipant_whenTournamentIsInRegistration_removesParticipant() {

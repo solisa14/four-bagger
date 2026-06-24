@@ -3,6 +3,7 @@ package com.github.solisa14.fourbagger.api.tournament;
 import com.github.solisa14.fourbagger.api.user.User;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -67,6 +68,15 @@ class TournamentController {
     return ResponseEntity.ok(
         tournamentMapper.toTournamentListResponse(
             tournamentService.listActiveTournamentsForUser(currentUser)));
+  }
+
+  @GetMapping("/completed")
+  ResponseEntity<List<TournamentSummaryResponse>> listCompletedTournaments(
+      @AuthenticationPrincipal User currentUser) {
+    return ResponseEntity.ok(
+        tournamentService.listCompletedTournamentsForUser(currentUser).stream()
+            .map(tournamentMapper::toTournamentSummaryResponse)
+            .toList());
   }
 
   /**

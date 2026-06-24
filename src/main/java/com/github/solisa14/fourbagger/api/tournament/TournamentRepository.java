@@ -51,4 +51,15 @@ public interface TournamentRepository extends JpaRepository<Tournament, UUID> {
       """)
   List<Tournament> findParticipatingActiveTournaments(
       @Param("userId") UUID userId, @Param("statuses") Collection<TournamentStatus> statuses);
+
+  @Query(
+      """
+      select distinct t
+      from Tournament t
+      left join t.participants p
+      where t.status = 'COMPLETED'
+        and (t.organizer.id = :userId or p.user.id = :userId)
+      order by t.updatedAt desc
+      """)
+  List<Tournament> findCompletedTournamentsForUser(@Param("userId") UUID userId);
 }

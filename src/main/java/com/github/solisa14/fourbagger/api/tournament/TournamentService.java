@@ -120,6 +120,11 @@ public class TournamentService {
     return new ActiveTournaments(hosting, playing);
   }
 
+  @Transactional(readOnly = true)
+  public List<Tournament> listCompletedTournamentsForUser(User currentUser) {
+    return tournamentRepository.findCompletedTournamentsForUser(currentUser.getId());
+  }
+
   /**
    * Creates a new tournament with the given command and a randomly generated join code.
    *

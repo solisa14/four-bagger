@@ -56,6 +56,9 @@ class TournamentControllerWebMvcTest {
     when(tournamentMapper.toTournamentListResponse(any()))
         .thenAnswer(
             invocation -> detailMapper.toTournamentListResponse(invocation.getArgument(0)));
+    when(tournamentMapper.toTournamentSummaryResponse(any()))
+        .thenAnswer(
+            invocation -> detailMapper.toTournamentSummaryResponse(invocation.getArgument(0)));
     when(tournamentMapper.toCreateCommand(any(), any()))
         .thenAnswer(
             invocation ->
@@ -322,6 +325,34 @@ class TournamentControllerWebMvcTest {
         .andExpect(jsonPath("$.playing[0].status").value("IN_PROGRESS"))
         .andExpect(jsonPath("$.playing[0].format").value("DOUBLE_ELIMINATION"))
         .andExpect(jsonPath("$.playing[0].gameType").value("DOUBLES"));
+  }
+
+  @Test
+  void listCompletedTournaments_returnsCompletedTournamentSummaries() throws Exception {
+    User principal = authenticatedUser();
+    Tournament completed =
+        Tournament.builder()
+            .id(UUID.randomUUID())
+            .organizer(principal)
+            .title("Old Tournament")
+            .joinCode("OLD001")
+            .status(TournamentStatus.COMPLETED)
+            .gameType(GameType.SINGLES)
+            .format(TournamentFormat.SINGLE_ELIMINATION)
+            .build();
+    when(tournamentService.listCompletedTournamentsForUser(any()))
+        .thenReturn(java.util.List.of(completed));
+
+    mockMvc
+        .perform(get("/api/v1/tournaments/completed").with(user(principal)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(completed.getId().toString()))
+        .andExpect(jsonPath("$[0].title").value("Old Tournament"))
+        .andExpect(jsonPath("$[0].status").value("COMPLETED"))
+        .andExpect(jsonPath("$[0].format").value("SINGLE_ELIMINATION"))
+        .andExpect(jsonPath("$[0].gameType").value("SINGLES"))
+        .andExpect(jsonPath("$[0].joinCode").doesNotExist())
+        .andExpect(jsonPath("$[0].brackets").doesNotExist());
   }
 
   // ── Delete Tournament ─────────────────────────────────────────

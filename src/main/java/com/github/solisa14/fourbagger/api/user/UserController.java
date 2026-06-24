@@ -68,6 +68,7 @@ public class UserController {
    * @param request the password update request payload containing current and new passwords
    * @return an empty ResponseEntity upon successful update
    */
+  // TODO: Integrate password reset fields on the frontend settings page in a future batch
   @PutMapping("/me/password")
   public ResponseEntity<Void> updatePassword(
       @AuthenticationPrincipal User currentUser,
