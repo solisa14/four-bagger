@@ -154,6 +154,21 @@ class TournamentController {
   }
 
   /**
+   * Retrieves details of a tournament by its unique join code.
+   *
+   * @param currentUser the currently authenticated user
+   * @param joinCode the 6-character tournament join code
+   * @return the tournament detail response
+   */
+  @GetMapping("/join-code/{joinCode}")
+  ResponseEntity<TournamentDetailResponse> getTournamentByJoinCode(
+      @AuthenticationPrincipal User currentUser, @PathVariable String joinCode) {
+    Tournament tournament = tournamentService.getTournamentByJoinCode(joinCode);
+    return ResponseEntity.ok(
+        tournamentMapper.toTournamentDetailResponse(tournament, currentUser));
+  }
+
+  /**
    * Removes a participant from a tournament during the registration phase.
    *
    * @param id the UUID of the tournament

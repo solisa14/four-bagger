@@ -1005,6 +1005,26 @@ class TournamentServiceTest {
         .isInstanceOf(TournamentNotFoundException.class);
   }
 
+  // --- getTournamentByJoinCode ---
+
+  @Test
+  void getTournamentByJoinCode_whenFound_returnsTournament() {
+    Tournament tournament = registrationTournament();
+    when(tournamentRepository.findByJoinCode("ABC123")).thenReturn(Optional.of(tournament));
+
+    Tournament result = tournamentService.getTournamentByJoinCode("ABC123");
+
+    assertThat(result).isEqualTo(tournament);
+  }
+
+  @Test
+  void getTournamentByJoinCode_whenNotFound_throwsNotFoundException() {
+    when(tournamentRepository.findByJoinCode("BADCODE")).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> tournamentService.getTournamentByJoinCode("BADCODE"))
+        .isInstanceOf(TournamentNotFoundException.class);
+  }
+
   // --- createTournament ---
 
   @Test

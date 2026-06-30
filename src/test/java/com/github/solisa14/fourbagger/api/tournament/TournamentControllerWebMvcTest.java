@@ -295,6 +295,37 @@ class TournamentControllerWebMvcTest {
         .andExpect(jsonPath("$.message").value("You are not allowed to modify tournament: " + id));
   }
 
+  // ── Get Tournament By Join Code ──────────────────────────────────
+
+  @Test
+  void getTournamentByJoinCode_whenFound_returnsOk() throws Exception {
+    User principal = authenticatedUser();
+    UUID id = UUID.randomUUID();
+    Tournament tournament = registrationTournament(id, principal);
+    when(tournamentService.getTournamentByJoinCode("ABC123")).thenReturn(tournament);
+    stubTournamentDetailResponse(tournament, principal);
+
+    mockMvc
+        .perform(get("/api/v1/tournaments/join-code/ABC123").with(user(principal)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(id.toString()))
+        .andExpect(jsonPath("$.joinCode").value("ABC123"))
+        .andExpect(jsonPath("$.title").value("TestTournament"))
+        .andExpect(jsonPath("$.status").value("REGISTRATION"));
+  }
+
+  @Test
+  void getTournamentByJoinCode_whenNotFound_returnsNotFound() throws Exception {
+    User principal = authenticatedUser();
+    when(tournamentService.getTournamentByJoinCode("BADCODE"))
+        .thenThrow(new TournamentNotFoundException());
+
+    mockMvc
+        .perform(get("/api/v1/tournaments/join-code/BADCODE").with(user(principal)))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("Tournament not found"));
+  }
+
   @Test
   void listMyTournaments_returnsGroupedActiveTournamentSummaries() throws Exception {
     User principal = authenticatedUser();

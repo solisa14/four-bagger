@@ -80,6 +80,21 @@ public class TournamentService {
   }
 
   /**
+   * Retrieves a tournament by its unique join code.
+   *
+   * @param joinCode the 6-character join code of the tournament to retrieve
+   * @return the tournament
+   * @throws TournamentNotFoundException if no tournament exists with that join code
+   */
+  @Transactional(readOnly = true)
+  public Tournament getTournamentByJoinCode(String joinCode) {
+    Tournament tournament =
+        tournamentRepository.findByJoinCode(joinCode).orElseThrow(TournamentNotFoundException::new);
+    initializeTournamentDetails(tournament);
+    return tournament;
+  }
+
+  /**
    * Retrieves a tournament by its ID.
    *
    * @param id the UUID of the tournament
