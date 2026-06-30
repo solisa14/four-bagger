@@ -120,6 +120,53 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void getTournamentByJoinCode_afterPlayersJoin_serializesParticipantUsernames() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken("joinorg" + suffix);
+    String p1Token = registerAndGetToken("joinp1" + suffix);
+    String p2Token = registerAndGetToken("joinp2" + suffix);
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Join Code Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    for (String playerToken : new String[] {p1Token, p2Token}) {
+      mockMvc
+          .perform(
+              post("/api/v1/tournaments/join")
+                  .cookie(TestCookieHelper.cookie("accessToken", playerToken))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(objectMapper.writeValueAsString(new JoinTournamentRequest(joinCode))))
+          .andExpect(status().isOk());
+    }
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/join-code/{joinCode}", joinCode)
+                .cookie(TestCookieHelper.cookie("accessToken", p1Token)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Join Code Test"))
+        .andExpect(jsonPath("$.joinCode").value(joinCode))
+        .andExpect(jsonPath("$.status").value("REGISTRATION"))
+        .andExpect(jsonPath("$.participants.length()").value(2))
+        .andExpect(jsonPath("$.participants[0].username").exists())
+        .andExpect(jsonPath("$.participants[1].username").exists())
+        .andExpect(jsonPath("$.bracketEligibility.participantCount").value(2));
+  }
+
+  @Test
   void getTournament_afterTournamentStarted_returnsNestedRoundsWithMatches() throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     String orgToken = registerAndGetToken("readorg2" + suffix);

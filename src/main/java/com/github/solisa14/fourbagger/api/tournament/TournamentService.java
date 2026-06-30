@@ -89,7 +89,9 @@ public class TournamentService {
   @Transactional(readOnly = true)
   public Tournament getTournamentByJoinCode(String joinCode) {
     Tournament tournament =
-        tournamentRepository.findByJoinCode(joinCode).orElseThrow(TournamentNotFoundException::new);
+        tournamentRepository
+            .findDetailByJoinCode(joinCode)
+            .orElseThrow(TournamentNotFoundException::new);
     initializeTournamentDetails(tournament);
     return tournament;
   }

@@ -73,6 +73,28 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
   }
 
   @Test
+  void findDetailByJoinCode_fetchesParticipantUsersBeforeEntityManagerIsCleared() {
+    User organizer = savedUser("joincode-organizer");
+    User player = savedUser("joincode-player");
+    Tournament tournament =
+        saveTournament(
+            organizer, "Join Code Tournament", "JOIN01", TournamentStatus.REGISTRATION);
+    tournament
+        .getParticipants()
+        .add(TournamentParticipant.builder().tournament(tournament).user(player).build());
+    tournamentRepository.saveAndFlush(tournament);
+    entityManager.clear();
+
+    Tournament detail = tournamentRepository.findDetailByJoinCode("JOIN01").orElseThrow();
+    entityManager.clear();
+
+    assertThat(detail.getOrganizer().getUsername()).isEqualTo(organizer.getUsername());
+    assertThat(detail.getParticipants())
+        .extracting(participant -> participant.getUser().getUsername())
+        .containsExactly(player.getUsername());
+  }
+
+  @Test
   void findByOrganizerIdAndStatusIn_whenActiveAndCompletedExist_returnsOnlyActiveHosted() {
     User organizer = savedUser("active-host");
     saveTournament(organizer, "Hosted Registration", "HOST01", TournamentStatus.REGISTRATION);

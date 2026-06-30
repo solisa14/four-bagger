@@ -38,6 +38,23 @@ public interface TournamentRepository extends JpaRepository<Tournament, UUID> {
       """)
   Optional<Tournament> findDetailById(@Param("id") UUID id);
 
+  /**
+   * Retrieves the tournament detail access graph by join code.
+   *
+   * <p>Same fetch graph as {@link #findDetailById(UUID)} so invite previews can serialize
+   * organizer and participant details outside the service transaction.
+   */
+  @Query(
+      """
+      select distinct tournament
+      from Tournament tournament
+      join fetch tournament.organizer
+      left join fetch tournament.participants participant
+      left join fetch participant.user
+      where tournament.joinCode = :joinCode
+      """)
+  Optional<Tournament> findDetailByJoinCode(@Param("joinCode") String joinCode);
+
   List<Tournament> findByOrganizer_IdAndStatusInOrderByUpdatedAtDesc(
       UUID organizerId, Collection<TournamentStatus> statuses);
 
