@@ -51,9 +51,10 @@ public class TournamentMatchOverrideService {
 
     TournamentTeam winningTeam = resolveWinningTeam(match, request.winnerTeamId());
     TournamentTeam losingTeam = resolveLosingTeam(match, winningTeam);
+    int[] canonicalScores = deriveCanonicalScores(match, winningTeam);
 
     progressionService.applyMatchOverride(
-        match, winningTeam, losingTeam, request.teamOneWins(), request.teamTwoWins());
+        match, winningTeam, losingTeam, canonicalScores[0], canonicalScores[1]);
 
     match = loadMatch(matchId, tournamentId);
     return buildDetail(match);
@@ -72,33 +73,25 @@ public class TournamentMatchOverrideService {
       throw new InvalidTournamentStateException("Both teams must be assigned before overriding");
     }
 
-    validateSeriesScore(match, request);
+    validateWinnerTeam(match, request.winnerTeamId());
     validateDownstreamNotStarted(match);
   }
 
-  private void validateSeriesScore(Match match, OverrideTournamentMatchResultRequest request) {
-    int winsToClinch = progressionService.winsToClinch(match);
-    UUID winnerTeamId = request.winnerTeamId();
+  private void validateWinnerTeam(Match match, UUID winnerTeamId) {
     UUID teamOneId = match.getTeamOne().getId();
     UUID teamTwoId = match.getTeamTwo().getId();
 
     if (!winnerTeamId.equals(teamOneId) && !winnerTeamId.equals(teamTwoId)) {
       throw new InvalidTournamentStateException("Winner team is not a participant in the match");
     }
+  }
 
-    int teamOneWins = request.teamOneWins();
-    int teamTwoWins = request.teamTwoWins();
-    int winnerWins = winnerTeamId.equals(teamOneId) ? teamOneWins : teamTwoWins;
-    int loserWins = winnerTeamId.equals(teamOneId) ? teamTwoWins : teamOneWins;
-
-    if (winnerWins != winsToClinch) {
-      throw new InvalidTournamentStateException(
-          "Winner must have exactly " + winsToClinch + " wins for this round");
+  private int[] deriveCanonicalScores(Match match, TournamentTeam winningTeam) {
+    int winnerWins = progressionService.winsToClinch(match);
+    if (winningTeam.getId().equals(match.getTeamOne().getId())) {
+      return new int[] {winnerWins, 0};
     }
-    if (loserWins < 0 || loserWins >= winsToClinch) {
-      throw new InvalidTournamentStateException(
-          "Loser must have between 0 and " + (winsToClinch - 1) + " wins for this round");
-    }
+    return new int[] {0, winnerWins};
   }
 
   private void validateDownstreamNotStarted(Match match) {

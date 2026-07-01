@@ -254,7 +254,7 @@ class TournamentMatchControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new OverrideTournamentMatchResultRequest(winnerTeamId, 2, 1))))
+                        new OverrideTournamentMatchResultRequest(winnerTeamId))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(matchId.toString()));
   }

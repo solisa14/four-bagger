@@ -36,12 +36,12 @@ class TournamentMatchOverrideServiceTest {
   @InjectMocks private TournamentMatchOverrideService tournamentMatchOverrideService;
 
   @Test
-  void overrideMatchResult_whenOrganizerAndCompletedMatch_revertsAndAppliesOverride() {
+  void overrideMatchResult_whenOrganizerAndCompletedMatch_revertsAndAppliesCanonicalScores() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     User organizer = tournament.getOrganizer();
     Match match = completedMatch(tournament);
     OverrideTournamentMatchResultRequest request =
-        new OverrideTournamentMatchResultRequest(match.getTeamTwo().getId(), 0, 1);
+        new OverrideTournamentMatchResultRequest(match.getTeamTwo().getId());
     TournamentMatchDetailResponse detail = detailResponse(match);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
@@ -64,13 +64,38 @@ class TournamentMatchOverrideServiceTest {
   }
 
   @Test
+  void overrideMatchResult_whenBestOfFive_derivesThreeZeroCanonicalScore() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    User organizer = tournament.getOrganizer();
+    Match match = match(tournament);
+    match.getRound().setBestOf(5);
+    match.setStatus(MatchStatus.IN_PROGRESS);
+    OverrideTournamentMatchResultRequest request =
+        new OverrideTournamentMatchResultRequest(match.getTeamOne().getId());
+    TournamentMatchDetailResponse detail = detailResponse(match);
+
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    when(progressionService.winsToClinch(match)).thenReturn(3);
+    when(progressionService.nextGameNumber(match)).thenReturn(null);
+    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
+    when(tournamentMapper.toMatchDetailResponse(eq(match), any(), eq(null))).thenReturn(detail);
+
+    tournamentMatchOverrideService.overrideMatchResult(
+        tournament.getId(), match.getId(), organizer, request);
+
+    verify(progressionService)
+        .applyMatchOverride(match, match.getTeamOne(), match.getTeamTwo(), 3, 0);
+  }
+
+  @Test
   void overrideMatchResult_whenInProgressMatch_skipsRevert() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     User organizer = tournament.getOrganizer();
     Match match = match(tournament);
     match.setStatus(MatchStatus.IN_PROGRESS);
     OverrideTournamentMatchResultRequest request =
-        new OverrideTournamentMatchResultRequest(match.getTeamOne().getId(), 1, 0);
+        new OverrideTournamentMatchResultRequest(match.getTeamOne().getId());
     TournamentMatchDetailResponse detail = detailResponse(match);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
@@ -97,11 +122,10 @@ class TournamentMatchOverrideServiceTest {
     downstream.setStatus(MatchStatus.IN_PROGRESS);
     match.setWinnerNextMatch(downstream);
     OverrideTournamentMatchResultRequest request =
-        new OverrideTournamentMatchResultRequest(match.getTeamTwo().getId(), 0, 1);
+        new OverrideTournamentMatchResultRequest(match.getTeamTwo().getId());
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
-    when(progressionService.winsToClinch(match)).thenReturn(1);
 
     assertThatThrownBy(
             () ->
@@ -115,23 +139,22 @@ class TournamentMatchOverrideServiceTest {
   }
 
   @Test
-  void overrideMatchResult_whenInvalidWinnerScore_throwsInvalidTournamentStateException() {
+  void overrideMatchResult_whenInvalidWinner_throwsInvalidTournamentStateException() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     User organizer = tournament.getOrganizer();
     Match match = match(tournament);
     OverrideTournamentMatchResultRequest request =
-        new OverrideTournamentMatchResultRequest(match.getTeamOne().getId(), 1, 1);
+        new OverrideTournamentMatchResultRequest(UUID.randomUUID());
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
-    when(progressionService.winsToClinch(match)).thenReturn(1);
 
     assertThatThrownBy(
             () ->
                 tournamentMatchOverrideService.overrideMatchResult(
                     tournament.getId(), match.getId(), organizer, request))
         .isInstanceOf(InvalidTournamentStateException.class)
-        .hasMessageContaining("Loser must have between 0 and 0 wins");
+        .hasMessageContaining("Winner team is not a participant in the match");
   }
 
   @Test
@@ -140,7 +163,7 @@ class TournamentMatchOverrideServiceTest {
     Match match = match(tournament);
     User participant = match.getTeamOne().getPlayerOne();
     OverrideTournamentMatchResultRequest request =
-        new OverrideTournamentMatchResultRequest(match.getTeamOne().getId(), 1, 0);
+        new OverrideTournamentMatchResultRequest(match.getTeamOne().getId());
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
