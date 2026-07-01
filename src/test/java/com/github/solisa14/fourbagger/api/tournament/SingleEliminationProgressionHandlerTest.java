@@ -52,6 +52,38 @@ class SingleEliminationProgressionHandlerTest {
     verify(tournamentRepository).save(tournament);
   }
 
+  @Test
+  void revert_whenWinnerRouteExists_clearsConfiguredDestinationSlot() {
+    Tournament tournament = tournament();
+    TournamentTeam winner = team(tournament);
+    TournamentTeam loser = team(tournament);
+    Match destination = match(tournament, null, null);
+    destination.setTeamTwo(winner);
+    Match source = match(tournament, winner, loser);
+    source.setWinnerNextMatch(destination);
+    source.setWinnerNextMatchPosition(2);
+
+    handler.revert(source, winner);
+
+    assertThat(destination.getTeamTwo()).isNull();
+    verify(matchRepository).save(destination);
+    verify(tournamentRepository, never()).save(tournament);
+  }
+
+  @Test
+  void revert_whenWinnerRouteIsTerminal_reopensCompletedTournament() {
+    Tournament tournament = tournament();
+    tournament.setStatus(TournamentStatus.COMPLETED);
+    TournamentTeam winner = team(tournament);
+    TournamentTeam loser = team(tournament);
+    Match source = match(tournament, winner, loser);
+
+    handler.revert(source, winner);
+
+    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+    verify(tournamentRepository).save(tournament);
+  }
+
   private Tournament tournament() {
     return Tournament.builder()
         .id(UUID.randomUUID())

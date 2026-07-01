@@ -19,12 +19,15 @@ class TournamentMatchController {
 
   private final TournamentMatchService tournamentMatchService;
   private final TournamentMatchResultService tournamentMatchResultService;
+  private final TournamentMatchOverrideService tournamentMatchOverrideService;
 
   TournamentMatchController(
       TournamentMatchService tournamentMatchService,
-      TournamentMatchResultService tournamentMatchResultService) {
+      TournamentMatchResultService tournamentMatchResultService,
+      TournamentMatchOverrideService tournamentMatchOverrideService) {
     this.tournamentMatchService = tournamentMatchService;
     this.tournamentMatchResultService = tournamentMatchResultService;
+    this.tournamentMatchOverrideService = tournamentMatchOverrideService;
   }
 
   @PostMapping("/{matchId}/start")
@@ -52,5 +55,16 @@ class TournamentMatchController {
         .body(
             tournamentMatchResultService.submitResult(
                 tournamentId, matchId, gameNumber, currentUser, request));
+  }
+
+  @PostMapping("/{matchId}/override")
+  ResponseEntity<TournamentMatchDetailResponse> overrideMatchResult(
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable UUID tournamentId,
+      @PathVariable UUID matchId,
+      @Valid @RequestBody OverrideTournamentMatchResultRequest request) {
+    return ResponseEntity.ok(
+        tournamentMatchOverrideService.overrideMatchResult(
+            tournamentId, matchId, currentUser, request));
   }
 }

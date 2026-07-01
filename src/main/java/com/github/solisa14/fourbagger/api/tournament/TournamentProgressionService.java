@@ -45,6 +45,50 @@ class TournamentProgressionService {
     return (match.getRound().getBestOf() / 2) + 1;
   }
 
+  @Transactional
+  void revertMatchCompletion(Match match) {
+    if (match.getStatus() != MatchStatus.COMPLETED) {
+      return;
+    }
+
+    TournamentTeam oldWinner = match.getWinner();
+    if (oldWinner == null) {
+      return;
+    }
+
+    TournamentTeam oldLoser = resolveLosingTeam(match, oldWinner);
+    Tournament tournament = match.getRound().getTournament();
+    TournamentFormat format =
+        tournament.getFormat() != null
+            ? tournament.getFormat()
+            : TournamentFormat.SINGLE_ELIMINATION;
+
+    if (format == TournamentFormat.SINGLE_ELIMINATION) {
+      singleEliminationProgressionHandler.revert(match, oldWinner);
+    } else if (format == TournamentFormat.DOUBLE_ELIMINATION) {
+      doubleEliminationProgressionHandler.revert(match, oldWinner, oldLoser);
+    } else {
+      throw new InvalidTournamentStateException("Unsupported tournament format: " + format);
+    }
+
+    match.setWinner(null);
+    match.setStatus(MatchStatus.IN_PROGRESS);
+    matchRepository.save(match);
+  }
+
+  @Transactional
+  void applyMatchOverride(
+      Match match,
+      TournamentTeam winningTeam,
+      TournamentTeam losingTeam,
+      int teamOneWins,
+      int teamTwoWins) {
+    validateWinnerTeam(match, winningTeam);
+    match.setTeamOneWins(teamOneWins);
+    match.setTeamTwoWins(teamTwoWins);
+    completeMatch(match, winningTeam, losingTeam);
+  }
+
   boolean isSeriesClinched(Match match) {
     int winsToClinch = winsToClinch(match);
     return match.getTeamOneWins() >= winsToClinch || match.getTeamTwoWins() >= winsToClinch;

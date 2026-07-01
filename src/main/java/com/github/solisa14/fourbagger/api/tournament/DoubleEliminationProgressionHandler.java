@@ -39,6 +39,28 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
     }
   }
 
+  void revert(Match match, TournamentTeam oldWinner, TournamentTeam oldLoser) {
+    if (oldLoser != null) {
+      oldLoser.setLosses(Math.max(0, oldLoser.getLosses() - 1));
+      if (oldLoser.getLosses() < LOSSES_TO_ELIMINATE) {
+        oldLoser.setEliminated(false);
+      }
+    }
+
+    if (isFirstFinal(match)) {
+      revertFirstFinal(match, oldWinner, oldLoser);
+      return;
+    }
+
+    removeTeamFromSlot(oldWinner, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
+    removeTeamFromSlot(oldLoser, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
+    saveDestinationMatches(match);
+
+    if (match.getWinnerNextMatch() == null && match.getLoserNextMatch() == null) {
+      reopenTournamentIfCompleted(match.getRound().getTournament());
+    }
+  }
+
   private void progressFirstFinal(
       Match match, TournamentTeam winningTeam, TournamentTeam losingTeam) {
     if (losingTeam.isEliminated()) {
@@ -59,6 +81,23 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
         && match.getWinnerNextMatch().getRound().getBracketType() == BracketType.GRAND_FINAL;
   }
 
+  private void revertFirstFinal(Match match, TournamentTeam oldWinner, TournamentTeam oldLoser) {
+    Match resetFinal = match.getWinnerNextMatch();
+    if (resetFinal == null) {
+      reopenTournamentIfCompleted(match.getRound().getTournament());
+      return;
+    }
+
+    if (resetFinal.getTeamOne() != null || resetFinal.getTeamTwo() != null) {
+      removeTeamFromSlot(oldWinner, resetFinal, match.getWinnerNextMatchPosition());
+      removeTeamFromSlot(oldLoser, resetFinal, match.getLoserNextMatchPosition());
+      matchRepository.save(resetFinal);
+      return;
+    }
+
+    reopenTournamentIfCompleted(match.getRound().getTournament());
+  }
+
   private void routeTeam(TournamentTeam team, Match destination, Integer position) {
     if (destination == null || position == null) {
       return;
@@ -67,6 +106,19 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
       destination.setTeamOne(team);
     } else if (position == 2) {
       destination.setTeamTwo(team);
+    }
+  }
+
+  private void removeTeamFromSlot(TournamentTeam team, Match destination, Integer position) {
+    if (destination == null || team == null || position == null) {
+      return;
+    }
+    if (position == 1 && destination.getTeamOne() != null
+        && destination.getTeamOne().getId().equals(team.getId())) {
+      destination.setTeamOne(null);
+    } else if (position == 2 && destination.getTeamTwo() != null
+        && destination.getTeamTwo().getId().equals(team.getId())) {
+      destination.setTeamTwo(null);
     }
   }
 
@@ -84,5 +136,12 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
   private void completeTournament(Tournament tournament) {
     tournament.setStatus(TournamentStatus.COMPLETED);
     tournamentRepository.save(tournament);
+  }
+
+  private void reopenTournamentIfCompleted(Tournament tournament) {
+    if (tournament.getStatus() == TournamentStatus.COMPLETED) {
+      tournament.setStatus(TournamentStatus.IN_PROGRESS);
+      tournamentRepository.save(tournament);
+    }
   }
 }

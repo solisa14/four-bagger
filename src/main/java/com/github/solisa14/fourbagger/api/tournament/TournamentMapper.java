@@ -101,11 +101,13 @@ public class TournamentMapper {
       boolean isParticipant,
       boolean bracketEligible) {
     boolean registration = tournament.getStatus() == TournamentStatus.REGISTRATION;
+    boolean inProgress = tournament.getStatus() == TournamentStatus.IN_PROGRESS;
     return new TournamentViewerCapabilitiesResponse(
         isOrganizer,
         isOrganizer && registration && bracketEligible,
         isOrganizer && registration,
-        isParticipant && registration);
+        isParticipant && registration,
+        isOrganizer && inProgress);
   }
 
   private boolean isOrganizer(User currentViewer, Tournament tournament) {

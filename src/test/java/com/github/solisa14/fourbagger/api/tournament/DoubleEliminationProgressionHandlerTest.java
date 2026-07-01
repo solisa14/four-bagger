@@ -126,6 +126,47 @@ class DoubleEliminationProgressionHandlerTest {
     verify(tournamentRepository, never()).save(tournament);
   }
 
+  @Test
+  void revert_routesWinnerAndFirstTimeLoserWithoutEliminatingLoser() {
+    Tournament tournament = tournament();
+    TournamentTeam winner = team(tournament);
+    TournamentTeam loser = team(tournament);
+    Match winnerDestination = match(tournament, null, null);
+    winnerDestination.setTeamTwo(winner);
+    Match loserDestination = match(tournament, null, null);
+    loserDestination.setTeamOne(loser);
+    Match source = match(tournament, winner, loser);
+    source.setWinnerNextMatch(winnerDestination);
+    source.setWinnerNextMatchPosition(2);
+    source.setLoserNextMatch(loserDestination);
+    source.setLoserNextMatchPosition(1);
+    loser.setLosses(1);
+
+    handler.revert(source, winner, loser);
+
+    assertThat(winnerDestination.getTeamTwo()).isNull();
+    assertThat(loserDestination.getTeamOne()).isNull();
+    assertThat(loser.getLosses()).isZero();
+    assertThat(loser.isEliminated()).isFalse();
+    verify(matchRepository).save(winnerDestination);
+    verify(matchRepository).save(loserDestination);
+  }
+
+  @Test
+  void revert_whenLoserHadSecondLoss_restoresEliminationState() {
+    Tournament tournament = tournament();
+    TournamentTeam winner = team(tournament);
+    TournamentTeam loser = team(tournament);
+    loser.setLosses(2);
+    loser.setEliminated(true);
+    Match source = match(tournament, winner, loser);
+
+    handler.revert(source, winner, loser);
+
+    assertThat(loser.getLosses()).isEqualTo(1);
+    assertThat(loser.isEliminated()).isFalse();
+  }
+
   private Tournament tournament() {
     return Tournament.builder()
         .id(UUID.randomUUID())

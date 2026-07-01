@@ -150,6 +150,7 @@ class TournamentMapperTest {
     assertThat(response.viewerCapabilities().canGenerateBracket()).isTrue();
     assertThat(response.viewerCapabilities().canRemoveParticipants()).isTrue();
     assertThat(response.viewerCapabilities().canLeaveRegistration()).isFalse();
+    assertThat(response.viewerCapabilities().canOverrideMatchResults()).isFalse();
     assertThat(response.bracketEligibility().eligible()).isTrue();
   }
 
@@ -205,6 +206,20 @@ class TournamentMapperTest {
 
     assertThat(response.viewerCapabilities().canGenerateBracket()).isFalse();
     assertThat(response.viewerCapabilities().canRemoveParticipants()).isFalse();
+  }
+
+  @Test
+  void toTournamentDetailResponse_organizerCapabilitiesDuringInProgress() {
+    Tournament tournament = registrationTournament();
+    User organizer = user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
+    tournament.setOrganizer(organizer);
+    tournament.setStatus(TournamentStatus.IN_PROGRESS);
+
+    TournamentDetailResponse response = mapper.toTournamentDetailResponse(tournament, organizer);
+
+    assertThat(response.viewerCapabilities().canManageTournament()).isTrue();
+    assertThat(response.viewerCapabilities().canOverrideMatchResults()).isTrue();
+    assertThat(response.viewerCapabilities().canGenerateBracket()).isFalse();
   }
 
   private Tournament registrationTournament() {

@@ -27,6 +27,17 @@ class SingleEliminationProgressionHandler implements TournamentProgressionHandle
     completeTournament(match.getRound().getTournament());
   }
 
+  void revert(Match match, TournamentTeam oldWinner) {
+    Match destination = match.getWinnerNextMatch();
+    if (destination != null) {
+      removeTeamFromSlot(oldWinner, destination, match.getWinnerNextMatchPosition());
+      matchRepository.save(destination);
+      return;
+    }
+
+    reopenTournamentIfCompleted(match.getRound().getTournament());
+  }
+
   private void assignTeam(TournamentTeam team, Match destination, Integer position) {
     if (position != null && position == 1) {
       destination.setTeamOne(team);
@@ -35,8 +46,25 @@ class SingleEliminationProgressionHandler implements TournamentProgressionHandle
     }
   }
 
+  private void removeTeamFromSlot(TournamentTeam team, Match destination, Integer position) {
+    if (position != null && position == 1 && destination.getTeamOne() != null
+        && destination.getTeamOne().getId().equals(team.getId())) {
+      destination.setTeamOne(null);
+    } else if (position != null && position == 2 && destination.getTeamTwo() != null
+        && destination.getTeamTwo().getId().equals(team.getId())) {
+      destination.setTeamTwo(null);
+    }
+  }
+
   private void completeTournament(Tournament tournament) {
     tournament.setStatus(TournamentStatus.COMPLETED);
     tournamentRepository.save(tournament);
+  }
+
+  private void reopenTournamentIfCompleted(Tournament tournament) {
+    if (tournament.getStatus() == TournamentStatus.COMPLETED) {
+      tournament.setStatus(TournamentStatus.IN_PROGRESS);
+      tournamentRepository.save(tournament);
+    }
   }
 }

@@ -40,6 +40,7 @@ class TournamentMatchControllerWebMvcTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
   @MockitoBean private TournamentMatchService tournamentMatchService;
   @MockitoBean private TournamentMatchResultService tournamentMatchResultService;
+  @MockitoBean private TournamentMatchOverrideService tournamentMatchOverrideService;
   @MockitoBean private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
   @MockitoBean private com.github.solisa14.fourbagger.api.user.UserService userService;
 
@@ -232,6 +233,30 @@ class TournamentMatchControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
         .andExpect(status().isMethodNotAllowed());
+  }
+
+  @Test
+  void overrideMatchResult_whenValid_returnsOkWithMatchDetail() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    UUID matchId = UUID.randomUUID();
+    UUID winnerTeamId = UUID.randomUUID();
+    TournamentMatchDetailResponse detail = matchDetail(matchId);
+
+    when(tournamentMatchOverrideService.overrideMatchResult(
+            eq(tournamentId), eq(matchId), any(), any()))
+        .thenReturn(detail);
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{tournamentId}/matches/{matchId}/override", tournamentId, matchId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        new OverrideTournamentMatchResultRequest(winnerTeamId, 2, 1))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(matchId.toString()));
   }
 
   @Test
