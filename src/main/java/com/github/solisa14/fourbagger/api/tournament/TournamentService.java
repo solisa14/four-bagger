@@ -30,6 +30,7 @@ public class TournamentService {
   private final TournamentRepository tournamentRepository;
   private final TournamentBracketService tournamentBracketService;
   private final TournamentBracketEligibilityPolicy bracketEligibilityPolicy;
+  private final TournamentGameResultRepository tournamentGameResultRepository;
 
   /**
    * Constructs a new TournamentService with required dependencies.
@@ -37,14 +38,17 @@ public class TournamentService {
    * @param tournamentRepository the repository for tournament data access
    * @param tournamentBracketService the service for generating tournament brackets
    * @param bracketEligibilityPolicy the policy for bracket participant eligibility
+   * @param tournamentGameResultRepository the repository for tournament game results
    */
   public TournamentService(
       TournamentRepository tournamentRepository,
       TournamentBracketService tournamentBracketService,
-      TournamentBracketEligibilityPolicy bracketEligibilityPolicy) {
+      TournamentBracketEligibilityPolicy bracketEligibilityPolicy,
+      TournamentGameResultRepository tournamentGameResultRepository) {
     this.tournamentRepository = tournamentRepository;
     this.tournamentBracketService = tournamentBracketService;
     this.bracketEligibilityPolicy = bracketEligibilityPolicy;
+    this.tournamentGameResultRepository = tournamentGameResultRepository;
   }
 
   /**
@@ -183,6 +187,7 @@ public class TournamentService {
     Tournament tournament =
         tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
     authorizeOrganizer(currentUser, tournament);
+    tournamentGameResultRepository.deleteByTournamentId(id);
     tournamentRepository.deleteById(id);
   }
 

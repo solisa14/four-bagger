@@ -19,4 +19,12 @@ public interface TournamentGameResultRepository extends JpaRepository<Tournament
   @Modifying
   @Query("delete from TournamentGameResult result where result.match.id = :matchId")
   void deleteByMatchId(@Param("matchId") UUID matchId);
+
+  @Modifying
+  @Query(
+      """
+      delete from TournamentGameResult result
+      where result.match.round.tournament.id = :tournamentId
+      """)
+  void deleteByTournamentId(@Param("tournamentId") UUID tournamentId);
 }

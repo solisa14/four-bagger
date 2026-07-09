@@ -1,6 +1,7 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -29,6 +30,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired private TournamentService tournamentService;
   @Autowired private MatchRepository matchRepository;
+  @Autowired private TournamentGameResultRepository tournamentGameResultRepository;
   @Autowired private UserRepository userRepository;
 
   @Test
@@ -475,6 +477,102 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("COMPLETED"));
+  }
+
+  @Test
+  void deleteTournament_whenCompletedWithGameResults_deletesTournamentAndDependents()
+      throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken("delorg" + suffix);
+    registerAndGetToken("delp1" + suffix);
+    registerAndGetToken("delp2" + suffix);
+    registerAndGetToken("delp3" + suffix);
+    registerAndGetToken("delp4" + suffix);
+
+    User organizer = userRepository.findUserByUsername("delorg" + suffix + "user").orElseThrow();
+    User player1 = userRepository.findUserByUsername("delp1" + suffix + "user").orElseThrow();
+    User player2 = userRepository.findUserByUsername("delp2" + suffix + "user").orElseThrow();
+    User player3 = userRepository.findUserByUsername("delp3" + suffix + "user").orElseThrow();
+    User player4 = userRepository.findUserByUsername("delp4" + suffix + "user").orElseThrow();
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Completed Delete Test",
+                                null,
+                                TournamentFormat.SINGLE_ELIMINATION))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(tournamentJson.get("id").asText());
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    tournamentService.joinTournament(joinCode, player1);
+    tournamentService.joinTournament(joinCode, player2);
+    tournamentService.joinTournament(joinCode, player3);
+    tournamentService.joinTournament(joinCode, player4);
+    tournamentService.generateBracket(tournamentId, organizer);
+    tournamentService.startTournament(tournamentId, organizer);
+
+    List<Match> initialMatches =
+        matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
+            tournamentId);
+    assertThat(initialMatches).hasSize(3);
+    completeMatchWithTeamOneWin(tournamentId, initialMatches.get(0).getId(), orgToken);
+    completeMatchWithTeamOneWin(tournamentId, initialMatches.get(1).getId(), orgToken);
+    completeMatchWithTeamOneWin(tournamentId, initialMatches.get(2).getId(), orgToken);
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COMPLETED"));
+
+    List<UUID> matchIds =
+        matchRepository
+            .findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(tournamentId)
+            .stream()
+            .map(Match::getId)
+            .toList();
+    assertThat(matchIds)
+        .isNotEmpty()
+        .allSatisfy(
+            matchId ->
+                assertThat(tournamentGameResultRepository.findByMatchIdOrderByGameNumberAsc(matchId))
+                    .isNotEmpty());
+
+    mockMvc
+        .perform(
+            delete("/api/v1/tournaments/{id}", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isNotFound());
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/completed")
+                .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[?(@.id == '" + tournamentId + "')]").isEmpty());
+
+    assertThat(matchIds)
+        .allSatisfy(
+            matchId ->
+                assertThat(tournamentGameResultRepository.findByMatchIdOrderByGameNumberAsc(matchId))
+                    .isEmpty());
   }
 
   @Test
