@@ -58,6 +58,12 @@ public class TournamentMatchResultService {
       return handleExistingResult(existingResult.get(), request, match);
     }
 
+    // After idempotency: exact/conflicting retries must still work when the tournament is no longer live.
+    if (tournament.getStatus() != TournamentStatus.IN_PROGRESS) {
+      throw new InvalidTournamentStateException(
+          "Cannot submit results unless the tournament is IN_PROGRESS");
+    }
+
     Integer expectedGameNumber = progressionService.nextGameNumber(match);
     if (expectedGameNumber == null) {
       throw new InvalidTournamentStateException("Match series is already clinched");

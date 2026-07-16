@@ -67,6 +67,31 @@ class TournamentMatchResultServiceTest {
   }
 
   @Test
+  void submitResult_whenTournamentNotInProgress_rejectsNewResultWithoutPersisting() {
+    Tournament tournament = tournament();
+    tournament.setStatus(TournamentStatus.COMPLETED);
+    Match match = match(tournament);
+    match.setStatus(MatchStatus.IN_PROGRESS);
+    User submitter = match.getTeamOne().getPlayerOne();
+    SubmitTournamentGameResultRequest request =
+        new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
+
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    when(resultRepository.findByMatchIdAndGameNumber(match.getId(), 1)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                tournamentMatchResultService.submitResult(
+                    tournament.getId(), match.getId(), 1, submitter, request))
+        .isInstanceOf(InvalidTournamentStateException.class)
+        .hasMessageContaining("IN_PROGRESS");
+
+    verify(resultRepository, never()).saveAndFlush(any());
+    verify(progressionService, never()).applyGameResult(any());
+  }
+
+  @Test
   void submitResult_whenExactRetry_returnsDetailWithoutReapplyingProgression() {
     Tournament tournament = tournament();
     Match match = match(tournament);
@@ -95,6 +120,47 @@ class TournamentMatchResultServiceTest {
         .thenReturn(List.of(existing));
     when(progressionService.nextGameNumber(match)).thenReturn(2);
     when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of(existing)), eq(2)))
+        .thenReturn(detail);
+
+    TournamentMatchDetailResponse result =
+        tournamentMatchResultService.submitResult(
+            tournament.getId(), match.getId(), 1, submitter, request);
+
+    assertThat(result).isEqualTo(detail);
+    verify(resultRepository, never()).saveAndFlush(any());
+    verify(progressionService, never()).applyGameResult(any());
+  }
+
+  @Test
+  void submitResult_whenExactRetryAndTournamentNotInProgress_returnsDetail() {
+    Tournament tournament = tournament();
+    tournament.setStatus(TournamentStatus.COMPLETED);
+    Match match = match(tournament);
+    match.setStatus(MatchStatus.COMPLETED);
+    User submitter = match.getTeamOne().getPlayerOne();
+    TournamentGameResult existing =
+        TournamentGameResult.builder()
+            .id(UUID.randomUUID())
+            .match(match)
+            .gameNumber(1)
+            .winnerTeam(match.getTeamOne())
+            .teamOneScore(21)
+            .teamTwoScore(15)
+            .submittedBy(submitter)
+            .submittedAt(Instant.now())
+            .build();
+    SubmitTournamentGameResultRequest request =
+        new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
+    TournamentMatchDetailResponse detail = detailResponse(match);
+
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    when(resultRepository.findByMatchIdAndGameNumber(match.getId(), 1))
+        .thenReturn(Optional.of(existing));
+    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId()))
+        .thenReturn(List.of(existing));
+    when(progressionService.nextGameNumber(match)).thenReturn(null);
+    when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of(existing)), eq(null)))
         .thenReturn(detail);
 
     TournamentMatchDetailResponse result =
@@ -137,6 +203,42 @@ class TournamentMatchResultServiceTest {
                     tournament.getId(), match.getId(), 1, submitter, request))
         .isInstanceOf(ResultAlreadySubmittedException.class);
 
+    verify(progressionService, never()).applyGameResult(any());
+  }
+
+  @Test
+  void submitResult_whenConflictingRetryAndTournamentNotInProgress_throwsResultAlreadySubmittedException() {
+    Tournament tournament = tournament();
+    tournament.setStatus(TournamentStatus.COMPLETED);
+    Match match = match(tournament);
+    match.setStatus(MatchStatus.COMPLETED);
+    User submitter = match.getTeamOne().getPlayerOne();
+    TournamentGameResult existing =
+        TournamentGameResult.builder()
+            .id(UUID.randomUUID())
+            .match(match)
+            .gameNumber(1)
+            .winnerTeam(match.getTeamOne())
+            .teamOneScore(21)
+            .teamTwoScore(15)
+            .submittedBy(submitter)
+            .submittedAt(Instant.now())
+            .build();
+    SubmitTournamentGameResultRequest request =
+        new SubmitTournamentGameResultRequest(match.getTeamTwo().getId(), 18, 21);
+
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    when(resultRepository.findByMatchIdAndGameNumber(match.getId(), 1))
+        .thenReturn(Optional.of(existing));
+
+    assertThatThrownBy(
+            () ->
+                tournamentMatchResultService.submitResult(
+                    tournament.getId(), match.getId(), 1, submitter, request))
+        .isInstanceOf(ResultAlreadySubmittedException.class);
+
+    verify(resultRepository, never()).saveAndFlush(any());
     verify(progressionService, never()).applyGameResult(any());
   }
 
