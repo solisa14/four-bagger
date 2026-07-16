@@ -29,7 +29,8 @@ class TournamentServiceTest {
 
   private final TournamentBracketService tournamentBracketService =
       new TournamentBracketService(
-          new SingleEliminationBracketGenerator(), new DoubleEliminationBracketGenerator());
+          new SingleEliminationBracketGenerator(),
+          new DoubleEliminationBracketGenerator(new DoubleEliminationByeResolver()));
   private final TournamentBracketEligibilityPolicy bracketEligibilityPolicy =
       new TournamentBracketEligibilityPolicy();
   @Mock private TournamentRepository tournamentRepository;

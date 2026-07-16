@@ -157,6 +157,79 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void submitResult_whenFiveTeamDoubleEliminationBracketCompletes_progressesEntireGraph()
+      throws Exception {
+    ProgressionFixture fixture = createSinglesDoubleEliminationTournament(5, "five");
+
+    List<Match> matches = tournamentMatches(fixture.tournamentId());
+    Match realFirstRound =
+        matches.stream()
+            .filter(candidate -> candidate.getRound().getBracketType() == BracketType.WINNERS)
+            .filter(candidate -> candidate.getRound().getRoundNumber() == 1)
+            .filter(candidate -> !candidate.isBye())
+            .findFirst()
+            .orElseThrow();
+    UUID expectedLosersByeWinnerId = realFirstRound.getTeamTwo().getId();
+
+    completeMatchWithTeamOneWin(fixture.tournamentId(), realFirstRound.getId(), fixture.orgToken());
+
+    Match runtimeLosersBye =
+        tournamentMatches(fixture.tournamentId()).stream()
+            .filter(candidate -> candidate.getRound().getBracketType() == BracketType.LOSERS)
+            .filter(candidate -> candidate.getRound().getRoundNumber() == 1)
+            .filter(Match::isBye)
+            .filter(candidate -> candidate.getWinner() != null)
+            .findFirst()
+            .orElseThrow();
+    assertThat(runtimeLosersBye.getStatus()).isEqualTo(MatchStatus.COMPLETED);
+    assertThat(runtimeLosersBye.getWinner().getId()).isEqualTo(expectedLosersByeWinnerId);
+
+    Match detailedLosersBye =
+        matchRepository.findForResponseById(runtimeLosersBye.getId()).orElseThrow();
+    assertThat(detailedLosersBye.getWinnerNextMatch().getTeamOne().getId())
+        .isEqualTo(expectedLosersByeWinnerId);
+
+    playThroughRemainingPlayableMatches(fixture.tournamentId(), fixture.orgToken());
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", fixture.tournamentId())
+                .cookie(TestCookieHelper.cookie("accessToken", fixture.orgToken())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COMPLETED"));
+  }
+
+  @Test
+  void submitResult_whenSixTeamDoubleEliminationBracketCompletes_progressesEntireGraph()
+      throws Exception {
+    ProgressionFixture fixture = createSinglesDoubleEliminationTournament(6, "six");
+
+    playThroughRemainingPlayableMatches(fixture.tournamentId(), fixture.orgToken());
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", fixture.tournamentId())
+                .cookie(TestCookieHelper.cookie("accessToken", fixture.orgToken())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COMPLETED"));
+  }
+
+  @Test
+  void submitResult_whenSevenTeamDoubleEliminationBracketCompletes_progressesEntireGraph()
+      throws Exception {
+    ProgressionFixture fixture = createSinglesDoubleEliminationTournament(7, "seven");
+
+    playThroughRemainingPlayableMatches(fixture.tournamentId(), fixture.orgToken());
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{id}", fixture.tournamentId())
+                .cookie(TestCookieHelper.cookie("accessToken", fixture.orgToken())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COMPLETED"));
+  }
+
+  @Test
   void submitResult_whenFourTeamDoublesDoubleEliminationBracketCompletes_progressesEntireGraph()
       throws Exception {
     String suffix = UUID.randomUUID().toString().substring(0, 8);
@@ -1048,6 +1121,70 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
       submitNextGameResult(tournamentId, matchId, orgToken, teamOneWins, detailJson);
     }
   }
+
+  private ProgressionFixture createSinglesDoubleEliminationTournament(
+      int participantCount, String label) throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String orgToken = registerAndGetToken(label + "org" + suffix);
+    User organizer =
+        userRepository.findUserByUsername(label + "org" + suffix + "user").orElseThrow();
+    List<User> players = new java.util.ArrayList<>(participantCount);
+    for (int i = 0; i < participantCount; i++) {
+      String usernamePrefix = label + "p" + i + suffix;
+      registerAndGetToken(usernamePrefix);
+      players.add(userRepository.findUserByUsername(usernamePrefix + "user").orElseThrow());
+    }
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", orgToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                label + " Double Elimination Progression",
+                                null,
+                                TournamentFormat.DOUBLE_ELIMINATION))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    var tournamentJson = objectMapper.readTree(createResult.getResponse().getContentAsString());
+    UUID tournamentId = UUID.fromString(tournamentJson.get("id").asText());
+    String joinCode = tournamentJson.get("joinCode").asText();
+
+    for (User player : players) {
+      tournamentService.joinTournament(joinCode, player);
+    }
+    tournamentService.generateBracket(tournamentId, organizer);
+    tournamentService.startTournament(tournamentId, organizer);
+    return new ProgressionFixture(tournamentId, orgToken);
+  }
+
+  private void playThroughRemainingPlayableMatches(UUID tournamentId, String orgToken)
+      throws Exception {
+    for (int safety = 0; safety < 64; safety++) {
+      List<Match> playable =
+          tournamentMatches(tournamentId).stream()
+              .filter(candidate -> !candidate.isBye())
+              .filter(
+                  candidate ->
+                      candidate.getStatus() == MatchStatus.PENDING
+                          || candidate.getStatus() == MatchStatus.IN_PROGRESS)
+              .filter(
+                  candidate ->
+                      candidate.getTeamOne() != null && candidate.getTeamTwo() != null)
+              .toList();
+      if (playable.isEmpty()) {
+        return;
+      }
+      completeMatchWithTeamOneWin(tournamentId, playable.getFirst().getId(), orgToken);
+    }
+    throw new IllegalStateException("Tournament did not drain playable matches within safety limit");
+  }
+
+  private record ProgressionFixture(UUID tournamentId, String orgToken) {}
 
   private void submitNextGameResult(
       UUID tournamentId, UUID matchId, String orgToken, boolean teamOneWins) throws Exception {

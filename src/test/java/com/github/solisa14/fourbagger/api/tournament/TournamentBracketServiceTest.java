@@ -81,6 +81,10 @@ class TournamentBracketServiceTest {
     private Tournament tournament;
     private List<TournamentTeam> seededTeams;
 
+    private RecordingDoubleEliminationGenerator() {
+      super(new DoubleEliminationByeResolver());
+    }
+
     @Override
     public void planBracket(Tournament tournament, List<TournamentTeam> seededTeams) {
       this.callCount++;

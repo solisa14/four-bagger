@@ -1,5 +1,7 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 /**
@@ -13,11 +15,15 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
 
   private final TournamentRepository tournamentRepository;
   private final MatchRepository matchRepository;
+  private final DoubleEliminationByeResolver byeResolver;
 
   DoubleEliminationProgressionHandler(
-      TournamentRepository tournamentRepository, MatchRepository matchRepository) {
+      TournamentRepository tournamentRepository,
+      MatchRepository matchRepository,
+      DoubleEliminationByeResolver byeResolver) {
     this.tournamentRepository = tournamentRepository;
     this.matchRepository = matchRepository;
+    this.byeResolver = byeResolver;
   }
 
   @Override
@@ -27,6 +33,7 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
 
     if (isFirstFinal(match)) {
       progressFirstFinal(match, winningTeam, losingTeam);
+      resolveAndPersistByes(match);
       return;
     }
 
@@ -34,6 +41,7 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
     routeTeam(losingTeam, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
 
     saveDestinationMatches(match);
+    resolveAndPersistByes(match);
     if (match.getWinnerNextMatch() == null && match.getLoserNextMatch() == null) {
       completeTournament(match.getRound().getTournament());
     }
@@ -49,12 +57,14 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
 
     if (isFirstFinal(match)) {
       revertFirstFinal(match, oldWinner, oldLoser);
+      revertAndPersistByes(match);
       return;
     }
 
     removeTeamFromSlot(oldWinner, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
     removeTeamFromSlot(oldLoser, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
     saveDestinationMatches(match);
+    revertAndPersistByes(match);
 
     if (match.getWinnerNextMatch() == null && match.getLoserNextMatch() == null) {
       reopenTournamentIfCompleted(match.getRound().getTournament());
@@ -96,6 +106,22 @@ class DoubleEliminationProgressionHandler implements TournamentProgressionHandle
     }
 
     reopenTournamentIfCompleted(match.getRound().getTournament());
+  }
+
+  private void resolveAndPersistByes(Match source) {
+    List<Match> changed = byeResolver.autoAdvanceResolvedByes(tournamentMatches(source));
+    changed.forEach(matchRepository::save);
+  }
+
+  private void revertAndPersistByes(Match source) {
+    List<Match> changed = byeResolver.revertUnresolvedByes(tournamentMatches(source), source);
+    changed.forEach(matchRepository::save);
+  }
+
+  private List<Match> tournamentMatches(Match source) {
+    UUID tournamentId = source.getRound().getTournament().getId();
+    return matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
+        tournamentId);
   }
 
   private void routeTeam(TournamentTeam team, Match destination, Integer position) {

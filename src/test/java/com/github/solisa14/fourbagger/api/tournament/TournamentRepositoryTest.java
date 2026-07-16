@@ -18,7 +18,8 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
 
   private final TournamentBracketService tournamentBracketService =
       new TournamentBracketService(
-          new SingleEliminationBracketGenerator(), new DoubleEliminationBracketGenerator());
+          new SingleEliminationBracketGenerator(),
+          new DoubleEliminationBracketGenerator(new DoubleEliminationByeResolver()));
 
   @Autowired private TournamentRepository tournamentRepository;
   @Autowired private MatchRepository matchRepository;

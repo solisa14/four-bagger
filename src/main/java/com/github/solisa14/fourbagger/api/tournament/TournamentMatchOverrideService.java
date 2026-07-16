@@ -103,6 +103,10 @@ public class TournamentMatchOverrideService {
     if (destination == null) {
       return;
     }
+    if (destination.isBye() && destination.getStatus() == MatchStatus.COMPLETED) {
+      validateDestinationNotLocked(destination.getWinnerNextMatch());
+      return;
+    }
     if (destination.getStartedAt() != null
         || destination.getStatus() == MatchStatus.IN_PROGRESS
         || destination.getStatus() == MatchStatus.COMPLETED) {

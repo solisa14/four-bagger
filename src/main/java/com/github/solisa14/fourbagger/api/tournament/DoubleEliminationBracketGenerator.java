@@ -17,6 +17,12 @@ public class DoubleEliminationBracketGenerator implements TournamentBracketGener
 
   private static final int MINIMUM_TEAM_COUNT = 4;
 
+  private final DoubleEliminationByeResolver byeResolver;
+
+  public DoubleEliminationBracketGenerator(DoubleEliminationByeResolver byeResolver) {
+    this.byeResolver = byeResolver;
+  }
+
   @Override
   public TournamentFormat format() {
     return TournamentFormat.DOUBLE_ELIMINATION;
@@ -38,7 +44,7 @@ public class DoubleEliminationBracketGenerator implements TournamentBracketGener
     seedFirstRound(bracket.winners().getFirst(), seededTeams, bracketSize);
     validateByes(bracket.winners().getFirst(), seededTeams.size(), bracketSize);
     autoAdvanceFirstRoundByes(bracket.winners().getFirst());
-    autoAdvanceResolvedByes(tournament);
+    byeResolver.autoAdvanceResolvedByes(allMatches(tournament));
     resetTeamState(seededTeams);
   }
 
@@ -290,65 +296,8 @@ public class DoubleEliminationBracketGenerator implements TournamentBracketGener
                     match.getWinnerNextMatchPosition()));
   }
 
-  private void autoAdvanceResolvedByes(Tournament tournament) {
-    List<Match> matches =
-        tournament.getRounds().stream().flatMap(round -> round.getMatches().stream()).toList();
-
-    boolean advanced;
-    do {
-      advanced = false;
-      for (Match match : matches) {
-        if (match.getStatus() != MatchStatus.PENDING || !allSourcesCompleted(matches, match)) {
-          continue;
-        }
-
-        TournamentTeam onlyTeam = onlyTeam(match);
-        if (teamCount(match) > 1) {
-          continue;
-        }
-
-        match.setBye(true);
-        match.setStatus(MatchStatus.COMPLETED);
-        match.setWinner(onlyTeam);
-        if (onlyTeam != null) {
-          assignTeam(onlyTeam, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
-        }
-        advanced = true;
-      }
-    } while (advanced);
-  }
-
-  private boolean allSourcesCompleted(List<Match> matches, Match destination) {
-    List<Match> sources =
-        matches.stream()
-            .filter(
-                source ->
-                    source.getWinnerNextMatch() == destination
-                        || source.getLoserNextMatch() == destination)
-            .toList();
-    return !sources.isEmpty()
-        && sources.stream().allMatch(source -> source.getStatus() == MatchStatus.COMPLETED);
-  }
-
-  private int teamCount(Match match) {
-    int count = 0;
-    if (match.getTeamOne() != null) {
-      count++;
-    }
-    if (match.getTeamTwo() != null) {
-      count++;
-    }
-    return count;
-  }
-
-  private TournamentTeam onlyTeam(Match match) {
-    if (match.getTeamOne() != null && match.getTeamTwo() == null) {
-      return match.getTeamOne();
-    }
-    if (match.getTeamTwo() != null && match.getTeamOne() == null) {
-      return match.getTeamTwo();
-    }
-    return null;
+  private List<Match> allMatches(Tournament tournament) {
+    return tournament.getRounds().stream().flatMap(round -> round.getMatches().stream()).toList();
   }
 
   private void assignTeam(TournamentTeam team, Match destination, Integer position) {

@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class DoubleEliminationBracketGeneratorTest {
 
   private final DoubleEliminationBracketGenerator generator =
-      new DoubleEliminationBracketGenerator();
+      new DoubleEliminationBracketGenerator(new DoubleEliminationByeResolver());
 
   @Test
   void format_returnsDoubleElimination() {
@@ -195,6 +195,32 @@ class DoubleEliminationBracketGeneratorTest {
     assertThat(emptyLosersMatch.isBye()).isTrue();
     assertThat(emptyLosersMatch.getStatus()).isEqualTo(MatchStatus.COMPLETED);
     assertThat(emptyLosersMatch.getWinner()).isNull();
+  }
+
+  @Test
+  void planBracket_whenSixTeams_assignsByesAndResolvesEmptyLosersPath() {
+    Tournament tournament = tournament();
+    List<TournamentTeam> teams = addTeams(tournament, 6);
+
+    generator.planBracket(tournament, teams);
+
+    List<Match> firstWinnerRound = round(tournament, BracketType.WINNERS, 1).getMatches();
+    List<Match> byeMatches = firstWinnerRound.stream().filter(Match::isBye).toList();
+    assertThat(byeMatches).hasSize(2);
+    assertThat(byeMatches)
+        .extracting(match -> match.getWinner().getSeed())
+        .containsExactly(1, 2);
+    assertThat(firstWinnerRound.stream().filter(match -> !match.isBye())).hasSize(2);
+
+    List<Match> losersRoundOne = round(tournament, BracketType.LOSERS, 1).getMatches();
+    assertThat(losersRoundOne).hasSize(2);
+    Match emptyLosersMatch = losersRoundOne.getFirst();
+    assertThat(emptyLosersMatch.isBye()).isTrue();
+    assertThat(emptyLosersMatch.getStatus()).isEqualTo(MatchStatus.COMPLETED);
+    assertThat(emptyLosersMatch.getWinner()).isNull();
+    Match pendingLosersMatch = losersRoundOne.getLast();
+    assertThat(pendingLosersMatch.isBye()).isFalse();
+    assertThat(pendingLosersMatch.getStatus()).isEqualTo(MatchStatus.PENDING);
   }
 
   @Test

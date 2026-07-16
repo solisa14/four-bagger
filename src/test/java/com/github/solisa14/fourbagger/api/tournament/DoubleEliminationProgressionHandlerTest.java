@@ -1,13 +1,17 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -16,7 +20,15 @@ class DoubleEliminationProgressionHandlerTest {
 
   @Mock private TournamentRepository tournamentRepository;
   @Mock private MatchRepository matchRepository;
-  @InjectMocks private DoubleEliminationProgressionHandler handler;
+
+  private DoubleEliminationProgressionHandler handler;
+
+  @BeforeEach
+  void setUp() {
+    handler =
+        new DoubleEliminationProgressionHandler(
+            tournamentRepository, matchRepository, new DoubleEliminationByeResolver());
+  }
 
   @Test
   void progress_routesWinnerAndFirstTimeLoserWithoutEliminatingLoser() {
@@ -30,6 +42,7 @@ class DoubleEliminationProgressionHandlerTest {
     source.setWinnerNextMatchPosition(2);
     source.setLoserNextMatch(loserDestination);
     source.setLoserNextMatchPosition(1);
+    stubTournamentMatches(tournament, source, winnerDestination, loserDestination);
 
     handler.progress(source, winner, loser);
 
@@ -52,6 +65,7 @@ class DoubleEliminationProgressionHandlerTest {
     Match source = match(tournament, winner, loser);
     source.setWinnerNextMatch(winnerDestination);
     source.setWinnerNextMatchPosition(1);
+    stubTournamentMatches(tournament, source, winnerDestination);
 
     handler.progress(source, winner, loser);
 
@@ -67,6 +81,7 @@ class DoubleEliminationProgressionHandlerTest {
     TournamentTeam loser = team(tournament);
     loser.setLosses(1);
     Match source = match(tournament, winner, loser);
+    stubTournamentMatches(tournament, source);
 
     handler.progress(source, winner, loser);
 
@@ -88,6 +103,7 @@ class DoubleEliminationProgressionHandlerTest {
     firstFinal.setWinnerNextMatchPosition(2);
     firstFinal.setLoserNextMatch(reset);
     firstFinal.setLoserNextMatchPosition(1);
+    stubTournamentMatches(tournament, firstFinal, reset);
 
     handler.progress(firstFinal, undefeatedWinner, oneLossLoser);
 
@@ -113,6 +129,7 @@ class DoubleEliminationProgressionHandlerTest {
     firstFinal.setWinnerNextMatchPosition(2);
     firstFinal.setLoserNextMatch(reset);
     firstFinal.setLoserNextMatchPosition(1);
+    stubTournamentMatches(tournament, firstFinal, reset);
 
     handler.progress(firstFinal, oneLossWinner, undefeatedLoser);
 
@@ -124,6 +141,89 @@ class DoubleEliminationProgressionHandlerTest {
     assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
     verify(matchRepository).save(reset);
     verify(tournamentRepository, never()).save(tournament);
+  }
+
+  @Test
+  void progress_whenLoserEntersOneTeamLosersMatch_autoCompletesByeAndRoutesWinner() {
+    Tournament tournament = tournament();
+    TournamentTeam winner = team(tournament);
+    TournamentTeam loser = team(tournament);
+    Match winnerDestination = match(tournament, null, null);
+    Match losersNext = match(tournament, null, null);
+    Match completedFeeder =
+        match(tournament, BracketType.WINNERS, team(tournament), null);
+    completedFeeder.setBye(true);
+    completedFeeder.setStatus(MatchStatus.COMPLETED);
+    completedFeeder.setWinner(completedFeeder.getTeamOne());
+    Match losersMatch = match(tournament, BracketType.LOSERS, null, null);
+    losersMatch.setStatus(MatchStatus.PENDING);
+    Match source = match(tournament, winner, loser);
+    source.setStatus(MatchStatus.COMPLETED);
+    source.setWinnerNextMatch(winnerDestination);
+    source.setWinnerNextMatchPosition(1);
+    source.setLoserNextMatch(losersMatch);
+    source.setLoserNextMatchPosition(2);
+    completedFeeder.setLoserNextMatch(losersMatch);
+    completedFeeder.setLoserNextMatchPosition(1);
+    losersMatch.setWinnerNextMatch(losersNext);
+    losersMatch.setWinnerNextMatchPosition(1);
+    stubTournamentMatches(
+        tournament, completedFeeder, source, losersMatch, winnerDestination, losersNext);
+
+    handler.progress(source, winner, loser);
+
+    assertThat(losersMatch.getTeamTwo()).isSameAs(loser);
+    assertThat(losersMatch.isBye()).isTrue();
+    assertThat(losersMatch.getStatus()).isEqualTo(MatchStatus.COMPLETED);
+    assertThat(losersMatch.getWinner()).isSameAs(loser);
+    assertThat(losersNext.getTeamOne()).isSameAs(loser);
+    verify(matchRepository, atLeastOnce()).save(losersMatch);
+    verify(matchRepository, atLeastOnce()).save(losersNext);
+  }
+
+  @Test
+  void revert_whenRuntimeByeWasAutoAdvanced_resetsByeAndClearsDownstreamSlot() {
+    Tournament tournament = tournament();
+    TournamentTeam winner = team(tournament);
+    TournamentTeam loser = team(tournament);
+    Match winnerDestination = match(tournament, null, null);
+    winnerDestination.setTeamOne(winner);
+    Match losersNext = match(tournament, null, null);
+    losersNext.setTeamOne(loser);
+    Match completedFeeder =
+        match(tournament, BracketType.WINNERS, team(tournament), null);
+    completedFeeder.setBye(true);
+    completedFeeder.setStatus(MatchStatus.COMPLETED);
+    completedFeeder.setWinner(completedFeeder.getTeamOne());
+    Match losersMatch = match(tournament, BracketType.LOSERS, null, loser);
+    losersMatch.setBye(true);
+    losersMatch.setStatus(MatchStatus.COMPLETED);
+    losersMatch.setWinner(loser);
+    losersMatch.setWinnerNextMatch(losersNext);
+    losersMatch.setWinnerNextMatchPosition(1);
+    Match source = match(tournament, winner, loser);
+    source.setStatus(MatchStatus.COMPLETED);
+    source.setWinnerNextMatch(winnerDestination);
+    source.setWinnerNextMatchPosition(1);
+    source.setLoserNextMatch(losersMatch);
+    source.setLoserNextMatchPosition(2);
+    completedFeeder.setLoserNextMatch(losersMatch);
+    completedFeeder.setLoserNextMatchPosition(1);
+    loser.setLosses(1);
+    stubTournamentMatches(
+        tournament, completedFeeder, source, losersMatch, winnerDestination, losersNext);
+
+    handler.revert(source, winner, loser);
+
+    assertThat(winnerDestination.getTeamOne()).isNull();
+    assertThat(losersMatch.getTeamTwo()).isNull();
+    assertThat(losersMatch.isBye()).isFalse();
+    assertThat(losersMatch.getStatus()).isEqualTo(MatchStatus.PENDING);
+    assertThat(losersMatch.getWinner()).isNull();
+    assertThat(losersNext.getTeamOne()).isNull();
+    assertThat(loser.getLosses()).isZero();
+    verify(matchRepository, atLeastOnce()).save(losersMatch);
+    verify(matchRepository, atLeastOnce()).save(losersNext);
   }
 
   @Test
@@ -141,6 +241,7 @@ class DoubleEliminationProgressionHandlerTest {
     source.setLoserNextMatch(loserDestination);
     source.setLoserNextMatchPosition(1);
     loser.setLosses(1);
+    stubTournamentMatches(tournament, source, winnerDestination, loserDestination);
 
     handler.revert(source, winner, loser);
 
@@ -160,11 +261,19 @@ class DoubleEliminationProgressionHandlerTest {
     loser.setLosses(2);
     loser.setEliminated(true);
     Match source = match(tournament, winner, loser);
+    stubTournamentMatches(tournament, source);
 
     handler.revert(source, winner, loser);
 
     assertThat(loser.getLosses()).isEqualTo(1);
     assertThat(loser.isEliminated()).isFalse();
+  }
+
+  private void stubTournamentMatches(Tournament tournament, Match... matches) {
+    List<Match> matchList = new ArrayList<>(List.of(matches));
+    when(matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
+            tournament.getId()))
+        .thenReturn(matchList);
   }
 
   private Tournament tournament() {
@@ -179,8 +288,7 @@ class DoubleEliminationProgressionHandlerTest {
     return TournamentTeam.builder().id(UUID.randomUUID()).tournament(tournament).build();
   }
 
-  private Match match(
-      Tournament tournament, TournamentTeam teamOne, TournamentTeam teamTwo) {
+  private Match match(Tournament tournament, TournamentTeam teamOne, TournamentTeam teamTwo) {
     return match(tournament, BracketType.WINNERS, teamOne, teamTwo);
   }
 
@@ -202,6 +310,7 @@ class DoubleEliminationProgressionHandlerTest {
         .teamOne(teamOne)
         .teamTwo(teamTwo)
         .matchNumber(1)
+        .status(MatchStatus.PENDING)
         .build();
   }
 }
