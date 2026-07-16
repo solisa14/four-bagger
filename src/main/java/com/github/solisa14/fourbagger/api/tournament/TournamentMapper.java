@@ -18,7 +18,11 @@ public class TournamentMapper {
 
   public CreateTournamentCommand toCreateCommand(User organizer, CreateTournamentRequest request) {
     return new CreateTournamentCommand(
-        organizer, request.title(), request.gameType(), request.format());
+        organizer,
+        request.title(),
+        request.gameType(),
+        request.format(),
+        request.participationMode());
   }
 
   public TournamentResponse toTournamentResponse(Tournament tournament) {
@@ -30,6 +34,7 @@ public class TournamentMapper {
         tournament.getStatus(),
         tournament.getGameType(),
         tournament.getFormat(),
+        tournament.getParticipationMode(),
         brackets);
   }
 
@@ -46,6 +51,7 @@ public class TournamentMapper {
         tournament.getStatus(),
         tournament.getGameType(),
         tournament.getFormat(),
+        tournament.getParticipationMode(),
         brackets,
         toParticipantResponses(tournament, currentViewer),
         toBracketEligibilityResponse(eligibility),
@@ -74,14 +80,14 @@ public class TournamentMapper {
     return tournament.getParticipants().stream()
         .sorted(
             Comparator.comparing(
-                participant -> participant.getUser().getUsername(), String.CASE_INSENSITIVE_ORDER))
+                TournamentParticipant::identityLabel, String.CASE_INSENSITIVE_ORDER))
         .map(
             participant ->
                 new TournamentParticipantResponse(
                     participant.getId(),
-                    participant.getUser().getUsername(),
-                    currentViewerId != null
-                        && currentViewerId.equals(participant.getUser().getId())))
+                    participant.isGuest() ? null : participant.getUser().getUsername(),
+                    participant.isGuest() ? participant.getDisplayName() : null,
+                    participant.matchesUser(currentViewerId)))
         .toList();
   }
 
@@ -121,7 +127,7 @@ public class TournamentMapper {
     }
     UUID currentViewerId = currentViewer.getId();
     return tournament.getParticipants().stream()
-        .anyMatch(participant -> participant.getUser().getId().equals(currentViewerId));
+        .anyMatch(participant -> participant.matchesUser(currentViewerId));
   }
 
   private TournamentBracketsResponse toBracketsResponse(List<TournamentRound> rounds) {

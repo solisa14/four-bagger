@@ -124,9 +124,40 @@ class TournamentMapperTest {
 
     assertThat(response.participants()).hasSize(2);
     assertThat(response.participants().get(0).username()).isEqualTo("alice");
+    assertThat(response.participants().get(0).displayName()).isNull();
     assertThat(response.participants().get(0).currentViewer()).isTrue();
     assertThat(response.participants().get(1).username()).isEqualTo("Bob");
+    assertThat(response.participants().get(1).displayName()).isNull();
     assertThat(response.participants().get(1).currentViewer()).isFalse();
+  }
+
+  @Test
+  void toTournamentDetailResponse_mapsGuestParticipantsWithDisplayNameOnly() {
+    Tournament tournament =
+        Tournament.builder()
+            .id(UUID.randomUUID())
+            .title("Managed Cup")
+            .participationMode(TournamentParticipationMode.ORGANIZER_MANAGED)
+            .status(TournamentStatus.REGISTRATION)
+            .format(TournamentFormat.SINGLE_ELIMINATION)
+            .gameType(GameType.SINGLES)
+            .build();
+    User organizer = user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
+    tournament.setOrganizer(organizer);
+    tournament.addGuestParticipant("Alex");
+    tournament.addGuestParticipant("blake");
+
+    TournamentDetailResponse response = mapper.toTournamentDetailResponse(tournament, organizer);
+
+    assertThat(response.participationMode())
+        .isEqualTo(TournamentParticipationMode.ORGANIZER_MANAGED);
+    assertThat(response.joinCode()).isNull();
+    assertThat(response.participants()).hasSize(2);
+    assertThat(response.participants().get(0).username()).isNull();
+    assertThat(response.participants().get(0).displayName()).isEqualTo("Alex");
+    assertThat(response.participants().get(0).currentViewer()).isFalse();
+    assertThat(response.participants().get(1).username()).isNull();
+    assertThat(response.participants().get(1).displayName()).isEqualTo("blake");
   }
 
   @Test
@@ -227,6 +258,7 @@ class TournamentMapperTest {
         .id(UUID.randomUUID())
         .title("Tournament")
         .joinCode("ABC123")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
         .status(TournamentStatus.REGISTRATION)
         .format(TournamentFormat.SINGLE_ELIMINATION)
         .gameType(GameType.SINGLES)
@@ -242,6 +274,7 @@ class TournamentMapperTest {
         .id(UUID.randomUUID())
         .title("Tournament")
         .joinCode("ABC123")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
         .status(TournamentStatus.IN_PROGRESS)
         .format(TournamentFormat.DOUBLE_ELIMINATION)
         .build();

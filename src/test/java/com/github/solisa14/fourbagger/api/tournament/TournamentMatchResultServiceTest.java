@@ -321,6 +321,7 @@ class TournamentMatchResultServiceTest {
         .title("Tournament")
         .status(TournamentStatus.IN_PROGRESS)
         .joinCode("ABC123")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
         .build();
   }
 

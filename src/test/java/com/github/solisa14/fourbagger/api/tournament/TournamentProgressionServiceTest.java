@@ -145,6 +145,7 @@ class TournamentProgressionServiceTest {
         .title("Tournament")
         .status(status)
         .joinCode("ABC123")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
         .build();
   }
 

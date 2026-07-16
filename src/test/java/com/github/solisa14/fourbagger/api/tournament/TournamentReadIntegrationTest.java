@@ -41,7 +41,7 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Read Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Read Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
@@ -89,7 +89,7 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Participants Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Participants Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -135,7 +135,7 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Join Code Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Join Code Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -188,7 +188,7 @@ class TournamentReadIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Read Bracket Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Read Bracket Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();

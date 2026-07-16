@@ -7,6 +7,7 @@ import com.github.solisa14.fourbagger.api.game.Game;
 import com.github.solisa14.fourbagger.api.game.GameStatus;
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.tournament.Tournament;
+import com.github.solisa14.fourbagger.api.tournament.TournamentParticipationMode;
 import com.github.solisa14.fourbagger.api.tournament.TournamentStatus;
 import com.github.solisa14.fourbagger.api.tournament.TournamentTeam;
 import com.github.solisa14.fourbagger.api.user.Role;
@@ -87,6 +88,7 @@ public final class TestDataFactory {
         .organizer(organizer)
         .title(title)
         .joinCode(joinCode)
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
         .status(TournamentStatus.REGISTRATION)
         .gameType(gameType)
         .build();

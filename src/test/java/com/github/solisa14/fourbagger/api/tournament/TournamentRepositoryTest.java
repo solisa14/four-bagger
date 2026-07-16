@@ -151,6 +151,7 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
             .title("Routing Cup")
             .status(TournamentStatus.BRACKET_READY)
             .joinCode("ROUTE1")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
             .build();
     List<TournamentTeam> teams = seededTeams(tournament, 4);
     tournament.getTeams().addAll(teams);
@@ -194,6 +195,7 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
             .status(TournamentStatus.BRACKET_READY)
             .format(TournamentFormat.DOUBLE_ELIMINATION)
             .joinCode("RESP01")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
             .build();
     List<TournamentTeam> teams = seededTeams(tournament, 4);
     tournament.getTeams().addAll(teams);
@@ -240,6 +242,7 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
             .organizer(organizer)
             .title(title)
             .joinCode(joinCode)
+            .participationMode(TournamentParticipationMode.SELF_JOIN)
             .status(status)
             .build());
   }

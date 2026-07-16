@@ -64,6 +64,7 @@ class TournamentServiceTest {
         .title("Test Tournament")
         .status(TournamentStatus.REGISTRATION)
         .joinCode("ABC123")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
         .build();
   }
 
@@ -1042,18 +1043,59 @@ class TournamentServiceTest {
   // --- createTournament ---
 
   @Test
-  void createTournament_initializeTournamentWithCorrectDefaults() {
+  void createTournament_whenSelfJoin_persistsModeAndGeneratesJoinCode() {
     User organizer = organizer();
     when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
     Tournament result =
         tournamentService.createTournament(
-            new CreateTournamentCommand(organizer, "Test Tournament", null, null));
+            new CreateTournamentCommand(
+                organizer,
+                "Test Tournament",
+                null,
+                null,
+                TournamentParticipationMode.SELF_JOIN));
     assertThat(result.getStatus()).isEqualTo(TournamentStatus.REGISTRATION);
     assertThat(result.getGameType()).isEqualTo(GameType.SINGLES);
     assertThat(result.getFormat()).isEqualTo(TournamentFormat.SINGLE_ELIMINATION);
+    assertThat(result.getParticipationMode()).isEqualTo(TournamentParticipationMode.SELF_JOIN);
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     assertThat(result.getOrganizer()).isEqualTo(organizer);
     assertThat(result.getTitle()).isEqualTo("Test Tournament");
+  }
+
+  @Test
+  void createTournament_whenOrganizerManaged_persistsModeWithoutJoinCode() {
+    User organizer = organizer();
+    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    Tournament result =
+        tournamentService.createTournament(
+            new CreateTournamentCommand(
+                organizer,
+                "Managed Cup",
+                GameType.SINGLES,
+                TournamentFormat.SINGLE_ELIMINATION,
+                TournamentParticipationMode.ORGANIZER_MANAGED));
+
+    assertThat(result.getParticipationMode())
+        .isEqualTo(TournamentParticipationMode.ORGANIZER_MANAGED);
+    assertThat(result.getJoinCode()).isNull();
+    assertThat(result.getStatus()).isEqualTo(TournamentStatus.REGISTRATION);
+    verify(tournamentRepository, times(1)).save(any(Tournament.class));
+  }
+
+  @Test
+  void createTournament_whenParticipationModeMissing_throwsInvalidTournamentStateException() {
+    User organizer = organizer();
+
+    assertThatThrownBy(
+            () ->
+                tournamentService.createTournament(
+                    new CreateTournamentCommand(
+                        organizer, "Test Tournament", null, null, null)))
+        .isInstanceOf(InvalidTournamentStateException.class)
+        .hasMessageContaining("participation mode");
+    verify(tournamentRepository, never()).save(any(Tournament.class));
   }
 
   @Test
@@ -1067,7 +1109,11 @@ class TournamentServiceTest {
     Tournament result =
         tournamentService.createTournament(
             new CreateTournamentCommand(
-                organizer, "Test Tournament", GameType.SINGLES, TournamentFormat.SINGLE_ELIMINATION));
+                organizer,
+                "Test Tournament",
+                GameType.SINGLES,
+                TournamentFormat.SINGLE_ELIMINATION,
+                TournamentParticipationMode.SELF_JOIN));
 
     assertThat(result.getJoinCode()).matches("[A-Z0-9]{6}");
     verify(tournamentRepository, times(2)).save(any(Tournament.class));
@@ -1087,7 +1133,8 @@ class TournamentServiceTest {
                         organizer,
                         "Test Tournament",
                         GameType.SINGLES,
-                        TournamentFormat.SINGLE_ELIMINATION)))
+                        TournamentFormat.SINGLE_ELIMINATION,
+                        TournamentParticipationMode.SELF_JOIN)))
         .isInstanceOf(JoinCodeGenerationException.class);
     verify(tournamentRepository, times(10)).save(any(Tournament.class));
   }

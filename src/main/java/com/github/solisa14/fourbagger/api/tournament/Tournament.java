@@ -19,6 +19,7 @@ import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -67,7 +68,13 @@ public class Tournament {
   @Column(nullable = false)
   private String title;
 
-  @Column(nullable = false, unique = true)
+  @Column(name = "participation_mode", nullable = false, updatable = false)
+  @Enumerated(EnumType.STRING)
+  @Setter(lombok.AccessLevel.NONE)
+  private TournamentParticipationMode participationMode;
+
+  /** Present for {@link TournamentParticipationMode#SELF_JOIN}; null for organizer-managed. */
+  @Column(unique = true)
   private String joinCode;
 
   @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -85,6 +92,40 @@ public class Tournament {
   @Version
   @Column(name = "version", nullable = false)
   private long version;
+
+  /**
+   * Adds a guest participant with a required display name unique within this tournament after trim
+   * and case-insensitive comparison. Preserves the organizer's chosen casing for display.
+   *
+   * @param rawDisplayName organizer-entered name
+   * @return the created guest participant attached to this tournament
+   * @throws InvalidTournamentStateException if this is not an organizer-managed tournament or the
+   *     name is blank
+   * @throws DuplicateGuestDisplayNameException if the normalized name is already used
+   */
+  public TournamentParticipant addGuestParticipant(String rawDisplayName) {
+    if (participationMode != TournamentParticipationMode.ORGANIZER_MANAGED) {
+      throw new InvalidTournamentStateException(
+          "Guest participants are only allowed on organizer-managed tournaments");
+    }
+    String displayName = rawDisplayName == null ? null : rawDisplayName.trim();
+    if (displayName == null || displayName.isBlank()) {
+      throw new InvalidTournamentStateException("Guest display name is required");
+    }
+    String key = displayName.toLowerCase(Locale.ROOT);
+    boolean duplicate =
+        participants.stream()
+            .filter(TournamentParticipant::isGuest)
+            .anyMatch(
+                guest -> key.equals(guest.getDisplayName().toLowerCase(Locale.ROOT)));
+    if (duplicate) {
+      throw new DuplicateGuestDisplayNameException(displayName);
+    }
+    TournamentParticipant guest =
+        TournamentParticipant.builder().tournament(this).displayName(displayName).build();
+    participants.add(guest);
+    return guest;
+  }
 
   @CreationTimestamp
   @Column(nullable = false, updatable = false)

@@ -87,6 +87,7 @@ class TournamentControllerWebMvcTest {
         .organizer(organizer)
         .title("TestTournament")
         .joinCode("ABC123")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
         .status(TournamentStatus.BRACKET_READY)
         .build();
   }
@@ -97,6 +98,7 @@ class TournamentControllerWebMvcTest {
         .organizer(organizer)
         .title("TestTournament")
         .joinCode("ABC123")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
         .status(TournamentStatus.IN_PROGRESS)
         .build();
   }
@@ -117,7 +119,7 @@ class TournamentControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new CreateTournamentRequest("TestTournament", null, null))))
+                        new CreateTournamentRequest("TestTournament", null, null, TournamentParticipationMode.SELF_JOIN))))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.title").value("TestTournament"))
         .andExpect(jsonPath("$.joinCode").value("ABC123"))
@@ -148,7 +150,7 @@ class TournamentControllerWebMvcTest {
                 .content(
                     objectMapper.writeValueAsString(
                         new CreateTournamentRequest(
-                            "TestTournament", GameType.DOUBLES, TournamentFormat.SINGLE_ELIMINATION))))
+                            "TestTournament", GameType.DOUBLES, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.gameType").value("DOUBLES"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"));
@@ -168,7 +170,7 @@ class TournamentControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new CreateTournamentRequest("TestTournament", null, null))))
+                        new CreateTournamentRequest("TestTournament", null, null, TournamentParticipationMode.SELF_JOIN))))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.gameType").value("SINGLES"))
         .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"));
@@ -184,6 +186,19 @@ class TournamentControllerWebMvcTest {
                 .with(user(principal))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void createTournament_whenParticipationModeMissing_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments")
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"TestTournament\"}"))
         .andExpect(status().isBadRequest());
   }
 
@@ -336,6 +351,7 @@ class TournamentControllerWebMvcTest {
             .organizer(authenticatedUser())
             .title("Playing Cup")
             .joinCode("PLAY01")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
             .status(TournamentStatus.IN_PROGRESS)
             .gameType(GameType.DOUBLES)
             .format(TournamentFormat.DOUBLE_ELIMINATION)
@@ -367,6 +383,7 @@ class TournamentControllerWebMvcTest {
             .organizer(principal)
             .title("Old Tournament")
             .joinCode("OLD001")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
             .status(TournamentStatus.COMPLETED)
             .gameType(GameType.SINGLES)
             .format(TournamentFormat.SINGLE_ELIMINATION)
@@ -546,6 +563,7 @@ class TournamentControllerWebMvcTest {
             .organizer(principal)
             .title("TestTournament")
             .joinCode("ABC123")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
             .status(TournamentStatus.BRACKET_READY)
             .gameType(GameType.DOUBLES)
             .build();

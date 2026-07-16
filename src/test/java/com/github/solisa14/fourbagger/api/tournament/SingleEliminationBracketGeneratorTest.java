@@ -263,6 +263,7 @@ class SingleEliminationBracketGeneratorTest {
         .title("Test")
         .status(TournamentStatus.BRACKET_READY)
         .joinCode("ABC123")
+        .participationMode(TournamentParticipationMode.SELF_JOIN)
         .build();
   }
 

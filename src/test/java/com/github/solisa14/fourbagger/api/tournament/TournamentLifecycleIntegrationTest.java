@@ -54,7 +54,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Lifecycle Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Lifecycle Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.status").value("REGISTRATION"))
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
@@ -153,7 +153,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Guard Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Guard Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
@@ -278,7 +278,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Dup Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Dup Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
@@ -324,7 +324,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Remove Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Remove Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
@@ -401,7 +401,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Leave Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Leave Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -446,7 +446,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Ineligible Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Ineligible Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -582,7 +582,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                             new CreateTournamentRequest(
                                 "Doubles Test",
                                 GameType.DOUBLES,
-                                TournamentFormat.SINGLE_ELIMINATION))))
+                                TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.gameType").value("DOUBLES"))
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
@@ -654,7 +654,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Start Early Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Start Early Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
@@ -690,7 +690,7 @@ class TournamentLifecycleIntegrationTest extends AbstractIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
-                            new CreateTournamentRequest(title, gameType, format))))
+                            new CreateTournamentRequest(title, gameType, format, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 

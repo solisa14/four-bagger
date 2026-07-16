@@ -14,6 +14,7 @@ public record TournamentDetailResponse(
     TournamentStatus status,
     GameType gameType,
     TournamentFormat format,
+    TournamentParticipationMode participationMode,
     TournamentBracketsResponse brackets,
     List<TournamentParticipantResponse> participants,
     TournamentBracketEligibilityResponse bracketEligibility,

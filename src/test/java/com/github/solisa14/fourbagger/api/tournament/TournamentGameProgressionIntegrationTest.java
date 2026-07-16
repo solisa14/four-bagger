@@ -60,7 +60,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                             new CreateTournamentRequest(
                                 "Double Elimination Progression",
                                 null,
-                                TournamentFormat.DOUBLE_ELIMINATION))))
+                                TournamentFormat.DOUBLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("DOUBLE_ELIMINATION"))
             .andReturn();
@@ -254,7 +254,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                             new CreateTournamentRequest(
                                 "Doubles Double Elimination Progression",
                                 GameType.DOUBLES,
-                                TournamentFormat.DOUBLE_ELIMINATION))))
+                                TournamentFormat.DOUBLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.gameType").value("DOUBLES"))
             .andExpect(jsonPath("$.format").value("DOUBLE_ELIMINATION"))
@@ -396,7 +396,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                             new CreateTournamentRequest(
                                 "Reset Final Progression",
                                 null,
-                                TournamentFormat.DOUBLE_ELIMINATION))))
+                                TournamentFormat.DOUBLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -496,7 +496,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                             new CreateTournamentRequest(
                                 "Full Progression Test",
                                 null,
-                                TournamentFormat.SINGLE_ELIMINATION))))
+                                TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
@@ -579,7 +579,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                             new CreateTournamentRequest(
                                 "Completed Delete Test",
                                 null,
-                                TournamentFormat.SINGLE_ELIMINATION))))
+                                TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -670,7 +670,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Mutation Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Mutation Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
@@ -754,7 +754,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Retry Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Retry Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -859,7 +859,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Conflict Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Conflict Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 
@@ -958,7 +958,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
@@ -1017,7 +1017,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                     .content(
                         objectMapper.writeValueAsString(
                             new CreateTournamentRequest(
-                                "Bo3 Test", null, TournamentFormat.SINGLE_ELIMINATION))))
+                                "Bo3 Test", null, TournamentFormat.SINGLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
             .andReturn();
@@ -1146,7 +1146,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                             new CreateTournamentRequest(
                                 label + " Double Elimination Progression",
                                 null,
-                                TournamentFormat.DOUBLE_ELIMINATION))))
+                                TournamentFormat.DOUBLE_ELIMINATION, TournamentParticipationMode.SELF_JOIN))))
             .andExpect(status().isCreated())
             .andReturn();
 

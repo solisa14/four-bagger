@@ -71,7 +71,7 @@ public class TournamentService {
 
     boolean alreadyJoined =
         tournament.getParticipants().stream()
-            .anyMatch(participant -> user.getId().equals(participant.getUser().getId()));
+            .anyMatch(participant -> participant.matchesUser(user.getId()));
     if (alreadyJoined) {
       throw new DuplicateTournamentParticipantException();
     }
@@ -147,25 +147,26 @@ public class TournamentService {
   }
 
   /**
-   * Creates a new tournament with the given command and a randomly generated join code.
+   * Creates a new tournament with the given command. Self-join tournaments get a join code;
+   * organizer-managed tournaments do not.
    *
    * @param command the command containing tournament details
    * @return the newly created tournament
+   * @throws InvalidTournamentStateException if participation mode is missing
    * @throws JoinCodeGenerationException if a unique join code could not be generated
    */
   public Tournament createTournament(CreateTournamentCommand command) {
+    if (command.participationMode() == null) {
+      throw new InvalidTournamentStateException("A participation mode is required");
+    }
+
+    if (command.participationMode() == TournamentParticipationMode.ORGANIZER_MANAGED) {
+      return tournamentRepository.save(buildTournament(command, null));
+    }
+
     for (int attempt = 1; attempt <= MAX_JOIN_CODE_ATTEMPTS; attempt++) {
       String joinCode = generateJoinCode();
-      Tournament tournament =
-          Tournament.builder()
-              .organizer(command.organizer())
-              .title(command.title())
-              .status(TournamentStatus.REGISTRATION)
-              .gameType(command.gameType() != null ? command.gameType() : GameType.SINGLES)
-              .format(
-                  command.format() != null ? command.format() : TournamentFormat.SINGLE_ELIMINATION)
-              .joinCode(joinCode)
-              .build();
+      Tournament tournament = buildTournament(command, joinCode);
       try {
         return tournamentRepository.save(tournament);
       } catch (DataIntegrityViolationException ex) {
@@ -175,6 +176,19 @@ public class TournamentService {
       }
     }
     throw new JoinCodeGenerationException();
+  }
+
+  private Tournament buildTournament(CreateTournamentCommand command, String joinCode) {
+    return Tournament.builder()
+        .organizer(command.organizer())
+        .title(command.title())
+        .status(TournamentStatus.REGISTRATION)
+        .gameType(command.gameType() != null ? command.gameType() : GameType.SINGLES)
+        .format(
+            command.format() != null ? command.format() : TournamentFormat.SINGLE_ELIMINATION)
+        .participationMode(command.participationMode())
+        .joinCode(joinCode)
+        .build();
   }
 
   /**
@@ -205,7 +219,7 @@ public class TournamentService {
     UUID currentUserId = currentUser.getId();
     return tournament.getOrganizer().getId().equals(currentUserId)
         || tournament.getParticipants().stream()
-            .anyMatch(participant -> participant.getUser().getId().equals(currentUserId));
+            .anyMatch(participant -> participant.matchesUser(currentUserId));
   }
 
   private void initializeTournamentDetails(Tournament tournament) {
@@ -454,7 +468,7 @@ public class TournamentService {
     boolean removed =
         tournament
             .getParticipants()
-            .removeIf(participant -> participant.getUser().getId().equals(currentUserId));
+            .removeIf(participant -> participant.matchesUser(currentUserId));
     if (!removed) {
       throw new TournamentParticipantNotFoundException();
     }
