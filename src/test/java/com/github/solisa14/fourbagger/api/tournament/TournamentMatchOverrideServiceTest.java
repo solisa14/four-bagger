@@ -89,6 +89,29 @@ class TournamentMatchOverrideServiceTest {
   }
 
   @Test
+  void overrideMatchResult_whenPendingMatch_throwsInvalidTournamentStateException() {
+    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+    User organizer = tournament.getOrganizer();
+    Match match = match(tournament);
+    OverrideTournamentMatchResultRequest request =
+        new OverrideTournamentMatchResultRequest(match.getTeamOne().getId());
+
+    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+
+    assertThatThrownBy(
+            () ->
+                tournamentMatchOverrideService.overrideMatchResult(
+                    tournament.getId(), match.getId(), organizer, request))
+        .isInstanceOf(InvalidTournamentStateException.class)
+        .hasMessageContaining("IN_PROGRESS or COMPLETED");
+
+    verify(resultRepository, never()).deleteByMatchId(any());
+    verify(progressionService, never()).revertMatchCompletion(match);
+    verify(progressionService, never()).applyMatchOverride(any(), any(), any(), anyInt(), anyInt());
+  }
+
+  @Test
   void overrideMatchResult_whenInProgressMatch_skipsRevert() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     User organizer = tournament.getOrganizer();
@@ -143,6 +166,7 @@ class TournamentMatchOverrideServiceTest {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     User organizer = tournament.getOrganizer();
     Match match = match(tournament);
+    match.setStatus(MatchStatus.IN_PROGRESS);
     OverrideTournamentMatchResultRequest request =
         new OverrideTournamentMatchResultRequest(UUID.randomUUID());
 

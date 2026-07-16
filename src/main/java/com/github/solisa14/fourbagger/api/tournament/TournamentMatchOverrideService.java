@@ -72,6 +72,11 @@ public class TournamentMatchOverrideService {
     if (match.getTeamOne() == null || match.getTeamTwo() == null) {
       throw new InvalidTournamentStateException("Both teams must be assigned before overriding");
     }
+    if (match.getStatus() != MatchStatus.IN_PROGRESS
+        && match.getStatus() != MatchStatus.COMPLETED) {
+      throw new InvalidTournamentStateException(
+          "Cannot override match results unless the match is IN_PROGRESS or COMPLETED");
+    }
 
     validateWinnerTeam(match, request.winnerTeamId());
     validateDownstreamNotStarted(match);
