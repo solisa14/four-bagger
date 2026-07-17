@@ -10,7 +10,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -178,5 +182,76 @@ class TournamentOrganizerManagedIntegrationTest extends AbstractIntegrationTest 
                 .content(objectMapper.writeValueAsString(new GuestParticipantRequest("Casey"))))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message").value("Cannot add guests after registration"));
+  }
+
+  @Test
+  void organizerManagedRoster_generateBracket_createsGuestBackedTeams() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String organizerToken = registerAndGetToken("ombracket" + suffix);
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", organizerToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Guest Bracket Cup",
+                                null,
+                                TournamentFormat.SINGLE_ELIMINATION,
+                                TournamentParticipationMode.ORGANIZER_MANAGED))))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+    UUID tournamentId =
+        UUID.fromString(
+            objectMapper.readTree(createResult.getResponse().getContentAsString()).get("id").asText());
+
+    for (String name : List.of("Pat", "Alex", "Casey", "Dana")) {
+      mockMvc
+          .perform(
+              post("/api/v1/tournaments/{id}/participants", tournamentId)
+                  .cookie(TestCookieHelper.cookie("accessToken", organizerToken))
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(objectMapper.writeValueAsString(new GuestParticipantRequest(name))))
+          .andExpect(status().isCreated());
+    }
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", organizerToken)))
+        .andExpect(status().isOk());
+
+    MvcResult detail =
+        mockMvc
+            .perform(
+                get("/api/v1/tournaments/{id}", tournamentId)
+                    .cookie(TestCookieHelper.cookie("accessToken", organizerToken)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("BRACKET_READY"))
+            .andExpect(jsonPath("$.brackets.winners[0].matches.length()").value(2))
+            .andReturn();
+
+    var matches =
+        objectMapper
+            .readTree(detail.getResponse().getContentAsString())
+            .path("brackets")
+            .path("winners")
+            .get(0)
+            .path("matches");
+    Set<String> names = new HashSet<>();
+    matches.forEach(
+        match -> {
+          if (match.hasNonNull("teamOne")) {
+            names.add(match.path("teamOne").path("playerOneDisplayName").asText());
+          }
+          if (match.hasNonNull("teamTwo")) {
+            names.add(match.path("teamTwo").path("playerOneDisplayName").asText());
+          }
+        });
+    Assertions.assertThat(names).containsExactlyInAnyOrder("Pat", "Alex", "Casey", "Dana");
   }
 }

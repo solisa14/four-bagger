@@ -43,9 +43,9 @@ public class TournamentMatchAuthorizationService {
     if (team == null) {
       return false;
     }
-    if (team.getPlayerOne().getId().equals(userId)) {
+    if (team.getPlayerOne().matchesUser(userId)) {
       return true;
     }
-    return team.getPlayerTwo() != null && team.getPlayerTwo().getId().equals(userId);
+    return team.getPlayerTwo() != null && team.getPlayerTwo().matchesUser(userId);
   }
 }

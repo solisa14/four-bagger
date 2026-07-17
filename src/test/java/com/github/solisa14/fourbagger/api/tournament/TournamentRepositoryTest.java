@@ -226,12 +226,20 @@ class TournamentRepositoryTest extends AbstractDataJpaTest {
   private List<TournamentTeam> seededTeams(Tournament tournament, int count) {
     return java.util.stream.IntStream.rangeClosed(1, count)
         .mapToObj(
-            seed ->
-                TournamentTeam.builder()
-                    .tournament(tournament)
-                    .playerOne(savedUser("seed" + seed))
-                    .seed(seed)
-                    .build())
+            seed -> {
+              User player = savedUser("seed" + seed);
+              TournamentParticipant participant =
+                  TournamentParticipant.builder()
+                      .tournament(tournament)
+                      .user(player)
+                      .build();
+              tournament.getParticipants().add(participant);
+              return TournamentTeam.builder()
+                  .tournament(tournament)
+                  .playerOne(participant)
+                  .seed(seed)
+                  .build();
+            })
         .toList();
   }
 

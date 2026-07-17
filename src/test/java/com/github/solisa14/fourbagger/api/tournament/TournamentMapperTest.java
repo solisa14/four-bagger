@@ -17,6 +17,43 @@ class TournamentMapperTest {
       new TournamentMapper(new TournamentBracketEligibilityPolicy());
 
   @Test
+  void toTeamSummary_whenGuestMembers_exposesDisplayNames() {
+    Tournament tournament =
+        Tournament.builder()
+            .id(UUID.randomUUID())
+            .title("Tournament")
+            .participationMode(TournamentParticipationMode.ORGANIZER_MANAGED)
+            .status(TournamentStatus.IN_PROGRESS)
+            .format(TournamentFormat.SINGLE_ELIMINATION)
+            .build();
+    TournamentTeam team =
+        TournamentTeam.builder()
+            .id(UUID.randomUUID())
+            .tournament(tournament)
+            .playerOne(
+                TournamentParticipant.builder()
+                    .id(UUID.randomUUID())
+                    .tournament(tournament)
+                    .displayName("Pat Riley")
+                    .build())
+            .playerTwo(
+                TournamentParticipant.builder()
+                    .id(UUID.randomUUID())
+                    .tournament(tournament)
+                    .displayName("Alex")
+                    .build())
+            .seed(1)
+            .build();
+
+    MatchResponse.TeamSummary summary = mapper.toTeamSummary(team);
+
+    assertThat(summary.playerOneUsername()).isNull();
+    assertThat(summary.playerOneDisplayName()).isEqualTo("Pat Riley");
+    assertThat(summary.playerTwoUsername()).isNull();
+    assertThat(summary.playerTwoDisplayName()).isEqualTo("Alex");
+  }
+
+  @Test
   void toTournamentResponse_whenResetIsInactive_hidesRoundAndIncomingRoutes() {
     Tournament tournament = tournament();
     TournamentRound finalRound = round(tournament, BracketType.FINAL);
@@ -49,7 +86,7 @@ class TournamentMapperTest {
     TournamentTeam teamTwo = team(tournament, "two");
     TournamentRound round = round(tournament, BracketType.WINNERS);
     Match match = match(round, teamOne, teamTwo);
-    User submitter = teamOne.getPlayerOne();
+    User submitter = teamOne.getPlayerOne().getUser();
     TournamentGameResult result =
         TournamentGameResult.builder()
             .id(UUID.randomUUID())
@@ -306,11 +343,16 @@ class TournamentMapperTest {
         .id(UUID.randomUUID())
         .tournament(tournament)
         .playerOne(
-            user(
-                UUID.randomUUID(),
-                username,
-                "encoded",
-                Role.USER))
+            TournamentParticipant.builder()
+                .id(UUID.randomUUID())
+                .tournament(tournament)
+                .user(
+                    user(
+                        UUID.randomUUID(),
+                        username,
+                        "encoded",
+                        Role.USER))
+                .build())
         .build();
   }
 }

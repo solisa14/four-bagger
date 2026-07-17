@@ -299,6 +299,6 @@ class TournamentMatchControllerWebMvcTest {
   }
 
   private MatchResponse.TeamSummary teamSummary(UUID id, String username) {
-    return new MatchResponse.TeamSummary(id, username, null, 1, 0, false);
+    return new MatchResponse.TeamSummary(id, username, null, null, null, 1, 0, false);
   }
 }

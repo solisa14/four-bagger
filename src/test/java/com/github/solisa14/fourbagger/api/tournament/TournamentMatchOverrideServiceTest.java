@@ -185,7 +185,7 @@ class TournamentMatchOverrideServiceTest {
   void overrideMatchResult_whenNotOrganizer_throwsAccessDenied() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament);
-    User participant = match.getTeamOne().getPlayerOne();
+    User participant = match.getTeamOne().getPlayerOne().getUser();
     OverrideTournamentMatchResultRequest request =
         new OverrideTournamentMatchResultRequest(match.getTeamOne().getId());
 
@@ -249,14 +249,14 @@ class TournamentMatchOverrideServiceTest {
         TournamentTeam.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(user("team1-a"))
+            .playerOne(participant(tournament, "team1-a"))
             .seed(1)
             .build();
     TournamentTeam teamTwo =
         TournamentTeam.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(user("team2-a"))
+            .playerOne(participant(tournament, "team2-a"))
             .seed(2)
             .build();
 
@@ -283,6 +283,15 @@ class TournamentMatchOverrideServiceTest {
     Match match = match(tournament);
     match.setStartedAt(Instant.now());
     return match;
+  }
+
+
+  private TournamentParticipant participant(Tournament tournament, String suffix) {
+    return TournamentParticipant.builder()
+        .id(UUID.randomUUID())
+        .tournament(tournament)
+        .user(user(suffix))
+        .build();
   }
 
   private User user(String suffix) {

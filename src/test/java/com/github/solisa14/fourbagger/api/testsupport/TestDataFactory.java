@@ -7,6 +7,7 @@ import com.github.solisa14.fourbagger.api.game.Game;
 import com.github.solisa14.fourbagger.api.game.GameStatus;
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.tournament.Tournament;
+import com.github.solisa14.fourbagger.api.tournament.TournamentParticipant;
 import com.github.solisa14.fourbagger.api.tournament.TournamentParticipationMode;
 import com.github.solisa14.fourbagger.api.tournament.TournamentStatus;
 import com.github.solisa14.fourbagger.api.tournament.TournamentTeam;
@@ -94,6 +95,22 @@ public final class TestDataFactory {
         .build();
   }
 
+  public static TournamentParticipant accountParticipant(Tournament tournament, User user) {
+    return TournamentParticipant.builder()
+        .id(UUID.randomUUID())
+        .tournament(tournament)
+        .user(user)
+        .build();
+  }
+
+  public static TournamentParticipant guestParticipant(Tournament tournament, String displayName) {
+    return TournamentParticipant.builder()
+        .id(UUID.randomUUID())
+        .tournament(tournament)
+        .displayName(displayName)
+        .build();
+  }
+
   public static List<TournamentTeam> seededTeams(Tournament tournament, int count) {
     return IntStream.rangeClosed(1, count)
         .mapToObj(
@@ -102,11 +119,13 @@ public final class TestDataFactory {
                     .id(UUID.randomUUID())
                     .tournament(tournament)
                     .playerOne(
-                        user(
-                            UUID.randomUUID(),
-                            "p" + seed,
-                            "encoded",
-                            Role.USER))
+                        accountParticipant(
+                            tournament,
+                            user(
+                                UUID.randomUUID(),
+                                "p" + seed,
+                                "encoded",
+                                Role.USER)))
                     .seed(seed)
                     .build())
         .toList();

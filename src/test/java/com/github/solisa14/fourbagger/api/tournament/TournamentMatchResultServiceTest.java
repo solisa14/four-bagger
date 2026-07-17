@@ -42,7 +42,7 @@ class TournamentMatchResultServiceTest {
     Tournament tournament = tournament();
     Match match = match(tournament);
     match.setStatus(MatchStatus.IN_PROGRESS);
-    User submitter = match.getTeamOne().getPlayerOne();
+    User submitter = match.getTeamOne().getPlayerOne().getUser();
     SubmitTournamentGameResultRequest request =
         new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
     TournamentMatchDetailResponse detail = detailResponse(match);
@@ -72,7 +72,7 @@ class TournamentMatchResultServiceTest {
     tournament.setStatus(TournamentStatus.COMPLETED);
     Match match = match(tournament);
     match.setStatus(MatchStatus.IN_PROGRESS);
-    User submitter = match.getTeamOne().getPlayerOne();
+    User submitter = match.getTeamOne().getPlayerOne().getUser();
     SubmitTournamentGameResultRequest request =
         new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
 
@@ -96,7 +96,7 @@ class TournamentMatchResultServiceTest {
     Tournament tournament = tournament();
     Match match = match(tournament);
     match.setStatus(MatchStatus.IN_PROGRESS);
-    User submitter = match.getTeamOne().getPlayerOne();
+    User submitter = match.getTeamOne().getPlayerOne().getUser();
     TournamentGameResult existing =
         TournamentGameResult.builder()
             .id(UUID.randomUUID())
@@ -137,7 +137,7 @@ class TournamentMatchResultServiceTest {
     tournament.setStatus(TournamentStatus.COMPLETED);
     Match match = match(tournament);
     match.setStatus(MatchStatus.COMPLETED);
-    User submitter = match.getTeamOne().getPlayerOne();
+    User submitter = match.getTeamOne().getPlayerOne().getUser();
     TournamentGameResult existing =
         TournamentGameResult.builder()
             .id(UUID.randomUUID())
@@ -177,7 +177,7 @@ class TournamentMatchResultServiceTest {
     Tournament tournament = tournament();
     Match match = match(tournament);
     match.setStatus(MatchStatus.IN_PROGRESS);
-    User submitter = match.getTeamOne().getPlayerOne();
+    User submitter = match.getTeamOne().getPlayerOne().getUser();
     TournamentGameResult existing =
         TournamentGameResult.builder()
             .id(UUID.randomUUID())
@@ -212,7 +212,7 @@ class TournamentMatchResultServiceTest {
     tournament.setStatus(TournamentStatus.COMPLETED);
     Match match = match(tournament);
     match.setStatus(MatchStatus.COMPLETED);
-    User submitter = match.getTeamOne().getPlayerOne();
+    User submitter = match.getTeamOne().getPlayerOne().getUser();
     TournamentGameResult existing =
         TournamentGameResult.builder()
             .id(UUID.randomUUID())
@@ -247,7 +247,7 @@ class TournamentMatchResultServiceTest {
     Tournament tournament = tournament();
     Match match = match(tournament);
     match.setStatus(MatchStatus.IN_PROGRESS);
-    User submitter = match.getTeamOne().getPlayerOne();
+    User submitter = match.getTeamOne().getPlayerOne().getUser();
     SubmitTournamentGameResultRequest request =
         new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
 
@@ -275,7 +275,7 @@ class TournamentMatchResultServiceTest {
     Tournament tournament = tournament();
     Match match = match(tournament);
     match.setStatus(MatchStatus.IN_PROGRESS);
-    User submitter = match.getTeamOne().getPlayerOne();
+    User submitter = match.getTeamOne().getPlayerOne().getUser();
     SubmitTournamentGameResultRequest request =
         new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
 
@@ -338,14 +338,14 @@ class TournamentMatchResultServiceTest {
         TournamentTeam.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(user("team1-a"))
+            .playerOne(participant(tournament, "team1-a"))
             .seed(1)
             .build();
     TournamentTeam teamTwo =
         TournamentTeam.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(user("team2-a"))
+            .playerOne(participant(tournament, "team2-a"))
             .seed(2)
             .build();
 
@@ -356,6 +356,15 @@ class TournamentMatchResultServiceTest {
         .teamTwo(teamTwo)
         .matchNumber(1)
         .status(MatchStatus.PENDING)
+        .build();
+  }
+
+
+  private TournamentParticipant participant(Tournament tournament, String suffix) {
+    return TournamentParticipant.builder()
+        .id(UUID.randomUUID())
+        .tournament(tournament)
+        .user(user(suffix))
         .build();
   }
 

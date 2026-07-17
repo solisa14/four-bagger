@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.github.solisa14.fourbagger.api.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -19,8 +18,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Represents a competing entity within a tournament. A team can consist of a single player (for
- * singles tournaments) or two players (for doubles).
+ * Represents a competing entity within a tournament. A team can consist of a single participant (for
+ * singles tournaments) or two participants (for doubles). Members are {@link TournamentParticipant}s
+ * so both account holders and guests can compete.
  */
 @NoArgsConstructor
 @AllArgsConstructor
@@ -41,15 +41,15 @@ public class TournamentTeam {
   @JoinColumn(name = "tournament_id", nullable = false)
   private Tournament tournament;
 
-  /** The first player on the team. Required for all teams. */
+  /** The first participant on the team. Required for all teams. */
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "player_one_id", nullable = false)
-  private User playerOne;
+  @JoinColumn(name = "player_one_participant_id", nullable = false)
+  private TournamentParticipant playerOne;
 
-  /** The second player on the team. Nullable for singles tournaments. */
+  /** The second participant on the team. Nullable for singles tournaments. */
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "player_two_id")
-  private User playerTwo;
+  @JoinColumn(name = "player_two_participant_id")
+  private TournamentParticipant playerTwo;
 
   @Column(name = "losses")
   @Builder.Default

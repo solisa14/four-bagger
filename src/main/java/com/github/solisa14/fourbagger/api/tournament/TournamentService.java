@@ -211,7 +211,29 @@ public class TournamentService {
         tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
     authorizeOrganizer(currentUser, tournament);
     tournamentGameResultRepository.deleteByTournamentId(id);
-    tournamentRepository.deleteById(id);
+    // Teams FK to participants; clear match routing/teams before cascade-removing participants.
+    clearBracketGraph(tournament);
+    tournamentRepository.delete(tournament);
+  }
+
+  private void clearBracketGraph(Tournament tournament) {
+    List<Match> existingMatches =
+        tournament.getRounds().stream().flatMap(round -> round.getMatches().stream()).toList();
+
+    existingMatches.forEach(
+        match -> {
+          match.setWinnerNextMatch(null);
+          match.setWinnerNextMatchPosition(null);
+          match.setLoserNextMatch(null);
+          match.setLoserNextMatchPosition(null);
+        });
+    tournamentRepository.flush();
+
+    tournament.getRounds().forEach(round -> round.getMatches().clear());
+    tournamentRepository.flush();
+
+    tournament.getTeams().clear();
+    tournamentRepository.flush();
   }
 
   private void authorizeOrganizer(User currentUser, Tournament tournament) {
@@ -261,9 +283,9 @@ public class TournamentService {
       return;
     }
     team.getSeed();
-    team.getPlayerOne().getUsername();
+    team.getPlayerOne().identityLabel();
     if (team.getPlayerTwo() != null) {
-      team.getPlayerTwo().getUsername();
+      team.getPlayerTwo().identityLabel();
     }
   }
 
@@ -311,8 +333,8 @@ public class TournamentService {
         TournamentTeam team =
             TournamentTeam.builder()
                 .tournament(tournament)
-                .playerOne(shuffledParticipants.get(i).getUser())
-                .playerTwo(shuffledParticipants.get(i + 1).getUser())
+                .playerOne(shuffledParticipants.get(i))
+                .playerTwo(shuffledParticipants.get(i + 1))
                 .seed((i / 2) + 1)
                 .build();
         tournament.getTeams().add(team);
@@ -322,7 +344,7 @@ public class TournamentService {
         TournamentTeam team =
             TournamentTeam.builder()
                 .tournament(tournament)
-                .playerOne(shuffledParticipants.get(i).getUser())
+                .playerOne(shuffledParticipants.get(i))
                 .seed(i + 1)
                 .build();
         tournament.getTeams().add(team);
@@ -336,23 +358,7 @@ public class TournamentService {
   }
 
   private void prepareBracketForRegeneration(Tournament tournament) {
-    List<Match> existingMatches =
-        tournament.getRounds().stream().flatMap(round -> round.getMatches().stream()).toList();
-
-    existingMatches.forEach(
-        match -> {
-          match.setWinnerNextMatch(null);
-          match.setWinnerNextMatchPosition(null);
-          match.setLoserNextMatch(null);
-          match.setLoserNextMatchPosition(null);
-        });
-    tournamentRepository.flush();
-
-    tournament.getRounds().forEach(round -> round.getMatches().clear());
-    tournamentRepository.flush();
-
-    tournament.getTeams().clear();
-    tournamentRepository.flush();
+    clearBracketGraph(tournament);
   }
 
   /**

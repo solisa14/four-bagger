@@ -233,12 +233,24 @@ public class TournamentMapper {
   }
 
   public MatchResponse.TeamSummary toTeamSummary(TournamentTeam team) {
+    TournamentParticipant playerOne = team.getPlayerOne();
+    TournamentParticipant playerTwo = team.getPlayerTwo();
     return new MatchResponse.TeamSummary(
         team.getId(),
-        team.getPlayerOne().getUsername(),
-        team.getPlayerTwo() != null ? team.getPlayerTwo().getUsername() : null,
+        accountUsername(playerOne),
+        guestDisplayName(playerOne),
+        playerTwo != null ? accountUsername(playerTwo) : null,
+        playerTwo != null ? guestDisplayName(playerTwo) : null,
         team.getSeed(),
         team.getLosses(),
         team.isEliminated());
+  }
+
+  private static String accountUsername(TournamentParticipant participant) {
+    return participant.isGuest() ? null : participant.getUser().getUsername();
+  }
+
+  private static String guestDisplayName(TournamentParticipant participant) {
+    return participant.isGuest() ? participant.getDisplayName() : null;
   }
 }

@@ -93,7 +93,7 @@ class TournamentMatchServiceTest {
   void startMatch_whenParticipantStarts_authorizesAndMarksInProgress() {
     Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
     Match match = match(tournament, false);
-    User participant = match.getTeamOne().getPlayerOne();
+    User participant = match.getTeamOne().getPlayerOne().getUser();
     TournamentMatchDetailResponse detail = detailResponse(match);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
@@ -279,16 +279,16 @@ class TournamentMatchServiceTest {
         TournamentTeam.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(user("team1-a"))
-            .playerTwo(doubles ? user("team1-b") : null)
+            .playerOne(participant(tournament, "team1-a"))
+            .playerTwo(doubles ? participant(tournament, "team1-b") : null)
             .seed(1)
             .build();
     TournamentTeam teamTwo =
         TournamentTeam.builder()
             .id(UUID.randomUUID())
             .tournament(tournament)
-            .playerOne(user("team2-a"))
-            .playerTwo(doubles ? user("team2-b") : null)
+            .playerOne(participant(tournament, "team2-a"))
+            .playerTwo(doubles ? participant(tournament, "team2-b") : null)
             .seed(2)
             .build();
 
@@ -299,6 +299,15 @@ class TournamentMatchServiceTest {
         .teamTwo(teamTwo)
         .matchNumber(1)
         .status(MatchStatus.PENDING)
+        .build();
+  }
+
+
+  private TournamentParticipant participant(Tournament tournament, String suffix) {
+    return TournamentParticipant.builder()
+        .id(UUID.randomUUID())
+        .tournament(tournament)
+        .user(user(suffix))
         .build();
   }
 

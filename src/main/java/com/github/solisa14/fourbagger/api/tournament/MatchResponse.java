@@ -42,9 +42,14 @@ public record MatchResponse(
   /**
    * Summary of a tournament team for inclusion in match responses.
    *
+   * <p>Account members expose {@code username}; guests expose {@code displayName}. The unused
+   * identity field is null.
+   *
    * @param id the team's unique identifier
-   * @param playerOneUsername username of the first player
-   * @param playerTwoUsername username of the second player, or null for singles
+   * @param playerOneUsername account username of the first member, or null for guests
+   * @param playerOneDisplayName guest display name of the first member, or null for accounts
+   * @param playerTwoUsername account username of the second member, or null when absent/guest
+   * @param playerTwoDisplayName guest display name of the second member, or null when absent/account
    * @param seed the team's seed number in the bracket
    * @param losses the number of tournament losses recorded for this team
    * @param eliminated whether this team has been eliminated from the tournament
@@ -52,7 +57,9 @@ public record MatchResponse(
   public record TeamSummary(
       UUID id,
       String playerOneUsername,
+      String playerOneDisplayName,
       String playerTwoUsername,
+      String playerTwoDisplayName,
       Integer seed,
       int losses,
       boolean eliminated) {}
