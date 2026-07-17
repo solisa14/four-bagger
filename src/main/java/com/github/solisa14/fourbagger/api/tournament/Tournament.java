@@ -73,6 +73,14 @@ public class Tournament {
   @Setter(lombok.AccessLevel.NONE)
   private TournamentParticipationMode participationMode;
 
+  /**
+   * Partner assignment strategy for organizer-managed doubles. Null for singles and self-join
+   * tournaments.
+   */
+  @Column(name = "doubles_pairing_mode")
+  @Enumerated(EnumType.STRING)
+  private DoublesPairingMode doublesPairingMode;
+
   /** Present for {@link TournamentParticipationMode#SELF_JOIN}; null for organizer-managed. */
   @Column(unique = true)
   private String joinCode;
@@ -167,6 +175,14 @@ public class Tournament {
     if (duplicate) {
       throw new DuplicateGuestDisplayNameException(displayName);
     }
+  }
+
+  /**
+   * Whether this tournament uses organizer-defined doubles pairs (seed-only shuffle on generate /
+   * reshuffle).
+   */
+  public boolean isManualDoubles() {
+    return gameType == GameType.DOUBLES && doublesPairingMode == DoublesPairingMode.MANUAL;
   }
 
   @CreationTimestamp

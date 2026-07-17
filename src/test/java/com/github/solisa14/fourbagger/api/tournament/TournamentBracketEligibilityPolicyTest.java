@@ -152,6 +152,29 @@ class TournamentBracketEligibilityPolicyTest {
     assertThat(result.message()).isEqualTo("Participant requirements are met.");
   }
 
+  @Test
+  void manualDoubles_sixParticipantsWithoutTeams_isIneligible() {
+    Tournament tournament =
+        manualDoublesTournament(TournamentFormat.SINGLE_ELIMINATION, 6, false);
+
+    BracketEligibility result = policy.evaluate(tournament);
+
+    assertThat(result.eligible()).isFalse();
+    assertThat(result.message())
+        .isEqualTo("Every guest must belong to exactly one complete team.");
+  }
+
+  @Test
+  void manualDoubles_sixParticipantsWithCompleteTeams_isEligible() {
+    Tournament tournament =
+        manualDoublesTournament(TournamentFormat.SINGLE_ELIMINATION, 6, true);
+
+    BracketEligibility result = policy.evaluate(tournament);
+
+    assertThat(result.eligible()).isTrue();
+    assertThat(result.message()).isEqualTo("Participant requirements are met.");
+  }
+
   private Tournament tournament(GameType gameType, TournamentFormat format, int participantCount) {
     Tournament tournament =
         Tournament.builder()
@@ -161,6 +184,41 @@ class TournamentBracketEligibilityPolicyTest {
             .build();
     for (int i = 0; i < participantCount; i++) {
       tournament.getParticipants().add(TournamentParticipant.builder().tournament(tournament).build());
+    }
+    return tournament;
+  }
+
+  private Tournament manualDoublesTournament(
+      TournamentFormat format, int participantCount, boolean completeTeams) {
+    Tournament tournament =
+        Tournament.builder()
+            .gameType(GameType.DOUBLES)
+            .format(format)
+            .status(TournamentStatus.REGISTRATION)
+            .participationMode(TournamentParticipationMode.ORGANIZER_MANAGED)
+            .doublesPairingMode(DoublesPairingMode.MANUAL)
+            .build();
+    for (int i = 0; i < participantCount; i++) {
+      tournament
+          .getParticipants()
+          .add(
+              TournamentParticipant.builder()
+                  .id(java.util.UUID.randomUUID())
+                  .tournament(tournament)
+                  .displayName("Guest " + i)
+                  .build());
+    }
+    if (completeTeams) {
+      for (int i = 0; i < participantCount; i += 2) {
+        tournament
+            .getTeams()
+            .add(
+                TournamentTeam.builder()
+                    .tournament(tournament)
+                    .playerOne(tournament.getParticipants().get(i))
+                    .playerTwo(tournament.getParticipants().get(i + 1))
+                    .build());
+      }
     }
     return tournament;
   }

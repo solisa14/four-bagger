@@ -35,6 +35,7 @@ public class TournamentMapper {
         tournament.getGameType(),
         tournament.getFormat(),
         tournament.getParticipationMode(),
+        tournament.getDoublesPairingMode(),
         brackets);
   }
 
@@ -52,8 +53,10 @@ public class TournamentMapper {
         tournament.getGameType(),
         tournament.getFormat(),
         tournament.getParticipationMode(),
+        tournament.getDoublesPairingMode(),
         brackets,
         toParticipantResponses(tournament, currentViewer),
+        toTeamResponses(tournament),
         toBracketEligibilityResponse(eligibility),
         toViewerCapabilitiesResponse(
             tournament, isOrganizer, isParticipant, eligibility.eligible()));
@@ -92,6 +95,29 @@ public class TournamentMapper {
                 TournamentParticipant::identityLabel, String.CASE_INSENSITIVE_ORDER))
         .map(participant -> toParticipantResponse(participant, currentViewer))
         .toList();
+  }
+
+  private List<TournamentTeamResponse> toTeamResponses(Tournament tournament) {
+    return tournament.getTeams().stream()
+        .sorted(
+            Comparator.comparing(
+                TournamentTeam::getSeed, Comparator.nullsLast(Comparator.naturalOrder())))
+        .map(this::toTeamResponse)
+        .toList();
+  }
+
+  private TournamentTeamResponse toTeamResponse(TournamentTeam team) {
+    TournamentParticipant playerOne = team.getPlayerOne();
+    TournamentParticipant playerTwo = team.getPlayerTwo();
+    return new TournamentTeamResponse(
+        team.getId(),
+        playerOne.getId(),
+        guestDisplayName(playerOne),
+        accountUsername(playerOne),
+        playerTwo != null ? playerTwo.getId() : null,
+        playerTwo != null ? guestDisplayName(playerTwo) : null,
+        playerTwo != null ? accountUsername(playerTwo) : null,
+        team.getSeed());
   }
 
   private TournamentBracketEligibilityResponse toBracketEligibilityResponse(

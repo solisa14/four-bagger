@@ -15,7 +15,9 @@ public record TournamentDetailResponse(
     GameType gameType,
     TournamentFormat format,
     TournamentParticipationMode participationMode,
+    DoublesPairingMode doublesPairingMode,
     TournamentBracketsResponse brackets,
     List<TournamentParticipantResponse> participants,
+    List<TournamentTeamResponse> teams,
     TournamentBracketEligibilityResponse bracketEligibility,
     TournamentViewerCapabilitiesResponse viewerCapabilities) {}

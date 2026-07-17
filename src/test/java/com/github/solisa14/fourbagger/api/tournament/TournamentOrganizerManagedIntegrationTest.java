@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -253,5 +254,107 @@ class TournamentOrganizerManagedIntegrationTest extends AbstractIntegrationTest 
           }
         });
     Assertions.assertThat(names).containsExactlyInAnyOrder("Pat", "Alex", "Casey", "Dana");
+  }
+
+  @Test
+  void organizerManagedManualDoubles_setTeamsGenerateAndReshufflePreservesPairs() throws Exception {
+    String suffix = UUID.randomUUID().toString().substring(0, 8);
+    String organizerToken = registerAndGetToken("ommanual" + suffix);
+
+    MvcResult createResult =
+        mockMvc
+            .perform(
+                post("/api/v1/tournaments")
+                    .cookie(TestCookieHelper.cookie("accessToken", organizerToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        objectMapper.writeValueAsString(
+                            new CreateTournamentRequest(
+                                "Manual Doubles Cup",
+                                com.github.solisa14.fourbagger.api.game.GameType.DOUBLES,
+                                TournamentFormat.SINGLE_ELIMINATION,
+                                TournamentParticipationMode.ORGANIZER_MANAGED))))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.doublesPairingMode").value("RANDOM"))
+            .andReturn();
+
+    UUID tournamentId =
+        UUID.fromString(
+            objectMapper.readTree(createResult.getResponse().getContentAsString()).get("id").asText());
+
+    mockMvc
+        .perform(
+            patch("/api/v1/tournaments/{id}/doubles-pairing-mode", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", organizerToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        new UpdateDoublesPairingModeRequest(DoublesPairingMode.MANUAL))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.doublesPairingMode").value("MANUAL"))
+        .andExpect(jsonPath("$.participants").isEmpty())
+        .andExpect(jsonPath("$.teams").isEmpty());
+
+    mockMvc
+        .perform(
+            put("/api/v1/tournaments/{id}/manual-teams", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", organizerToken))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        new ReplaceManualTeamsRequest(
+                            List.of(
+                                new ReplaceManualTeamsRequest.ManualTeamRequest("Pat", "Alex"),
+                                new ReplaceManualTeamsRequest.ManualTeamRequest("Casey", "Dana"),
+                                new ReplaceManualTeamsRequest.ManualTeamRequest(
+                                    "Riley", "Jordan"))))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.participants.length()").value(6))
+        .andExpect(jsonPath("$.teams.length()").value(3))
+        .andExpect(jsonPath("$.bracketEligibility.eligible").value(true));
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", organizerToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("BRACKET_READY"));
+
+    Set<Set<String>> pairsBeforeReshuffle = readDoublesPairs(tournamentId, organizerToken);
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/bracket", tournamentId)
+                .cookie(TestCookieHelper.cookie("accessToken", organizerToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("BRACKET_READY"));
+
+    Set<Set<String>> pairsAfterReshuffle = readDoublesPairs(tournamentId, organizerToken);
+    Assertions.assertThat(pairsAfterReshuffle).isEqualTo(pairsBeforeReshuffle);
+    Assertions.assertThat(pairsAfterReshuffle)
+        .containsExactlyInAnyOrder(
+            Set.of("Pat", "Alex"), Set.of("Casey", "Dana"), Set.of("Riley", "Jordan"));
+  }
+
+  private Set<Set<String>> readDoublesPairs(UUID tournamentId, String organizerToken)
+      throws Exception {
+    MvcResult detail =
+        mockMvc
+            .perform(
+                get("/api/v1/tournaments/{id}", tournamentId)
+                    .cookie(TestCookieHelper.cookie("accessToken", organizerToken)))
+            .andExpect(status().isOk())
+            .andReturn();
+
+    var teams =
+        objectMapper.readTree(detail.getResponse().getContentAsString()).path("teams");
+    Set<Set<String>> pairs = new HashSet<>();
+    teams.forEach(
+        team ->
+            pairs.add(
+                Set.of(
+                    team.path("playerOneDisplayName").asText(),
+                    team.path("playerTwoDisplayName").asText())));
+    return pairs;
   }
 }

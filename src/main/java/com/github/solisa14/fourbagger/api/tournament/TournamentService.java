@@ -5,7 +5,9 @@ import com.github.solisa14.fourbagger.api.user.User;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -188,14 +190,21 @@ public class TournamentService {
   }
 
   private Tournament buildTournament(CreateTournamentCommand command, String joinCode) {
+    GameType gameType = command.gameType() != null ? command.gameType() : GameType.SINGLES;
+    DoublesPairingMode doublesPairingMode = null;
+    if (command.participationMode() == TournamentParticipationMode.ORGANIZER_MANAGED
+        && gameType == GameType.DOUBLES) {
+      doublesPairingMode = DoublesPairingMode.RANDOM;
+    }
     return Tournament.builder()
         .organizer(command.organizer())
         .title(command.title())
         .status(TournamentStatus.REGISTRATION)
-        .gameType(command.gameType() != null ? command.gameType() : GameType.SINGLES)
+        .gameType(gameType)
         .format(
             command.format() != null ? command.format() : TournamentFormat.SINGLE_ELIMINATION)
         .participationMode(command.participationMode())
+        .doublesPairingMode(doublesPairingMode)
         .joinCode(joinCode)
         .build();
   }
@@ -217,6 +226,12 @@ public class TournamentService {
   }
 
   private void clearBracketGraph(Tournament tournament) {
+    clearMatchGraph(tournament);
+    tournament.getTeams().clear();
+    tournamentRepository.flush();
+  }
+
+  private void clearMatchGraph(Tournament tournament) {
     List<Match> existingMatches =
         tournament.getRounds().stream().flatMap(round -> round.getMatches().stream()).toList();
 
@@ -230,9 +245,6 @@ public class TournamentService {
     tournamentRepository.flush();
 
     tournament.getRounds().forEach(round -> round.getMatches().clear());
-    tournamentRepository.flush();
-
-    tournament.getTeams().clear();
     tournamentRepository.flush();
   }
 
@@ -261,6 +273,7 @@ public class TournamentService {
   }
 
   private void initializeTournamentDetails(Tournament tournament) {
+    tournament.getTeams().forEach(this::initializeTeam);
     tournament
         .getRounds()
         .forEach(
@@ -300,6 +313,9 @@ public class TournamentService {
    * randomly shuffled and seeded before generating matchups. The tournament transitions to the
    * BRACKET_READY state.
    *
+   * <p>For organizer-managed manual doubles, existing pairs are preserved and only team seeds are
+   * randomized. Random doubles (and all other modes) re-pair from the participant roster.
+   *
    * @param tournamentId the UUID of the tournament
    * @throws TournamentNotFoundException if the tournament does not exist
    * @throws InvalidTournamentStateException if the tournament has already started or has too few
@@ -318,17 +334,24 @@ public class TournamentService {
 
     bracketEligibilityPolicy.validateForBracketGeneration(tournament);
 
-    List<TournamentParticipant> shuffledParticipants =
-        new ArrayList<>(tournament.getParticipants());
-    Collections.shuffle(shuffledParticipants, RANDOM);
+    boolean manualDoubles = tournament.isManualDoubles();
 
     if (tournament.getStatus() == TournamentStatus.BRACKET_READY) {
-      prepareBracketForRegeneration(tournament);
-    } else {
+      if (manualDoubles) {
+        clearMatchGraph(tournament);
+      } else {
+        prepareBracketForRegeneration(tournament);
+      }
+    } else if (!manualDoubles) {
       tournament.getTeams().clear();
     }
 
-    if (tournament.getGameType() == GameType.DOUBLES) {
+    if (manualDoubles) {
+      assignSeedsToManualTeams(tournament);
+    } else if (tournament.getGameType() == GameType.DOUBLES) {
+      List<TournamentParticipant> shuffledParticipants =
+          new ArrayList<>(tournament.getParticipants());
+      Collections.shuffle(shuffledParticipants, RANDOM);
       for (int i = 0; i < shuffledParticipants.size(); i += 2) {
         TournamentTeam team =
             TournamentTeam.builder()
@@ -340,6 +363,9 @@ public class TournamentService {
         tournament.getTeams().add(team);
       }
     } else {
+      List<TournamentParticipant> shuffledParticipants =
+          new ArrayList<>(tournament.getParticipants());
+      Collections.shuffle(shuffledParticipants, RANDOM);
       for (int i = 0; i < shuffledParticipants.size(); i++) {
         TournamentTeam team =
             TournamentTeam.builder()
@@ -355,6 +381,16 @@ public class TournamentService {
 
     tournament.setStatus(TournamentStatus.BRACKET_READY);
     tournamentRepository.save(tournament);
+  }
+
+  private void assignSeedsToManualTeams(Tournament tournament) {
+    List<TournamentTeam> teams = new ArrayList<>(tournament.getTeams());
+    Collections.shuffle(teams, RANDOM);
+    for (int i = 0; i < teams.size(); i++) {
+      teams.get(i).setSeed(i + 1);
+      teams.get(i).setLosses(0);
+      teams.get(i).setEliminated(false);
+    }
   }
 
   private void prepareBracketForRegeneration(Tournament tournament) {
@@ -456,6 +492,7 @@ public class TournamentService {
     if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
       throw new InvalidTournamentStateException("Cannot add guests after registration");
     }
+    assertNotManualDoublesRosterMutation(tournament);
 
     TournamentParticipant guest = tournament.addGuestParticipant(displayName);
     tournamentRepository.saveAndFlush(tournament);
@@ -491,6 +528,7 @@ public class TournamentService {
     if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
       throw new InvalidTournamentStateException("Cannot update guests after registration");
     }
+    assertNotManualDoublesRosterMutation(tournament);
 
     TournamentParticipant guest = tournament.updateGuestDisplayName(participantId, displayName);
     tournamentRepository.save(tournament);
@@ -515,6 +553,7 @@ public class TournamentService {
     if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
       throw new InvalidTournamentStateException("Cannot remove participants after registration");
     }
+    assertNotManualDoublesRosterMutation(tournament);
 
     boolean removed =
         tournament
@@ -562,5 +601,130 @@ public class TournamentService {
 
   private boolean isValidBestOf(int bestOf) {
     return bestOf == 1 || bestOf == 3 || bestOf == 5 || bestOf == 7;
+  }
+
+  /**
+   * Sets the doubles pairing mode for an organizer-managed doubles tournament during registration.
+   * Changing the mode clears all guests and draft teams.
+   *
+   * @param tournamentId the tournament to update
+   * @param currentUser the organizer
+   * @param doublesPairingMode the new pairing mode
+   */
+  public void setDoublesPairingMode(
+      UUID tournamentId, User currentUser, DoublesPairingMode doublesPairingMode) {
+    Tournament tournament =
+        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    authorizeOrganizer(currentUser, tournament);
+
+    if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
+      throw new InvalidTournamentStateException(
+          "Cannot change doubles pairing mode after registration");
+    }
+    if (tournament.getParticipationMode() != TournamentParticipationMode.ORGANIZER_MANAGED) {
+      throw new InvalidTournamentStateException(
+          "Doubles pairing mode is only available on organizer-managed tournaments");
+    }
+    if (tournament.getGameType() != GameType.DOUBLES) {
+      throw new InvalidTournamentStateException(
+          "Doubles pairing mode is only available on doubles tournaments");
+    }
+    if (doublesPairingMode == null) {
+      throw new InvalidTournamentStateException("A doubles pairing mode is required");
+    }
+
+    if (tournament.getDoublesPairingMode() != doublesPairingMode) {
+      tournament.getTeams().clear();
+      tournament.getParticipants().clear();
+    }
+    tournament.setDoublesPairingMode(doublesPairingMode);
+    tournamentRepository.save(tournament);
+  }
+
+  /**
+   * Replaces the guest roster and draft teams for a manual doubles tournament during registration.
+   * Every guest display name must appear in exactly one complete team.
+   *
+   * @param tournamentId the tournament to update
+   * @param currentUser the organizer
+   * @param teams complete two-guest team rows
+   */
+  public void replaceManualTeams(UUID tournamentId, User currentUser, List<ManualTeamRow> teams) {
+    Tournament tournament =
+        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    authorizeOrganizer(currentUser, tournament);
+
+    if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
+      throw new InvalidTournamentStateException("Cannot update manual teams after registration");
+    }
+    if (tournament.getParticipationMode() != TournamentParticipationMode.ORGANIZER_MANAGED) {
+      throw new InvalidTournamentStateException(
+          "Manual doubles teams are only available on organizer-managed tournaments");
+    }
+    if (tournament.getGameType() != GameType.DOUBLES
+        || tournament.getDoublesPairingMode() != DoublesPairingMode.MANUAL) {
+      throw new InvalidTournamentStateException(
+          "Manual doubles teams require manual pairing mode");
+    }
+    if (teams == null || teams.isEmpty()) {
+      throw new InvalidTournamentStateException("At least one manual team is required");
+    }
+
+    validateManualTeamRows(teams);
+
+    tournament.getTeams().clear();
+    tournament.getParticipants().clear();
+
+    for (ManualTeamRow row : teams) {
+      TournamentParticipant playerOne = tournament.addGuestParticipant(row.playerOneDisplayName());
+      TournamentParticipant playerTwo = tournament.addGuestParticipant(row.playerTwoDisplayName());
+      tournament
+          .getTeams()
+          .add(
+              TournamentTeam.builder()
+                  .tournament(tournament)
+                  .playerOne(playerOne)
+                  .playerTwo(playerTwo)
+                  .build());
+    }
+
+    tournamentRepository.save(tournament);
+  }
+
+  private void validateManualTeamRows(List<ManualTeamRow> teams) {
+    Set<String> seen = new HashSet<>();
+    for (ManualTeamRow row : teams) {
+      String playerOne = requireManualDisplayName(row.playerOneDisplayName());
+      String playerTwo = requireManualDisplayName(row.playerTwoDisplayName());
+      if (playerOne.equalsIgnoreCase(playerTwo)) {
+        throw new InvalidTournamentStateException(
+            "Each manual team must contain two different guests");
+      }
+      assertUniqueManualName(seen, playerOne);
+      assertUniqueManualName(seen, playerTwo);
+    }
+  }
+
+  private static String requireManualDisplayName(String rawDisplayName) {
+    String displayName = rawDisplayName == null ? null : rawDisplayName.trim();
+    if (displayName == null || displayName.isBlank()) {
+      throw new InvalidTournamentStateException("Guest display name is required");
+    }
+    return displayName;
+  }
+
+  private static void assertUniqueManualName(Set<String> seen, String displayName) {
+    String key = displayName.toLowerCase(Locale.ROOT);
+    if (!seen.add(key)) {
+      throw new InvalidTournamentStateException(
+          "Every guest must belong to exactly one complete team");
+    }
+  }
+
+  private static void assertNotManualDoublesRosterMutation(Tournament tournament) {
+    if (tournament.isManualDoubles()) {
+      throw new InvalidTournamentStateException(
+          "Manual doubles rosters must be updated through complete team rows");
+    }
   }
 }

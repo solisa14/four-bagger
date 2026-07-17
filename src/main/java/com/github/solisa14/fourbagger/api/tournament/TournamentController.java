@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -258,5 +259,41 @@ class TournamentController {
     tournamentService.updateRoundSettings(id, currentUser, roundNumber, request.bestOf());
     return ResponseEntity.ok(
         tournamentMapper.toTournamentResponse(tournamentService.getTournament(id)));
+  }
+
+  /**
+   * Sets the doubles pairing mode for an organizer-managed doubles tournament during registration.
+   * Changing the mode clears guests and draft teams.
+   */
+  @PatchMapping("/{id}/doubles-pairing-mode")
+  ResponseEntity<TournamentDetailResponse> updateDoublesPairingMode(
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable UUID id,
+      @Valid @RequestBody UpdateDoublesPairingModeRequest request) {
+    tournamentService.setDoublesPairingMode(id, currentUser, request.doublesPairingMode());
+    return ResponseEntity.ok(
+        tournamentMapper.toTournamentDetailResponse(
+            tournamentService.getTournamentForUser(id, currentUser), currentUser));
+  }
+
+  /**
+   * Replaces the full set of manual doubles teams (and guest roster) during registration.
+   */
+  @PutMapping("/{id}/manual-teams")
+  ResponseEntity<TournamentDetailResponse> replaceManualTeams(
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable UUID id,
+      @Valid @RequestBody ReplaceManualTeamsRequest request) {
+    tournamentService.replaceManualTeams(
+        id,
+        currentUser,
+        request.teams().stream()
+            .map(
+                team ->
+                    new ManualTeamRow(team.playerOneDisplayName(), team.playerTwoDisplayName()))
+            .toList());
+    return ResponseEntity.ok(
+        tournamentMapper.toTournamentDetailResponse(
+            tournamentService.getTournamentForUser(id, currentUser), currentUser));
   }
 }

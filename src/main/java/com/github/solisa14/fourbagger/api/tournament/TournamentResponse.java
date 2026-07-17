@@ -12,6 +12,7 @@ import java.util.UUID;
  * @param status the current status of the tournament
  * @param gameType whether the tournament is SINGLES or DOUBLES
  * @param participationMode how players enter the tournament
+ * @param doublesPairingMode partner assignment for organizer-managed doubles; null otherwise
  * @param brackets the tournament rounds grouped by bracket section; each group is ordered by round
  *     number and empty when absent
  */
@@ -23,4 +24,5 @@ public record TournamentResponse(
     GameType gameType,
     TournamentFormat format,
     TournamentParticipationMode participationMode,
+    DoublesPairingMode doublesPairingMode,
     TournamentBracketsResponse brackets) {}
