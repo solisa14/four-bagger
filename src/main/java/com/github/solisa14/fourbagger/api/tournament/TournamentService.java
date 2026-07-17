@@ -65,6 +65,11 @@ public class TournamentService {
     Tournament tournament =
         tournamentRepository.findByJoinCode(joinCode).orElseThrow(TournamentNotFoundException::new);
 
+    if (tournament.getParticipationMode() == TournamentParticipationMode.ORGANIZER_MANAGED) {
+      throw new InvalidTournamentStateException(
+          "Organizer-managed tournaments do not allow account self-join");
+    }
+
     if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
       throw new InvalidTournamentStateException("Tournament is not open for registration");
     }
@@ -96,6 +101,10 @@ public class TournamentService {
         tournamentRepository
             .findDetailByJoinCode(joinCode)
             .orElseThrow(TournamentNotFoundException::new);
+    if (tournament.getParticipationMode() == TournamentParticipationMode.ORGANIZER_MANAGED) {
+      throw new InvalidTournamentStateException(
+          "Organizer-managed tournaments do not support join-code lookup");
+    }
     initializeTournamentDetails(tournament);
     return tournament;
   }
@@ -217,9 +226,16 @@ public class TournamentService {
     }
 
     UUID currentUserId = currentUser.getId();
-    return tournament.getOrganizer().getId().equals(currentUserId)
-        || tournament.getParticipants().stream()
-            .anyMatch(participant -> participant.matchesUser(currentUserId));
+    if (tournament.getOrganizer().getId().equals(currentUserId)) {
+      return true;
+    }
+
+    if (tournament.getParticipationMode() == TournamentParticipationMode.ORGANIZER_MANAGED) {
+      return false;
+    }
+
+    return tournament.getParticipants().stream()
+        .anyMatch(participant -> participant.matchesUser(currentUserId));
   }
 
   private void initializeTournamentDetails(Tournament tournament) {
@@ -411,6 +427,68 @@ public class TournamentService {
       sb.append(chars.charAt(RANDOM.nextInt(chars.length())));
     }
     return sb.toString();
+  }
+
+  /**
+   * Adds a guest participant to an organizer-managed tournament during registration.
+   *
+   * @param tournamentId the UUID of the tournament
+   * @param currentUser the organizer performing the mutation
+   * @param displayName the guest display name (trimmed; uniqueness is case-insensitive)
+   * @return the created guest participant
+   * @throws TournamentAccessDeniedException if the current user is not the organizer
+   * @throws InvalidTournamentStateException if registration is closed, the tournament is not
+   *     organizer-managed, or the name is blank
+   * @throws DuplicateGuestDisplayNameException if the normalized name is already used
+   */
+  public TournamentParticipant addGuestParticipant(
+      UUID tournamentId, User currentUser, String displayName) {
+    Tournament tournament =
+        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    authorizeOrganizer(currentUser, tournament);
+
+    if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
+      throw new InvalidTournamentStateException("Cannot add guests after registration");
+    }
+
+    TournamentParticipant guest = tournament.addGuestParticipant(displayName);
+    tournamentRepository.saveAndFlush(tournament);
+
+    // GenerationType.UUID is applied on flush; reload so the returned entity has its id.
+    String persistedDisplayName = guest.getDisplayName();
+    return tournamentRepository
+        .findDetailById(tournamentId)
+        .orElseThrow(TournamentNotFoundException::new)
+        .getParticipants()
+        .stream()
+        .filter(TournamentParticipant::isGuest)
+        .filter(participant -> persistedDisplayName.equals(participant.getDisplayName()))
+        .findFirst()
+        .orElseThrow(TournamentParticipantNotFoundException::new);
+  }
+
+  /**
+   * Updates a guest participant's display name during registration.
+   *
+   * @param tournamentId the UUID of the tournament
+   * @param currentUser the organizer performing the mutation
+   * @param participantId the guest participant to rename
+   * @param displayName the new display name
+   * @return the updated guest participant
+   */
+  public TournamentParticipant updateGuestParticipant(
+      UUID tournamentId, User currentUser, UUID participantId, String displayName) {
+    Tournament tournament =
+        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
+    authorizeOrganizer(currentUser, tournament);
+
+    if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
+      throw new InvalidTournamentStateException("Cannot update guests after registration");
+    }
+
+    TournamentParticipant guest = tournament.updateGuestDisplayName(participantId, displayName);
+    tournamentRepository.save(tournament);
+    return guest;
   }
 
   /**

@@ -74,20 +74,23 @@ public class TournamentMapper {
         tournament.getGameType());
   }
 
+  public TournamentParticipantResponse toParticipantResponse(
+      TournamentParticipant participant, User currentViewer) {
+    UUID currentViewerId = currentViewer != null ? currentViewer.getId() : null;
+    return new TournamentParticipantResponse(
+        participant.getId(),
+        participant.isGuest() ? null : participant.getUser().getUsername(),
+        participant.isGuest() ? participant.getDisplayName() : null,
+        participant.matchesUser(currentViewerId));
+  }
+
   private List<TournamentParticipantResponse> toParticipantResponses(
       Tournament tournament, User currentViewer) {
-    UUID currentViewerId = currentViewer != null ? currentViewer.getId() : null;
     return tournament.getParticipants().stream()
         .sorted(
             Comparator.comparing(
                 TournamentParticipant::identityLabel, String.CASE_INSENSITIVE_ORDER))
-        .map(
-            participant ->
-                new TournamentParticipantResponse(
-                    participant.getId(),
-                    participant.isGuest() ? null : participant.getUser().getUsername(),
-                    participant.isGuest() ? participant.getDisplayName() : null,
-                    participant.matchesUser(currentViewerId)))
+        .map(participant -> toParticipantResponse(participant, currentViewer))
         .toList();
   }
 

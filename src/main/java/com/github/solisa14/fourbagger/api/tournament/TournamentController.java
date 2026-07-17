@@ -185,6 +185,49 @@ class TournamentController {
   }
 
   /**
+   * Adds a guest participant to an organizer-managed tournament during registration.
+   *
+   * @param id the UUID of the tournament
+   * @param request the guest display name
+   * @return the created guest participant
+   */
+  @PostMapping("/{id}/participants")
+  ResponseEntity<TournamentParticipantResponse> addGuestParticipant(
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable UUID id,
+      @Valid @RequestBody GuestParticipantRequest request) {
+    TournamentParticipant guest =
+        tournamentService.addGuestParticipant(id, currentUser, request.displayName());
+    URI location =
+        ServletUriComponentsBuilder.fromCurrentRequest()
+            .path("/{participantId}")
+            .buildAndExpand(guest.getId())
+            .toUri();
+    return ResponseEntity.created(location)
+        .body(tournamentMapper.toParticipantResponse(guest, currentUser));
+  }
+
+  /**
+   * Updates a guest participant's display name during registration.
+   *
+   * @param id the UUID of the tournament
+   * @param participantId the UUID of the guest participant
+   * @param request the new display name
+   * @return the updated guest participant
+   */
+  @PatchMapping("/{id}/participants/{participantId}")
+  ResponseEntity<TournamentParticipantResponse> updateGuestParticipant(
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable UUID id,
+      @PathVariable UUID participantId,
+      @Valid @RequestBody GuestParticipantRequest request) {
+    TournamentParticipant guest =
+        tournamentService.updateGuestParticipant(
+            id, currentUser, participantId, request.displayName());
+    return ResponseEntity.ok(tournamentMapper.toParticipantResponse(guest, currentUser));
+  }
+
+  /**
    * Withdraws the authenticated user from a tournament during the registration phase.
    *
    * @param id the UUID of the tournament

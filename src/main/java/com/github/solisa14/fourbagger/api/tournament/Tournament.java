@@ -108,23 +108,65 @@ public class Tournament {
       throw new InvalidTournamentStateException(
           "Guest participants are only allowed on organizer-managed tournaments");
     }
-    String displayName = rawDisplayName == null ? null : rawDisplayName.trim();
-    if (displayName == null || displayName.isBlank()) {
-      throw new InvalidTournamentStateException("Guest display name is required");
-    }
-    String key = displayName.toLowerCase(Locale.ROOT);
-    boolean duplicate =
-        participants.stream()
-            .filter(TournamentParticipant::isGuest)
-            .anyMatch(
-                guest -> key.equals(guest.getDisplayName().toLowerCase(Locale.ROOT)));
-    if (duplicate) {
-      throw new DuplicateGuestDisplayNameException(displayName);
-    }
+    String displayName = requireGuestDisplayName(rawDisplayName);
+    assertGuestDisplayNameAvailable(displayName, null);
     TournamentParticipant guest =
         TournamentParticipant.builder().tournament(this).displayName(displayName).build();
     participants.add(guest);
     return guest;
+  }
+
+  /**
+   * Updates a guest participant's display name with the same normalization and uniqueness rules as
+   * {@link #addGuestParticipant(String)}.
+   *
+   * @param participantId the guest participant to rename
+   * @param rawDisplayName the new organizer-entered name
+   * @return the updated guest participant
+   * @throws TournamentParticipantNotFoundException if no participant matches the id
+   * @throws InvalidTournamentStateException if the participant is not a guest or the name is blank
+   * @throws DuplicateGuestDisplayNameException if the normalized name is already used by another
+   *     guest
+   */
+  public TournamentParticipant updateGuestDisplayName(UUID participantId, String rawDisplayName) {
+    if (participationMode != TournamentParticipationMode.ORGANIZER_MANAGED) {
+      throw new InvalidTournamentStateException(
+          "Guest participants are only allowed on organizer-managed tournaments");
+    }
+    TournamentParticipant participant =
+        participants.stream()
+            .filter(candidate -> participantId.equals(candidate.getId()))
+            .findFirst()
+            .orElseThrow(TournamentParticipantNotFoundException::new);
+    if (!participant.isGuest()) {
+      throw new InvalidTournamentStateException("Only guest participants can be renamed");
+    }
+    String displayName = requireGuestDisplayName(rawDisplayName);
+    assertGuestDisplayNameAvailable(displayName, participantId);
+    participant.setDisplayName(displayName);
+    return participant;
+  }
+
+  private String requireGuestDisplayName(String rawDisplayName) {
+    String displayName = rawDisplayName == null ? null : rawDisplayName.trim();
+    if (displayName == null || displayName.isBlank()) {
+      throw new InvalidTournamentStateException("Guest display name is required");
+    }
+    return displayName;
+  }
+
+  private void assertGuestDisplayNameAvailable(String displayName, UUID excludeParticipantId) {
+    String key = displayName.toLowerCase(Locale.ROOT);
+    boolean duplicate =
+        participants.stream()
+            .filter(TournamentParticipant::isGuest)
+            .filter(
+                guest ->
+                    excludeParticipantId == null || !excludeParticipantId.equals(guest.getId()))
+            .anyMatch(guest -> key.equals(guest.getDisplayName().toLowerCase(Locale.ROOT)));
+    if (duplicate) {
+      throw new DuplicateGuestDisplayNameException(displayName);
+    }
   }
 
   @CreationTimestamp

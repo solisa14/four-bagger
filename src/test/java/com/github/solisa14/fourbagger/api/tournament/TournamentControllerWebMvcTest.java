@@ -698,6 +698,136 @@ class TournamentControllerWebMvcTest {
         .andExpect(status().isNoContent());
   }
 
+  // ── Guest roster ──────────────────────────────────────────────
+
+  @Test
+  void addGuestParticipant_whenValid_returnsCreated() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    UUID participantId = UUID.randomUUID();
+    TournamentParticipant guest =
+        TournamentParticipant.builder()
+            .id(participantId)
+            .displayName("Pat Riley")
+            .build();
+    when(tournamentService.addGuestParticipant(eq(tournamentId), any(), eq("Pat Riley")))
+        .thenReturn(guest);
+    when(tournamentMapper.toParticipantResponse(eq(guest), any()))
+        .thenReturn(
+            new TournamentParticipantResponse(participantId, null, "Pat Riley", false));
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/participants", tournamentId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new GuestParticipantRequest("Pat Riley"))))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").value(participantId.toString()))
+        .andExpect(jsonPath("$.displayName").value("Pat Riley"))
+        .andExpect(jsonPath("$.username").doesNotExist());
+  }
+
+  @Test
+  void addGuestParticipant_whenBlankDisplayName_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/participants", tournamentId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new GuestParticipantRequest("  "))))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void addGuestParticipant_whenNotOrganizer_returnsForbidden() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    doThrow(new TournamentAccessDeniedException(tournamentId))
+        .when(tournamentService)
+        .addGuestParticipant(eq(tournamentId), any(), eq("Alex"));
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/participants", tournamentId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new GuestParticipantRequest("Alex"))))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void addGuestParticipant_whenDuplicateName_returnsConflict() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    doThrow(new DuplicateGuestDisplayNameException("Alex"))
+        .when(tournamentService)
+        .addGuestParticipant(eq(tournamentId), any(), eq("Alex"));
+
+    mockMvc
+        .perform(
+            post("/api/v1/tournaments/{id}/participants", tournamentId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new GuestParticipantRequest("Alex"))))
+        .andExpect(status().isConflict());
+  }
+
+  @Test
+  void updateGuestParticipant_whenValid_returnsOk() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    UUID participantId = UUID.randomUUID();
+    TournamentParticipant guest =
+        TournamentParticipant.builder()
+            .id(participantId)
+            .displayName("Pat Riley")
+            .build();
+    when(tournamentService.updateGuestParticipant(
+            eq(tournamentId), any(), eq(participantId), eq("Pat Riley")))
+        .thenReturn(guest);
+    when(tournamentMapper.toParticipantResponse(eq(guest), any()))
+        .thenReturn(
+            new TournamentParticipantResponse(participantId, null, "Pat Riley", false));
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/v1/tournaments/{id}/participants/{participantId}",
+                    tournamentId,
+                    participantId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new GuestParticipantRequest("Pat Riley"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.displayName").value("Pat Riley"));
+  }
+
+  @Test
+  void updateGuestParticipant_whenNotRegistration_returnsBadRequest() throws Exception {
+    User principal = authenticatedUser();
+    UUID tournamentId = UUID.randomUUID();
+    UUID participantId = UUID.randomUUID();
+    doThrow(new InvalidTournamentStateException("Cannot update guests after registration"))
+        .when(tournamentService)
+        .updateGuestParticipant(eq(tournamentId), any(), eq(participantId), eq("Alex"));
+
+    mockMvc
+        .perform(
+            patch(
+                    "/api/v1/tournaments/{id}/participants/{participantId}",
+                    tournamentId,
+                    participantId)
+                .with(user(principal))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new GuestParticipantRequest("Alex"))))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.message").value("Cannot update guests after registration"));
+  }
+
   @Test
   void removeParticipant_whenNotRegistration_returnsBadRequest() throws Exception {
     User principal = authenticatedUser();
