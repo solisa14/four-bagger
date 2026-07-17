@@ -304,10 +304,9 @@ class TournamentOrganizerManagedIntegrationTest extends AbstractIntegrationTest 
                     objectMapper.writeValueAsString(
                         new ReplaceManualTeamsRequest(
                             List.of(
-                                new ReplaceManualTeamsRequest.ManualTeamRequest("Pat", "Alex"),
-                                new ReplaceManualTeamsRequest.ManualTeamRequest("Casey", "Dana"),
-                                new ReplaceManualTeamsRequest.ManualTeamRequest(
-                                    "Riley", "Jordan"))))))
+                                new ManualTeamRow("Pat", "Alex"),
+                                new ManualTeamRow("Casey", "Dana"),
+                                new ManualTeamRow("Riley", "Jordan"))))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.participants.length()").value(6))
         .andExpect(jsonPath("$.teams.length()").value(3))

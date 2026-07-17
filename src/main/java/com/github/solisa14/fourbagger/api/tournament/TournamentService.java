@@ -348,32 +348,31 @@ public class TournamentService {
 
     if (manualDoubles) {
       assignSeedsToManualTeams(tournament);
-    } else if (tournament.getGameType() == GameType.DOUBLES) {
-      List<TournamentParticipant> shuffledParticipants =
-          new ArrayList<>(tournament.getParticipants());
-      Collections.shuffle(shuffledParticipants, RANDOM);
-      for (int i = 0; i < shuffledParticipants.size(); i += 2) {
-        TournamentTeam team =
-            TournamentTeam.builder()
-                .tournament(tournament)
-                .playerOne(shuffledParticipants.get(i))
-                .playerTwo(shuffledParticipants.get(i + 1))
-                .seed((i / 2) + 1)
-                .build();
-        tournament.getTeams().add(team);
-      }
     } else {
       List<TournamentParticipant> shuffledParticipants =
           new ArrayList<>(tournament.getParticipants());
       Collections.shuffle(shuffledParticipants, RANDOM);
-      for (int i = 0; i < shuffledParticipants.size(); i++) {
-        TournamentTeam team =
-            TournamentTeam.builder()
-                .tournament(tournament)
-                .playerOne(shuffledParticipants.get(i))
-                .seed(i + 1)
-                .build();
-        tournament.getTeams().add(team);
+      if (tournament.getGameType() == GameType.DOUBLES) {
+        for (int i = 0; i < shuffledParticipants.size(); i += 2) {
+          TournamentTeam team =
+              TournamentTeam.builder()
+                  .tournament(tournament)
+                  .playerOne(shuffledParticipants.get(i))
+                  .playerTwo(shuffledParticipants.get(i + 1))
+                  .seed((i / 2) + 1)
+                  .build();
+          tournament.getTeams().add(team);
+        }
+      } else {
+        for (int i = 0; i < shuffledParticipants.size(); i++) {
+          TournamentTeam team =
+              TournamentTeam.builder()
+                  .tournament(tournament)
+                  .playerOne(shuffledParticipants.get(i))
+                  .seed(i + 1)
+                  .build();
+          tournament.getTeams().add(team);
+        }
       }
     }
 

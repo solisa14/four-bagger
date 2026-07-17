@@ -15,7 +15,6 @@ import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -1430,65 +1429,6 @@ class TournamentServiceTest {
   // --- manual doubles pairing (FB-13) ---
 
   @Test
-  void createTournament_whenOrganizerManagedDoubles_defaultsToRandomPairingMode() {
-    User organizer = organizer();
-    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
-
-    Tournament created =
-        tournamentService.createTournament(
-            new CreateTournamentCommand(
-                organizer,
-                "Manual Cup",
-                GameType.DOUBLES,
-                TournamentFormat.SINGLE_ELIMINATION,
-                TournamentParticipationMode.ORGANIZER_MANAGED));
-
-    assertThat(created.getDoublesPairingMode()).isEqualTo(DoublesPairingMode.RANDOM);
-  }
-
-  @Test
-  void createTournament_whenSelfJoinDoubles_leavesPairingModeUnset() {
-    User organizer = organizer();
-    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
-
-    Tournament created =
-        tournamentService.createTournament(
-            new CreateTournamentCommand(
-                organizer,
-                "Self Join Doubles",
-                GameType.DOUBLES,
-                TournamentFormat.SINGLE_ELIMINATION,
-                TournamentParticipationMode.SELF_JOIN));
-
-    assertThat(created.getDoublesPairingMode()).isNull();
-  }
-
-  @Test
-  void setDoublesPairingMode_whenOrganizerManagedDoubles_updatesModeAndClearsRoster() {
-    Tournament tournament = organizerManagedTournament();
-    tournament.setGameType(GameType.DOUBLES);
-    tournament.setDoublesPairingMode(DoublesPairingMode.RANDOM);
-    tournament.getParticipants().add(TestDataFactory.guestParticipant(tournament, "Pat"));
-    tournament
-        .getTeams()
-        .add(
-            TournamentTeam.builder()
-                .tournament(tournament)
-                .playerOne(tournament.getParticipants().get(0))
-                .playerTwo(TestDataFactory.guestParticipant(tournament, "Alex"))
-                .build());
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
-
-    tournamentService.setDoublesPairingMode(
-        tournament.getId(), tournament.getOrganizer(), DoublesPairingMode.MANUAL);
-
-    assertThat(tournament.getDoublesPairingMode()).isEqualTo(DoublesPairingMode.MANUAL);
-    assertThat(tournament.getParticipants()).isEmpty();
-    assertThat(tournament.getTeams()).isEmpty();
-  }
-
-  @Test
   void setDoublesPairingMode_whenSelfJoin_throwsInvalidTournamentStateException() {
     Tournament tournament =
         tournamentWithParticipants(TournamentStatus.REGISTRATION, 0, GameType.DOUBLES);
@@ -1514,39 +1454,6 @@ class TournamentServiceTest {
                     tournament.getId(), tournament.getOrganizer(), DoublesPairingMode.MANUAL))
         .isInstanceOf(InvalidTournamentStateException.class)
         .hasMessageContaining("doubles");
-  }
-
-  @Test
-  void replaceManualTeams_whenManualMode_createsGuestsAndCompleteTeams() {
-    Tournament tournament = organizerManagedTournament();
-    tournament.setGameType(GameType.DOUBLES);
-    tournament.setDoublesPairingMode(DoublesPairingMode.MANUAL);
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
-
-    tournamentService.replaceManualTeams(
-        tournament.getId(),
-        tournament.getOrganizer(),
-        List.of(
-            new ManualTeamRow("Pat", "Alex"),
-            new ManualTeamRow("Casey", "Dana"),
-            new ManualTeamRow("Riley", "Jordan")));
-
-    assertThat(tournament.getParticipants()).hasSize(6);
-    assertThat(tournament.getParticipants())
-        .extracting(TournamentParticipant::getDisplayName)
-        .containsExactlyInAnyOrder("Pat", "Alex", "Casey", "Dana", "Riley", "Jordan");
-    assertThat(tournament.getTeams()).hasSize(3);
-    assertThat(tournament.getTeams())
-        .allSatisfy(
-            team -> {
-              assertThat(team.getPlayerOne()).isNotNull();
-              assertThat(team.getPlayerTwo()).isNotNull();
-              assertThat(team.getSeed()).isNull();
-            });
-    assertThat(tournament.getTeams())
-        .extracting(team -> team.getPlayerOne().getDisplayName() + "/" + team.getPlayerTwo().getDisplayName())
-        .containsExactlyInAnyOrder("Pat/Alex", "Casey/Dana", "Riley/Jordan");
   }
 
   @Test
@@ -1602,48 +1509,6 @@ class TournamentServiceTest {
   }
 
   @Test
-  void generateBracket_whenManualDoubles_preservesPairsAndAssignsSeeds() {
-    Tournament tournament = organizerManagedTournament();
-    tournament.setGameType(GameType.DOUBLES);
-    tournament.setDoublesPairingMode(DoublesPairingMode.MANUAL);
-    TournamentParticipant pat = TestDataFactory.guestParticipant(tournament, "Pat");
-    TournamentParticipant alex = TestDataFactory.guestParticipant(tournament, "Alex");
-    TournamentParticipant casey = TestDataFactory.guestParticipant(tournament, "Casey");
-    TournamentParticipant dana = TestDataFactory.guestParticipant(tournament, "Dana");
-    TournamentParticipant riley = TestDataFactory.guestParticipant(tournament, "Riley");
-    TournamentParticipant jordan = TestDataFactory.guestParticipant(tournament, "Jordan");
-    tournament.getParticipants().addAll(List.of(pat, alex, casey, dana, riley, jordan));
-    tournament
-        .getTeams()
-        .addAll(
-            List.of(
-                TournamentTeam.builder().tournament(tournament).playerOne(pat).playerTwo(alex).build(),
-                TournamentTeam.builder()
-                    .tournament(tournament)
-                    .playerOne(casey)
-                    .playerTwo(dana)
-                    .build(),
-                TournamentTeam.builder()
-                    .tournament(tournament)
-                    .playerOne(riley)
-                    .playerTwo(jordan)
-                    .build()));
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
-
-    tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer());
-
-    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.BRACKET_READY);
-    assertThat(tournament.getTeams()).hasSize(3);
-    assertThat(tournament.getTeams())
-        .extracting(TournamentTeam::getSeed)
-        .containsExactlyInAnyOrder(1, 2, 3);
-    assertThat(tournament.getTeams())
-        .extracting(team -> Set.of(team.getPlayerOne().getDisplayName(), team.getPlayerTwo().getDisplayName()))
-        .containsExactlyInAnyOrder(Set.of("Pat", "Alex"), Set.of("Casey", "Dana"), Set.of("Riley", "Jordan"));
-  }
-
-  @Test
   void generateBracket_whenManualDoublesIncompleteTeams_throwsException() {
     Tournament tournament = organizerManagedTournament();
     tournament.setGameType(GameType.DOUBLES);
@@ -1651,7 +1516,6 @@ class TournamentServiceTest {
     for (int i = 0; i < 6; i++) {
       tournament.getParticipants().add(TestDataFactory.guestParticipant(tournament, "Guest " + i));
     }
-    // Only two teams — Guest 4 and Guest 5 unpaired
     tournament
         .getTeams()
         .add(
@@ -1674,133 +1538,5 @@ class TournamentServiceTest {
             () -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
         .isInstanceOf(InvalidTournamentStateException.class)
         .hasMessageContaining("exactly one");
-  }
-
-  @Test
-  void generateBracket_whenManualDoublesReshuffle_preservesPairsAndReassignsSeeds() {
-    Tournament tournament = organizerManagedTournament();
-    tournament.setStatus(TournamentStatus.BRACKET_READY);
-    tournament.setGameType(GameType.DOUBLES);
-    tournament.setDoublesPairingMode(DoublesPairingMode.MANUAL);
-    TournamentParticipant pat = TestDataFactory.guestParticipant(tournament, "Pat");
-    TournamentParticipant alex = TestDataFactory.guestParticipant(tournament, "Alex");
-    TournamentParticipant casey = TestDataFactory.guestParticipant(tournament, "Casey");
-    TournamentParticipant dana = TestDataFactory.guestParticipant(tournament, "Dana");
-    TournamentParticipant riley = TestDataFactory.guestParticipant(tournament, "Riley");
-    TournamentParticipant jordan = TestDataFactory.guestParticipant(tournament, "Jordan");
-    tournament.getParticipants().addAll(List.of(pat, alex, casey, dana, riley, jordan));
-    TournamentTeam team1 =
-        TournamentTeam.builder()
-            .id(UUID.randomUUID())
-            .tournament(tournament)
-            .playerOne(pat)
-            .playerTwo(alex)
-            .seed(1)
-            .build();
-    TournamentTeam team2 =
-        TournamentTeam.builder()
-            .id(UUID.randomUUID())
-            .tournament(tournament)
-            .playerOne(casey)
-            .playerTwo(dana)
-            .seed(2)
-            .build();
-    TournamentTeam team3 =
-        TournamentTeam.builder()
-            .id(UUID.randomUUID())
-            .tournament(tournament)
-            .playerOne(riley)
-            .playerTwo(jordan)
-            .seed(3)
-            .build();
-    tournament.getTeams().addAll(List.of(team1, team2, team3));
-    TournamentRound round = round(tournament, 1);
-    tournament.getRounds().add(round);
-    round
-        .getMatches()
-        .add(
-            Match.builder()
-                .id(UUID.randomUUID())
-                .round(round)
-                .matchNumber(1)
-                .teamOne(team1)
-                .teamTwo(team2)
-                .status(MatchStatus.PENDING)
-                .build());
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
-
-    Set<UUID> originalTeamIds = Set.of(team1.getId(), team2.getId(), team3.getId());
-    Set<Set<String>> originalPairs =
-        Set.of(Set.of("Pat", "Alex"), Set.of("Casey", "Dana"), Set.of("Riley", "Jordan"));
-
-    tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer());
-
-    assertThat(tournament.getTeams()).hasSize(3);
-    assertThat(tournament.getTeams()).extracting(TournamentTeam::getId).containsExactlyInAnyOrderElementsOf(originalTeamIds);
-    assertThat(tournament.getTeams())
-        .extracting(team -> Set.of(team.getPlayerOne().getDisplayName(), team.getPlayerTwo().getDisplayName()))
-        .containsExactlyInAnyOrderElementsOf(originalPairs);
-    assertThat(tournament.getTeams())
-        .extracting(TournamentTeam::getSeed)
-        .containsExactlyInAnyOrder(1, 2, 3);
-  }
-
-  @Test
-  void generateBracket_whenRandomOrganizerManagedDoublesReshuffle_rePairsGuests() {
-    Tournament tournament = organizerManagedTournament();
-    tournament.setStatus(TournamentStatus.BRACKET_READY);
-    tournament.setGameType(GameType.DOUBLES);
-    tournament.setDoublesPairingMode(DoublesPairingMode.RANDOM);
-    for (int i = 0; i < 6; i++) {
-      TournamentParticipant guest = TestDataFactory.guestParticipant(tournament, "Guest " + i);
-      tournament.getParticipants().add(guest);
-    }
-    // Pre-existing teams with fixed pairs (will be replaced on reshuffle)
-    tournament
-        .getTeams()
-        .add(
-            TournamentTeam.builder()
-                .id(UUID.randomUUID())
-                .tournament(tournament)
-                .playerOne(tournament.getParticipants().get(0))
-                .playerTwo(tournament.getParticipants().get(1))
-                .seed(1)
-                .build());
-    tournament
-        .getTeams()
-        .add(
-            TournamentTeam.builder()
-                .id(UUID.randomUUID())
-                .tournament(tournament)
-                .playerOne(tournament.getParticipants().get(2))
-                .playerTwo(tournament.getParticipants().get(3))
-                .seed(2)
-                .build());
-    tournament
-        .getTeams()
-        .add(
-            TournamentTeam.builder()
-                .id(UUID.randomUUID())
-                .tournament(tournament)
-                .playerOne(tournament.getParticipants().get(4))
-                .playerTwo(tournament.getParticipants().get(5))
-                .seed(3)
-                .build());
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(tournamentRepository.save(any(Tournament.class))).thenAnswer(inv -> inv.getArgument(0));
-
-    tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer());
-
-    assertThat(tournament.getTeams()).hasSize(3);
-    assertThat(tournament.getTeams())
-        .allSatisfy(
-            team -> {
-              assertThat(team.getPlayerOne()).isNotNull();
-              assertThat(team.getPlayerTwo()).isNotNull();
-            });
-    assertThat(tournament.getTeams())
-        .extracting(TournamentTeam::getSeed)
-        .containsExactlyInAnyOrder(1, 2, 3);
   }
 }

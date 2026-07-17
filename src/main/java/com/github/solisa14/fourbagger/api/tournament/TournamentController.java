@@ -284,14 +284,7 @@ class TournamentController {
       @AuthenticationPrincipal User currentUser,
       @PathVariable UUID id,
       @Valid @RequestBody ReplaceManualTeamsRequest request) {
-    tournamentService.replaceManualTeams(
-        id,
-        currentUser,
-        request.teams().stream()
-            .map(
-                team ->
-                    new ManualTeamRow(team.playerOneDisplayName(), team.playerTwoDisplayName()))
-            .toList());
+    tournamentService.replaceManualTeams(id, currentUser, request.teams());
     return ResponseEntity.ok(
         tournamentMapper.toTournamentDetailResponse(
             tournamentService.getTournamentForUser(id, currentUser), currentUser));

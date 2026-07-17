@@ -182,7 +182,9 @@ public class Tournament {
    * reshuffle).
    */
   public boolean isManualDoubles() {
-    return gameType == GameType.DOUBLES && doublesPairingMode == DoublesPairingMode.MANUAL;
+    return participationMode == TournamentParticipationMode.ORGANIZER_MANAGED
+        && gameType == GameType.DOUBLES
+        && doublesPairingMode == DoublesPairingMode.MANUAL;
   }
 
   @CreationTimestamp
