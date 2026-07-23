@@ -15,7 +15,6 @@ public class TournamentMatchResultService {
 
   private final TournamentRepository tournamentRepository;
   private final MatchRepository matchRepository;
-  private final TournamentTeamRepository teamRepository;
   private final TournamentGameResultRepository resultRepository;
   private final TournamentMatchAuthorizationService authorizationService;
   private final FinalScoreValidator finalScoreValidator;
@@ -25,7 +24,6 @@ public class TournamentMatchResultService {
   public TournamentMatchResultService(
       TournamentRepository tournamentRepository,
       MatchRepository matchRepository,
-      TournamentTeamRepository teamRepository,
       TournamentGameResultRepository resultRepository,
       TournamentMatchAuthorizationService authorizationService,
       FinalScoreValidator finalScoreValidator,
@@ -33,7 +31,6 @@ public class TournamentMatchResultService {
       TournamentMapper tournamentMapper) {
     this.tournamentRepository = tournamentRepository;
     this.matchRepository = matchRepository;
-    this.teamRepository = teamRepository;
     this.resultRepository = resultRepository;
     this.authorizationService = authorizationService;
     this.finalScoreValidator = finalScoreValidator;
@@ -73,17 +70,11 @@ public class TournamentMatchResultService {
           "Game number must be " + expectedGameNumber + ", got " + gameNumber);
     }
 
-    TournamentTeam winnerTeam =
-        teamRepository
-            .findById(request.winnerTeamId())
-            .orElseThrow(TournamentTeamNotFoundException::new);
     finalScoreValidator.validateScores(request.teamOneScore(), request.teamTwoScore());
-    finalScoreValidator.validateWinnerHasHigherScore(
-        request.winnerTeamId(),
-        match.getTeamOne().getId(),
-        match.getTeamTwo().getId(),
-        request.teamOneScore(),
-        request.teamTwoScore());
+    TournamentTeam winnerTeam =
+        request.teamOneScore() > request.teamTwoScore()
+            ? match.getTeamOne()
+            : match.getTeamTwo();
 
     TournamentGameResult result =
         TournamentGameResult.builder()
@@ -126,8 +117,7 @@ public class TournamentMatchResultService {
 
   private boolean isExactMatch(
       TournamentGameResult existing, SubmitTournamentGameResultRequest request) {
-    return existing.getWinnerTeam().getId().equals(request.winnerTeamId())
-        && existing.getTeamOneScore() == request.teamOneScore()
+    return existing.getTeamOneScore() == request.teamOneScore()
         && existing.getTeamTwoScore() == request.teamTwoScore();
   }
 

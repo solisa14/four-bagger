@@ -120,7 +120,6 @@ class TournamentMatchControllerWebMvcTest {
     User principal = authenticatedUser();
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
-    UUID winnerTeamId = UUID.randomUUID();
     TournamentMatchDetailResponse detail = matchDetail(matchId);
 
     when(tournamentMatchResultService.submitResult(
@@ -138,7 +137,7 @@ class TournamentMatchControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new SubmitTournamentGameResultRequest(winnerTeamId, 21, 15))))
+                        new SubmitTournamentGameResultRequest(21, 15))))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(matchId.toString()));
   }
@@ -148,11 +147,7 @@ class TournamentMatchControllerWebMvcTest {
     User principal = authenticatedUser();
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
-    UUID winnerTeamId = UUID.randomUUID();
-    String body =
-        "{\"winnerTeamId\":\""
-            + winnerTeamId
-            + "\",\"teamTwoScore\":15}";
+    String body = "{\"teamTwoScore\":15}";
 
     mockMvc
         .perform(
@@ -172,11 +167,7 @@ class TournamentMatchControllerWebMvcTest {
     User principal = authenticatedUser();
     UUID tournamentId = UUID.randomUUID();
     UUID matchId = UUID.randomUUID();
-    UUID winnerTeamId = UUID.randomUUID();
-    String body =
-        "{\"winnerTeamId\":\""
-            + winnerTeamId
-            + "\",\"teamOneScore\":21}";
+    String body = "{\"teamOneScore\":21}";
 
     mockMvc
         .perform(
@@ -212,7 +203,7 @@ class TournamentMatchControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new SubmitTournamentGameResultRequest(UUID.randomUUID(), 21, 15))))
+                        new SubmitTournamentGameResultRequest(21, 15))))
         .andExpect(status().isConflict());
   }
 

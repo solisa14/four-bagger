@@ -704,17 +704,6 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.nextGameNumber").value(1));
 
-    MvcResult detailResult =
-        mockMvc
-            .perform(
-                get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
-                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-            .andExpect(status().isOk())
-            .andReturn();
-
-    var detailJson = objectMapper.readTree(detailResult.getResponse().getContentAsString());
-    UUID teamOneId = UUID.fromString(detailJson.get("teamOne").get("id").asText());
-
     mockMvc
         .perform(
             post(
@@ -726,7 +715,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new SubmitTournamentGameResultRequest(teamOneId, 21, 15))))
+                        new SubmitTournamentGameResultRequest(21, 15))))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.results[0].teamOneScore").value(21))
         .andExpect(jsonPath("$.results[0].teamTwoScore").value(15));
@@ -786,18 +775,8 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
         .andExpect(status().isOk());
 
-    MvcResult detailResult =
-        mockMvc
-            .perform(
-                get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
-                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-            .andExpect(status().isOk())
-            .andReturn();
-
-    var detailJson = objectMapper.readTree(detailResult.getResponse().getContentAsString());
-    UUID teamOneId = UUID.fromString(detailJson.get("teamOne").get("id").asText());
     SubmitTournamentGameResultRequest request =
-        new SubmitTournamentGameResultRequest(teamOneId, 21, 15);
+        new SubmitTournamentGameResultRequest(21, 15);
 
     mockMvc
         .perform(
@@ -891,18 +870,6 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                 .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
         .andExpect(status().isOk());
 
-    MvcResult detailResult =
-        mockMvc
-            .perform(
-                get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
-                    .cookie(TestCookieHelper.cookie("accessToken", orgToken)))
-            .andExpect(status().isOk())
-            .andReturn();
-
-    var detailJson = objectMapper.readTree(detailResult.getResponse().getContentAsString());
-    UUID teamOneId = UUID.fromString(detailJson.get("teamOne").get("id").asText());
-    UUID teamTwoId = UUID.fromString(detailJson.get("teamTwo").get("id").asText());
-
     mockMvc
         .perform(
             post(
@@ -914,7 +881,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new SubmitTournamentGameResultRequest(teamOneId, 21, 15))))
+                        new SubmitTournamentGameResultRequest(21, 15))))
         .andExpect(status().isCreated());
 
     mockMvc
@@ -928,7 +895,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new SubmitTournamentGameResultRequest(teamTwoId, 18, 21))))
+                        new SubmitTournamentGameResultRequest(18, 21))))
         .andExpect(status().isConflict());
 
     Match persistedMatch = matchRepository.findById(matchId).orElseThrow();
@@ -1208,9 +1175,6 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
       com.fasterxml.jackson.databind.JsonNode detailJson)
       throws Exception {
     int gameNumber = detailJson.get("nextGameNumber").asInt();
-    UUID teamOneId = UUID.fromString(detailJson.get("teamOne").get("id").asText());
-    UUID teamTwoId = UUID.fromString(detailJson.get("teamTwo").get("id").asText());
-    UUID winnerTeamId = teamOneWins ? teamOneId : teamTwoId;
     int teamOneScore = teamOneWins ? 21 : 15;
     int teamTwoScore = teamOneWins ? 15 : 21;
 
@@ -1225,8 +1189,7 @@ class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        new SubmitTournamentGameResultRequest(
-                            winnerTeamId, teamOneScore, teamTwoScore))))
+                        new SubmitTournamentGameResultRequest(teamOneScore, teamTwoScore))))
         .andExpect(status().isCreated());
   }
 

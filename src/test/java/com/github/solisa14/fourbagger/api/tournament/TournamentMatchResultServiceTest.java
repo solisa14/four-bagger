@@ -28,7 +28,6 @@ class TournamentMatchResultServiceTest {
 
   @Mock private TournamentRepository tournamentRepository;
   @Mock private MatchRepository matchRepository;
-  @Mock private TournamentTeamRepository teamRepository;
   @Mock private TournamentGameResultRepository resultRepository;
   @Mock private TournamentMatchAuthorizationService authorizationService;
   @Mock private FinalScoreValidator finalScoreValidator;
@@ -44,15 +43,13 @@ class TournamentMatchResultServiceTest {
     match.setStatus(MatchStatus.IN_PROGRESS);
     User submitter = match.getTeamOne().getPlayerOne().getUser();
     SubmitTournamentGameResultRequest request =
-        new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
+        new SubmitTournamentGameResultRequest(21, 15);
     TournamentMatchDetailResponse detail = detailResponse(match);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
     when(resultRepository.findByMatchIdAndGameNumber(match.getId(), 1)).thenReturn(Optional.empty());
     when(progressionService.nextGameNumber(match)).thenReturn(1, 2);
-    when(teamRepository.findById(match.getTeamOne().getId()))
-        .thenReturn(Optional.of(match.getTeamOne()));
     when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
     when(tournamentMapper.toMatchDetailResponse(eq(match), any(), eq(2))).thenReturn(detail);
 
@@ -74,7 +71,7 @@ class TournamentMatchResultServiceTest {
     match.setStatus(MatchStatus.IN_PROGRESS);
     User submitter = match.getTeamOne().getPlayerOne().getUser();
     SubmitTournamentGameResultRequest request =
-        new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
+        new SubmitTournamentGameResultRequest(21, 15);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
@@ -109,7 +106,7 @@ class TournamentMatchResultServiceTest {
             .submittedAt(Instant.now())
             .build();
     SubmitTournamentGameResultRequest request =
-        new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
+        new SubmitTournamentGameResultRequest(21, 15);
     TournamentMatchDetailResponse detail = detailResponse(match);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
@@ -150,7 +147,7 @@ class TournamentMatchResultServiceTest {
             .submittedAt(Instant.now())
             .build();
     SubmitTournamentGameResultRequest request =
-        new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
+        new SubmitTournamentGameResultRequest(21, 15);
     TournamentMatchDetailResponse detail = detailResponse(match);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
@@ -190,7 +187,7 @@ class TournamentMatchResultServiceTest {
             .submittedAt(Instant.now())
             .build();
     SubmitTournamentGameResultRequest request =
-        new SubmitTournamentGameResultRequest(match.getTeamTwo().getId(), 18, 21);
+        new SubmitTournamentGameResultRequest(18, 21);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
@@ -225,7 +222,7 @@ class TournamentMatchResultServiceTest {
             .submittedAt(Instant.now())
             .build();
     SubmitTournamentGameResultRequest request =
-        new SubmitTournamentGameResultRequest(match.getTeamTwo().getId(), 18, 21);
+        new SubmitTournamentGameResultRequest(18, 21);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
@@ -249,14 +246,12 @@ class TournamentMatchResultServiceTest {
     match.setStatus(MatchStatus.IN_PROGRESS);
     User submitter = match.getTeamOne().getPlayerOne().getUser();
     SubmitTournamentGameResultRequest request =
-        new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
+        new SubmitTournamentGameResultRequest(21, 15);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
     when(resultRepository.findByMatchIdAndGameNumber(match.getId(), 1)).thenReturn(Optional.empty());
     when(progressionService.nextGameNumber(match)).thenReturn(1);
-    when(teamRepository.findById(match.getTeamOne().getId()))
-        .thenReturn(Optional.of(match.getTeamOne()));
     doThrow(new DataIntegrityViolationException("duplicate"))
         .when(resultRepository)
         .saveAndFlush(any(TournamentGameResult.class));
@@ -277,7 +272,7 @@ class TournamentMatchResultServiceTest {
     match.setStatus(MatchStatus.IN_PROGRESS);
     User submitter = match.getTeamOne().getPlayerOne().getUser();
     SubmitTournamentGameResultRequest request =
-        new SubmitTournamentGameResultRequest(match.getTeamOne().getId(), 21, 15);
+        new SubmitTournamentGameResultRequest(21, 15);
 
     when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
     when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
