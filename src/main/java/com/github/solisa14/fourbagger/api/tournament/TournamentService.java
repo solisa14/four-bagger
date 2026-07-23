@@ -633,8 +633,11 @@ public class TournamentService {
     }
 
     if (tournament.getDoublesPairingMode() != doublesPairingMode) {
+      // Teams FK to participants — delete teams first, then guests (same order as clearBracketGraph).
       tournament.getTeams().clear();
+      tournamentRepository.flush();
       tournament.getParticipants().clear();
+      tournamentRepository.flush();
     }
     tournament.setDoublesPairingMode(doublesPairingMode);
     tournamentRepository.save(tournament);
@@ -671,8 +674,13 @@ public class TournamentService {
 
     validateManualTeamRows(teams);
 
+    // Teams FK to participants — delete teams first, then guests. Flush after each clear so:
+    // 1) team deletes don't null non-nullable player FKs while removing guests
+    // 2) guest deletes land before re-inserting the same display names (unique index)
     tournament.getTeams().clear();
+    tournamentRepository.flush();
     tournament.getParticipants().clear();
+    tournamentRepository.flush();
 
     for (ManualTeamRow row : teams) {
       TournamentParticipant playerOne = tournament.addGuestParticipant(row.playerOneDisplayName());
