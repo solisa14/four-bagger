@@ -17,9 +17,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -33,7 +33,21 @@ class TournamentMatchOverrideServiceTest {
   @Mock private TournamentProgressionService progressionService;
   @Mock private TournamentMapper tournamentMapper;
 
-  @InjectMocks private TournamentMatchOverrideService tournamentMatchOverrideService;
+  private TournamentMatchOverrideService tournamentMatchOverrideService;
+
+  @BeforeEach
+  void setUp() {
+    TournamentMatchSupport matchSupport =
+        new TournamentMatchSupport(
+            tournamentRepository,
+            matchRepository,
+            resultRepository,
+            tournamentMapper,
+            progressionService);
+    tournamentMatchOverrideService =
+        new TournamentMatchOverrideService(
+            matchSupport, resultRepository, authorizationService, progressionService);
+  }
 
   @Test
   void overrideMatchResult_whenOrganizerAndCompletedMatch_revertsAndAppliesCanonicalScores() {

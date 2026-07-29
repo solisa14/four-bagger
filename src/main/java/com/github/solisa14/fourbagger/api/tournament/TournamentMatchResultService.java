@@ -2,7 +2,6 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.user.User;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -13,29 +12,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TournamentMatchResultService {
 
-  private final TournamentRepository tournamentRepository;
-  private final MatchRepository matchRepository;
+  private final TournamentMatchSupport matchSupport;
   private final TournamentGameResultRepository resultRepository;
   private final TournamentMatchAuthorizationService authorizationService;
   private final FinalScoreValidator finalScoreValidator;
   private final TournamentProgressionService progressionService;
-  private final TournamentMapper tournamentMapper;
 
   public TournamentMatchResultService(
-      TournamentRepository tournamentRepository,
-      MatchRepository matchRepository,
+      TournamentMatchSupport matchSupport,
       TournamentGameResultRepository resultRepository,
       TournamentMatchAuthorizationService authorizationService,
       FinalScoreValidator finalScoreValidator,
-      TournamentProgressionService progressionService,
-      TournamentMapper tournamentMapper) {
-    this.tournamentRepository = tournamentRepository;
-    this.matchRepository = matchRepository;
+      TournamentProgressionService progressionService) {
+    this.matchSupport = matchSupport;
     this.resultRepository = resultRepository;
     this.authorizationService = authorizationService;
     this.finalScoreValidator = finalScoreValidator;
     this.progressionService = progressionService;
-    this.tournamentMapper = tournamentMapper;
   }
 
   @Transactional
@@ -45,12 +38,13 @@ public class TournamentMatchResultService {
       int gameNumber,
       User currentUser,
       SubmitTournamentGameResultRequest request) {
-    Tournament tournament = loadTournament(tournamentId);
-    Match match = loadMatch(matchId, tournamentId);
+    Tournament tournament = matchSupport.requireTournament(tournamentId);
+    Match match = matchSupport.requireMatch(matchId, tournamentId);
     authorizationService.authorizeMatchMutation(currentUser, tournament, match);
     validateMatchReady(match);
 
-    Optional<TournamentGameResult> existingResult = resultRepository.findByMatchIdAndGameNumber(matchId, gameNumber);
+    Optional<TournamentGameResult> existingResult =
+        resultRepository.findByMatchIdAndGameNumber(matchId, gameNumber);
     if (existingResult.isPresent()) {
       return handleExistingResult(existingResult.get(), request, match);
     }
@@ -94,8 +88,8 @@ public class TournamentMatchResultService {
     }
 
     progressionService.applyGameResult(result);
-    match = loadMatch(matchId, tournamentId);
-    return buildDetail(match);
+    match = matchSupport.requireMatch(matchId, tournamentId);
+    return matchSupport.toDetail(match);
   }
 
   private TournamentMatchDetailResponse handleExistingResult(
@@ -103,7 +97,7 @@ public class TournamentMatchResultService {
       SubmitTournamentGameResultRequest request,
       Match match) {
     if (isExactMatch(existing, request)) {
-      return buildDetail(match);
+      return matchSupport.toDetail(match);
     }
     throw new ResultAlreadySubmittedException(existing.getGameNumber());
   }
@@ -112,22 +106,6 @@ public class TournamentMatchResultService {
       TournamentGameResult existing, SubmitTournamentGameResultRequest request) {
     return existing.getTeamOneScore() == request.teamOneScore()
         && existing.getTeamTwoScore() == request.teamTwoScore();
-  }
-
-  private Tournament loadTournament(UUID tournamentId) {
-    return tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-  }
-
-  private Match loadMatch(UUID matchId, UUID tournamentId) {
-    Match match =
-        matchRepository
-            .findForResponseById(matchId)
-            .orElseThrow(() -> new MatchNotFoundException(matchId));
-    UUID ownerTournamentId = match.getRound().getTournament().getId();
-    if (!tournamentId.equals(ownerTournamentId)) {
-      throw new InvalidTournamentStateException("Match does not belong to this tournament");
-    }
-    return match;
   }
 
   private void validateMatchReady(Match match) {
@@ -140,11 +118,5 @@ public class TournamentMatchResultService {
     if (match.getTeamOne() == null || match.getTeamTwo() == null) {
       throw new InvalidTournamentStateException("Both teams must be assigned");
     }
-  }
-
-  private TournamentMatchDetailResponse buildDetail(Match match) {
-    List<TournamentGameResult> results = resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId());
-    return tournamentMapper.toMatchDetailResponse(
-        match, results, progressionService.nextGameNumber(match));
   }
 }

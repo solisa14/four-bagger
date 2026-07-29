@@ -2,7 +2,6 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.user.User;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,33 +10,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TournamentMatchService {
 
-  private final TournamentRepository tournamentRepository;
+  private final TournamentMatchSupport matchSupport;
   private final MatchRepository matchRepository;
   private final TournamentMatchAuthorizationService authorizationService;
-  private final TournamentMapper tournamentMapper;
-  private final TournamentGameResultRepository resultRepository;
-  private final TournamentProgressionService progressionService;
 
   public TournamentMatchService(
-      TournamentRepository tournamentRepository,
+      TournamentMatchSupport matchSupport,
       MatchRepository matchRepository,
-      TournamentMatchAuthorizationService authorizationService,
-      TournamentMapper tournamentMapper,
-      TournamentGameResultRepository resultRepository,
-      TournamentProgressionService progressionService) {
-    this.tournamentRepository = tournamentRepository;
+      TournamentMatchAuthorizationService authorizationService) {
+    this.matchSupport = matchSupport;
     this.matchRepository = matchRepository;
     this.authorizationService = authorizationService;
-    this.tournamentMapper = tournamentMapper;
-    this.resultRepository = resultRepository;
-    this.progressionService = progressionService;
   }
 
   @Transactional
   public TournamentMatchDetailResponse startMatch(UUID tournamentId, UUID matchId, User currentUser) {
-    Tournament tournament =
-        tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-    Match match = loadMatch(matchId, tournamentId);
+    Tournament tournament = matchSupport.requireTournament(tournamentId);
+    Match match = matchSupport.requireMatch(matchId, tournamentId);
     authorizationService.authorizeMatchMutation(currentUser, tournament, match);
 
     if (tournament.getStatus() != TournamentStatus.IN_PROGRESS) {
@@ -47,36 +36,27 @@ public class TournamentMatchService {
     validateStartable(match);
 
     if (match.getStatus() == MatchStatus.IN_PROGRESS && match.getStartedAt() != null) {
-      return buildDetail(match);
+      return matchSupport.toDetail(match);
     }
 
     match.setStatus(MatchStatus.IN_PROGRESS);
     match.setStartedAt(Instant.now());
     match.setStartedBy(currentUser);
     matchRepository.save(match);
-    return buildDetail(match);
+    return matchSupport.toDetail(match);
   }
 
   @Transactional(readOnly = true)
   public TournamentMatchDetailResponse getMatchDetail(UUID tournamentId, UUID matchId) {
-    tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-    Match match = loadMatch(matchId, tournamentId);
-    return buildDetail(match);
+    matchSupport.requireTournament(tournamentId);
+    Match match = matchSupport.requireMatch(matchId, tournamentId);
+    return matchSupport.toDetail(match);
   }
 
   @Transactional(readOnly = true)
   public Match getMatch(UUID tournamentId, UUID matchId) {
-    tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-    return loadMatch(matchId, tournamentId);
-  }
-
-  private Match loadMatch(UUID matchId, UUID tournamentId) {
-    Match match =
-        matchRepository
-            .findForResponseById(matchId)
-            .orElseThrow(() -> new MatchNotFoundException(matchId));
-    validateMatchBelongsToTournament(tournamentId, match);
-    return match;
+    matchSupport.requireTournament(tournamentId);
+    return matchSupport.requireMatch(matchId, tournamentId);
   }
 
   private void validateStartable(Match match) {
@@ -89,19 +69,5 @@ public class TournamentMatchService {
     if (match.getTeamOne() == null || match.getTeamTwo() == null) {
       throw new InvalidTournamentStateException("Cannot start a match until both teams are assigned");
     }
-  }
-
-  private void validateMatchBelongsToTournament(UUID tournamentId, Match match) {
-    UUID ownerTournamentId = match.getRound().getTournament().getId();
-    if (!tournamentId.equals(ownerTournamentId)) {
-      throw new InvalidTournamentStateException("Match does not belong to this tournament");
-    }
-  }
-
-  private TournamentMatchDetailResponse buildDetail(Match match) {
-    List<TournamentGameResult> results =
-        resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId());
-    return tournamentMapper.toMatchDetailResponse(
-        match, results, progressionService.nextGameNumber(match));
   }
 }

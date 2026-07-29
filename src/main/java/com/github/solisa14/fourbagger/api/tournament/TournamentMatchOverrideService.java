@@ -1,7 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.user.User;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,26 +9,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TournamentMatchOverrideService {
 
-  private final TournamentRepository tournamentRepository;
-  private final MatchRepository matchRepository;
+  private final TournamentMatchSupport matchSupport;
   private final TournamentGameResultRepository resultRepository;
   private final TournamentMatchAuthorizationService authorizationService;
   private final TournamentProgressionService progressionService;
-  private final TournamentMapper tournamentMapper;
 
   public TournamentMatchOverrideService(
-      TournamentRepository tournamentRepository,
-      MatchRepository matchRepository,
+      TournamentMatchSupport matchSupport,
       TournamentGameResultRepository resultRepository,
       TournamentMatchAuthorizationService authorizationService,
-      TournamentProgressionService progressionService,
-      TournamentMapper tournamentMapper) {
-    this.tournamentRepository = tournamentRepository;
-    this.matchRepository = matchRepository;
+      TournamentProgressionService progressionService) {
+    this.matchSupport = matchSupport;
     this.resultRepository = resultRepository;
     this.authorizationService = authorizationService;
     this.progressionService = progressionService;
-    this.tournamentMapper = tournamentMapper;
   }
 
   @Transactional
@@ -38,8 +31,8 @@ public class TournamentMatchOverrideService {
       UUID matchId,
       User currentUser,
       OverrideTournamentMatchResultRequest request) {
-    Tournament tournament = loadTournament(tournamentId);
-    Match match = loadMatch(matchId, tournamentId);
+    Tournament tournament = matchSupport.requireTournament(tournamentId);
+    Match match = matchSupport.requireMatch(matchId, tournamentId);
     authorizationService.authorizeOrganizer(currentUser, tournament);
     validateOverrideAllowed(tournament, match, request);
 
@@ -56,8 +49,8 @@ public class TournamentMatchOverrideService {
     progressionService.applyMatchOverride(
         match, winningTeam, losingTeam, canonicalScores[0], canonicalScores[1]);
 
-    match = loadMatch(matchId, tournamentId);
-    return buildDetail(match);
+    match = matchSupport.requireMatch(matchId, tournamentId);
+    return matchSupport.toDetail(match);
   }
 
   private void validateOverrideAllowed(
@@ -132,27 +125,5 @@ public class TournamentMatchOverrideService {
       return match.getTeamTwo();
     }
     return match.getTeamOne();
-  }
-
-  private Tournament loadTournament(UUID tournamentId) {
-    return tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-  }
-
-  private Match loadMatch(UUID matchId, UUID tournamentId) {
-    Match match =
-        matchRepository
-            .findForResponseById(matchId)
-            .orElseThrow(() -> new MatchNotFoundException(matchId));
-    UUID ownerTournamentId = match.getRound().getTournament().getId();
-    if (!tournamentId.equals(ownerTournamentId)) {
-      throw new InvalidTournamentStateException("Match does not belong to this tournament");
-    }
-    return match;
-  }
-
-  private TournamentMatchDetailResponse buildDetail(Match match) {
-    List<TournamentGameResult> results = resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId());
-    return tournamentMapper.toMatchDetailResponse(
-        match, results, progressionService.nextGameNumber(match));
   }
 }

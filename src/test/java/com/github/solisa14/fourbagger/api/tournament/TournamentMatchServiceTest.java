@@ -16,9 +16,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -32,7 +32,20 @@ class TournamentMatchServiceTest {
   @Mock private TournamentGameResultRepository resultRepository;
   @Mock private TournamentProgressionService progressionService;
 
-  @InjectMocks private TournamentMatchService tournamentMatchService;
+  private TournamentMatchService tournamentMatchService;
+
+  @BeforeEach
+  void setUp() {
+    TournamentMatchSupport matchSupport =
+        new TournamentMatchSupport(
+            tournamentRepository,
+            matchRepository,
+            resultRepository,
+            tournamentMapper,
+            progressionService);
+    tournamentMatchService =
+        new TournamentMatchService(matchSupport, matchRepository, authorizationService);
+  }
 
   @Test
   void startMatch_whenTournamentNotInProgress_throwsInvalidTournamentStateException() {

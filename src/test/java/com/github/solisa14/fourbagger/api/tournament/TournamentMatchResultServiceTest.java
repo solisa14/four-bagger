@@ -16,10 +16,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -34,7 +34,25 @@ class TournamentMatchResultServiceTest {
   @Mock private TournamentProgressionService progressionService;
   @Mock private TournamentMapper tournamentMapper;
 
-  @InjectMocks private TournamentMatchResultService tournamentMatchResultService;
+  private TournamentMatchResultService tournamentMatchResultService;
+
+  @BeforeEach
+  void setUp() {
+    TournamentMatchSupport matchSupport =
+        new TournamentMatchSupport(
+            tournamentRepository,
+            matchRepository,
+            resultRepository,
+            tournamentMapper,
+            progressionService);
+    tournamentMatchResultService =
+        new TournamentMatchResultService(
+            matchSupport,
+            resultRepository,
+            authorizationService,
+            finalScoreValidator,
+            progressionService);
+  }
 
   @Test
   void submitResult_whenNewResult_savesAndAppliesProgression() {
