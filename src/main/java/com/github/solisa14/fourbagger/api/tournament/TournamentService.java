@@ -340,7 +340,7 @@ public class TournamentService {
       if (manualDoubles) {
         clearMatchGraph(tournament);
       } else {
-        prepareBracketForRegeneration(tournament);
+        clearBracketGraph(tournament);
       }
     } else if (!manualDoubles) {
       tournament.getTeams().clear();
@@ -390,10 +390,6 @@ public class TournamentService {
       teams.get(i).setLosses(0);
       teams.get(i).setEliminated(false);
     }
-  }
-
-  private void prepareBracketForRegeneration(Tournament tournament) {
-    clearBracketGraph(tournament);
   }
 
   /**

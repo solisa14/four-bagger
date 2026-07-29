@@ -44,7 +44,7 @@ public class GameService {
 
     game.setStatus(GameStatus.IN_PROGRESS);
     Game savedGame = gameRepository.save(game);
-    initializeGameDetails(savedGame);
+    initializeGameSummary(savedGame);
     return savedGame;
   }
 
@@ -78,7 +78,7 @@ public class GameService {
 
     try {
       Game saved = gameRepository.saveAndFlush(game);
-      initializeGameDetails(saved);
+      initializeGameSummary(saved);
       return saved;
     } catch (ObjectOptimisticLockingFailureException ex) {
       throw new ResultAlreadySubmittedException();
@@ -91,7 +91,7 @@ public class GameService {
     if (!canAccessGame(currentUser, game)) {
       throw new GameAccessDeniedException();
     }
-    initializeGameDetails(game);
+    initializeGameSummary(game);
     return game;
   }
 
@@ -121,12 +121,8 @@ public class GameService {
 
     game.setStatus(GameStatus.CANCELLED);
     Game savedGame = gameRepository.save(game);
-    initializeGameDetails(savedGame);
+    initializeGameSummary(savedGame);
     return savedGame;
-  }
-
-  private void initializeGameDetails(Game game) {
-    initializeGameSummary(game);
   }
 
   private void initializeGameSummary(Game game) {

@@ -98,13 +98,6 @@ public class TournamentMatchResultService {
     return buildDetail(match);
   }
 
-  @Transactional(readOnly = true)
-  public TournamentMatchDetailResponse getMatchDetail(UUID tournamentId, UUID matchId) {
-    loadTournament(tournamentId);
-    Match match = loadMatch(matchId, tournamentId);
-    return buildDetail(match);
-  }
-
   private TournamentMatchDetailResponse handleExistingResult(
       TournamentGameResult existing,
       SubmitTournamentGameResultRequest request,

@@ -71,10 +71,7 @@ public class TournamentBracketEligibilityPolicy {
     if (participantCount < minimum) {
       return "At least " + minimum + " participants are required.";
     }
-    if (requiresEven && participantCount % 2 != 0) {
-      return "Doubles tournaments require an even number of participants.";
-    }
-    return "Participant requirements are met.";
+    return "Doubles tournaments require an even number of participants.";
   }
 
   /**

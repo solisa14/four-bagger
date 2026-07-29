@@ -7,17 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-/** Repository interface for managing {@link Game} entities. */
+/** Repository for standalone {@link Game} entities. */
 @Repository
 public interface GameRepository extends JpaRepository<Game, UUID> {
 
-  /**
-   * Finds all games where the specified user is either player one or player two. Order is by
-   * creation time descending.
-   *
-   * @param user The user.
-   * @return List of matching games.
-   */
+  /** Games where the user is any side participant, newest first. */
   @Query(
       """
       SELECT g
@@ -29,12 +23,4 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
       ORDER BY g.createdAt DESC
       """)
   List<Game> findByPlayer(User user);
-
-  /**
-   * Finds games associated with a specific tournament match.
-   *
-   * @param tournamentMatchId The ID of the tournament match.
-   * @return List of matching games ordered by creation time.
-   */
-  List<Game> findByTournamentMatchIdOrderByCreatedAtAsc(UUID tournamentMatchId);
 }
