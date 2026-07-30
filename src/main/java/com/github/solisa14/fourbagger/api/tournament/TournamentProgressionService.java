@@ -58,10 +58,7 @@ class TournamentProgressionService {
 
     TournamentTeam oldLoser = resolveLosingTeam(match, oldWinner);
     Tournament tournament = match.getRound().getTournament();
-    TournamentFormat format =
-        tournament.getFormat() != null
-            ? tournament.getFormat()
-            : TournamentFormat.SINGLE_ELIMINATION;
+    TournamentFormat format = tournament.effectiveFormat();
 
     if (format == TournamentFormat.SINGLE_ELIMINATION) {
       singleEliminationProgressionHandler.revert(match, oldWinner);
@@ -133,10 +130,7 @@ class TournamentProgressionService {
     matchRepository.save(match);
 
     Tournament tournament = match.getRound().getTournament();
-    TournamentFormat format =
-        tournament.getFormat() != null
-            ? tournament.getFormat()
-            : TournamentFormat.SINGLE_ELIMINATION;
+    TournamentFormat format = tournament.effectiveFormat();
     if (format == TournamentFormat.SINGLE_ELIMINATION) {
       singleEliminationProgressionHandler.progress(match, winningTeam, losingTeam);
     } else if (format == TournamentFormat.DOUBLE_ELIMINATION) {

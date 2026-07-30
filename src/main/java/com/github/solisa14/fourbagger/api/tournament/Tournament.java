@@ -187,6 +187,11 @@ public class Tournament {
         && doublesPairingMode == DoublesPairingMode.MANUAL;
   }
 
+  /** Format used for bracket planning and progression; defaults to single elimination. */
+  public TournamentFormat effectiveFormat() {
+    return format != null ? format : TournamentFormat.SINGLE_ELIMINATION;
+  }
+
   @CreationTimestamp
   @Column(nullable = false, updatable = false)
   private Instant createdAt;

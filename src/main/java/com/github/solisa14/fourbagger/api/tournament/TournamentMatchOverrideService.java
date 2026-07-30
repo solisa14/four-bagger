@@ -2,6 +2,7 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.user.User;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +15,8 @@ public class TournamentMatchOverrideService {
   private final TournamentMatchAuthorizationService authorizationService;
   private final TournamentProgressionService progressionService;
 
-  public TournamentMatchOverrideService(
+  @Autowired
+  TournamentMatchOverrideService(
       TournamentMatchSupport matchSupport,
       TournamentGameResultRepository resultRepository,
       TournamentMatchAuthorizationService authorizationService,
@@ -23,6 +25,25 @@ public class TournamentMatchOverrideService {
     this.resultRepository = resultRepository;
     this.authorizationService = authorizationService;
     this.progressionService = progressionService;
+  }
+
+  public TournamentMatchOverrideService(
+      TournamentRepository tournamentRepository,
+      MatchRepository matchRepository,
+      TournamentGameResultRepository resultRepository,
+      TournamentMatchAuthorizationService authorizationService,
+      TournamentProgressionService progressionService,
+      TournamentMapper tournamentMapper) {
+    this(
+        new TournamentMatchSupport(
+            tournamentRepository,
+            matchRepository,
+            resultRepository,
+            tournamentMapper,
+            progressionService),
+        resultRepository,
+        authorizationService,
+        progressionService);
   }
 
   @Transactional

@@ -3,6 +3,7 @@ package com.github.solisa14.fourbagger.api.tournament;
 import com.github.solisa14.fourbagger.api.user.User;
 import java.time.Instant;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,13 +15,32 @@ public class TournamentMatchService {
   private final MatchRepository matchRepository;
   private final TournamentMatchAuthorizationService authorizationService;
 
-  public TournamentMatchService(
+  @Autowired
+  TournamentMatchService(
       TournamentMatchSupport matchSupport,
       MatchRepository matchRepository,
       TournamentMatchAuthorizationService authorizationService) {
     this.matchSupport = matchSupport;
     this.matchRepository = matchRepository;
     this.authorizationService = authorizationService;
+  }
+
+  public TournamentMatchService(
+      TournamentRepository tournamentRepository,
+      MatchRepository matchRepository,
+      TournamentMatchAuthorizationService authorizationService,
+      TournamentMapper tournamentMapper,
+      TournamentGameResultRepository resultRepository,
+      TournamentProgressionService progressionService) {
+    this(
+        new TournamentMatchSupport(
+            tournamentRepository,
+            matchRepository,
+            resultRepository,
+            tournamentMapper,
+            progressionService),
+        matchRepository,
+        authorizationService);
   }
 
   @Transactional

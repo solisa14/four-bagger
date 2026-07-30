@@ -17,11 +17,7 @@ public class TournamentBracketService {
   }
 
   public void planBracket(Tournament tournament, List<TournamentTeam> seededTeams) {
-    TournamentFormat format =
-        tournament.getFormat() != null
-            ? tournament.getFormat()
-            : TournamentFormat.SINGLE_ELIMINATION;
-    generatorFor(format).planBracket(tournament, seededTeams);
+    generatorFor(tournament.effectiveFormat()).planBracket(tournament, seededTeams);
   }
 
   private TournamentBracketGenerator generatorFor(TournamentFormat format) {
