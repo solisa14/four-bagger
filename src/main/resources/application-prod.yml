@@ -7,6 +7,8 @@ spring:
     hikari:
       data-source-properties:
         sslmode: require
+  flyway:
+    baseline-on-migrate: false
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 

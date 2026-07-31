@@ -112,7 +112,7 @@ Start Postgres and the API with one command:
 docker compose up --build
 ```
 
-Compose sets `SPRING_PROFILES_ACTIVE=dev` and the local database env vars. The API listens on `http://localhost:8080`. Flyway runs from `main()` before the Spring context starts, so there is no separate migration command.
+Compose sets `SPRING_PROFILES_ACTIVE=dev` and the local database env vars. The API listens on `http://localhost:8080`. Spring Boot runs Flyway migrations during application startup, so there is no separate migration command. Automatic baselining is disabled; production databases must already have Flyway history or be explicitly baselined as a deployment operation.
 
 To run the API on the host without Compose, activate the `dev` profile explicitly (there is no default profile):
 

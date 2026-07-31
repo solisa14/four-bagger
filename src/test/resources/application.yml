@@ -3,7 +3,7 @@ spring:
   application:
     name: four-bagger-api
   datasource:
-    url: jdbc:tc:postgresql:14-alpine:///fourbagger
+    url: jdbc:tc:postgresql:16-alpine:///fourbagger
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
   jpa:
     open-in-view: false
