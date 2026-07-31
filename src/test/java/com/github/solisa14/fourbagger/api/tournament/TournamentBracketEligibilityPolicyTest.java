@@ -39,6 +39,15 @@ class TournamentBracketEligibilityPolicyTest {
   }
 
   @Test
+  void singlesNullFormat_usesSingleEliminationMinimum() {
+    BracketEligibility result = policy.evaluate(tournament(GameType.SINGLES, null, 3));
+
+    assertThat(result.eligible()).isTrue();
+    assertThat(result.minimumParticipantCount()).isEqualTo(3);
+    assertThat(result.message()).isEqualTo("Participant requirements are met.");
+  }
+
+  @Test
   void singlesDoubleElimination_threeParticipants_isIneligible() {
     BracketEligibility result =
         policy.evaluate(tournament(GameType.SINGLES, TournamentFormat.DOUBLE_ELIMINATION, 3));
@@ -78,6 +87,15 @@ class TournamentBracketEligibilityPolicyTest {
     assertThat(result.eligible()).isTrue();
     assertThat(result.minimumParticipantCount()).isEqualTo(6);
     assertThat(result.requiresEvenParticipantCount()).isTrue();
+    assertThat(result.message()).isEqualTo("Participant requirements are met.");
+  }
+
+  @Test
+  void doublesNullFormat_usesSingleEliminationMinimum() {
+    BracketEligibility result = policy.evaluate(tournament(GameType.DOUBLES, null, 6));
+
+    assertThat(result.eligible()).isTrue();
+    assertThat(result.minimumParticipantCount()).isEqualTo(6);
     assertThat(result.message()).isEqualTo("Participant requirements are met.");
   }
 

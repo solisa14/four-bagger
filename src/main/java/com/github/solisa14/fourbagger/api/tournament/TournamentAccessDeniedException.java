@@ -4,7 +4,7 @@ import com.github.solisa14.fourbagger.api.common.exception.BusinessException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 
-/** Exception thrown when a user attempts to mutate a tournament they do not organize. */
+/** Exception thrown when a user is not allowed to access a tournament. */
 public class TournamentAccessDeniedException extends BusinessException {
 
   /**
@@ -13,6 +13,6 @@ public class TournamentAccessDeniedException extends BusinessException {
    * @param tournamentId the ID of the protected tournament
    */
   public TournamentAccessDeniedException(UUID tournamentId) {
-    super("You are not allowed to modify tournament: " + tournamentId, HttpStatus.FORBIDDEN);
+    super("You are not allowed to access tournament: " + tournamentId, HttpStatus.FORBIDDEN);
   }
 }

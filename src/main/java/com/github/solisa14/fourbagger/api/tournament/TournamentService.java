@@ -33,6 +33,7 @@ public class TournamentService {
   private final TournamentBracketService tournamentBracketService;
   private final TournamentBracketEligibilityPolicy bracketEligibilityPolicy;
   private final TournamentGameResultRepository tournamentGameResultRepository;
+  private final TournamentMatchAuthorizationService authorizationService;
 
   /**
    * Constructs a new TournamentService with required dependencies.
@@ -41,16 +42,19 @@ public class TournamentService {
    * @param tournamentBracketService the service for generating tournament brackets
    * @param bracketEligibilityPolicy the policy for bracket participant eligibility
    * @param tournamentGameResultRepository the repository for tournament game results
+   * @param authorizationService the service for tournament access checks
    */
   public TournamentService(
       TournamentRepository tournamentRepository,
       TournamentBracketService tournamentBracketService,
       TournamentBracketEligibilityPolicy bracketEligibilityPolicy,
-      TournamentGameResultRepository tournamentGameResultRepository) {
+      TournamentGameResultRepository tournamentGameResultRepository,
+      TournamentMatchAuthorizationService authorizationService) {
     this.tournamentRepository = tournamentRepository;
     this.tournamentBracketService = tournamentBracketService;
     this.bracketEligibilityPolicy = bracketEligibilityPolicy;
     this.tournamentGameResultRepository = tournamentGameResultRepository;
+    this.authorizationService = authorizationService;
   }
 
   /**
@@ -130,9 +134,7 @@ public class TournamentService {
   public Tournament getTournamentForUser(UUID id, User currentUser) {
     Tournament tournament =
         tournamentRepository.findDetailById(id).orElseThrow(TournamentNotFoundException::new);
-    if (!canAccessTournament(currentUser, tournament)) {
-      throw new TournamentAccessDeniedException(tournament.getId());
-    }
+    authorizationService.authorizeTournamentAccess(currentUser, tournament);
     initializeTournamentDetails(tournament);
     return tournament;
   }
@@ -252,24 +254,6 @@ public class TournamentService {
     if (!tournament.getOrganizer().getId().equals(currentUser.getId())) {
       throw new TournamentAccessDeniedException(tournament.getId());
     }
-  }
-
-  private boolean canAccessTournament(User currentUser, Tournament tournament) {
-    if (currentUser == null) {
-      return false;
-    }
-
-    UUID currentUserId = currentUser.getId();
-    if (tournament.getOrganizer().getId().equals(currentUserId)) {
-      return true;
-    }
-
-    if (tournament.getParticipationMode() == TournamentParticipationMode.ORGANIZER_MANAGED) {
-      return false;
-    }
-
-    return tournament.getParticipants().stream()
-        .anyMatch(participant -> participant.matchesUser(currentUserId));
   }
 
   private void initializeTournamentDetails(Tournament tournament) {
@@ -574,9 +558,7 @@ public class TournamentService {
   public void leaveTournament(UUID tournamentId, User currentUser) {
     Tournament tournament =
         tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-    if (!canAccessTournament(currentUser, tournament)) {
-      throw new TournamentAccessDeniedException(tournament.getId());
-    }
+    authorizationService.authorizeTournamentAccess(currentUser, tournament);
 
     if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
       throw new InvalidTournamentStateException("Cannot leave tournament after registration");

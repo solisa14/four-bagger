@@ -4,9 +4,15 @@ import com.github.solisa14.fourbagger.api.user.User;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
-/** Authorization checks for tournament match mutations. */
+/** Authorization checks for tournament access and match mutations. */
 @Service
 public class TournamentMatchAuthorizationService {
+
+  public void authorizeTournamentAccess(User currentUser, Tournament tournament) {
+    if (!canAccessTournament(currentUser, tournament)) {
+      throw new TournamentAccessDeniedException(tournament.getId());
+    }
+  }
 
   public void authorizeMatchMutation(User currentUser, Tournament tournament, Match match) {
     if (!canMutateMatch(currentUser, tournament, match)) {
@@ -18,6 +24,24 @@ public class TournamentMatchAuthorizationService {
     if (!isOrganizer(currentUser, tournament)) {
       throw new TournamentAccessDeniedException(tournament.getId());
     }
+  }
+
+  public boolean canAccessTournament(User currentUser, Tournament tournament) {
+    if (currentUser == null) {
+      return false;
+    }
+
+    UUID currentUserId = currentUser.getId();
+    if (isOrganizer(currentUser, tournament)) {
+      return true;
+    }
+
+    if (tournament.getParticipationMode() == TournamentParticipationMode.ORGANIZER_MANAGED) {
+      return false;
+    }
+
+    return tournament.getParticipants().stream()
+        .anyMatch(participant -> participant.matchesUser(currentUserId));
   }
 
   public boolean canMutateMatch(User currentUser, Tournament tournament, Match match) {

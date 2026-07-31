@@ -254,6 +254,22 @@ class TournamentOrganizerManagedIntegrationTest extends AbstractIntegrationTest 
           }
         });
     Assertions.assertThat(names).containsExactlyInAnyOrder("Pat", "Alex", "Casey", "Dana");
+
+    String outsiderToken = registerAndGetToken("ombracketout" + suffix);
+    String matchId = matches.get(0).path("id").asText();
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
+                .cookie(TestCookieHelper.cookie("accessToken", outsiderToken)))
+        .andExpect(status().isForbidden());
+
+    mockMvc
+        .perform(
+            get("/api/v1/tournaments/{tournamentId}/matches/{matchId}", tournamentId, matchId)
+                .cookie(TestCookieHelper.cookie("accessToken", organizerToken)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(matchId));
   }
 
   @Test

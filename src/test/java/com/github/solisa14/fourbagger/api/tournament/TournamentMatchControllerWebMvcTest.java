@@ -103,7 +103,8 @@ class TournamentMatchControllerWebMvcTest {
             1,
             List.of());
 
-    when(tournamentMatchService.getMatchDetail(tournamentId, matchId)).thenReturn(detail);
+    when(tournamentMatchService.getMatchDetail(eq(tournamentId), eq(matchId), any()))
+        .thenReturn(detail);
 
     mockMvc
         .perform(

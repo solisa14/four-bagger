@@ -207,7 +207,8 @@ class TournamentMatchServiceTest {
         .thenReturn(detail);
 
     TournamentMatchDetailResponse result =
-        tournamentMatchService.getMatchDetail(tournament.getId(), match.getId());
+        tournamentMatchService.getMatchDetail(
+            tournament.getId(), match.getId(), tournament.getOrganizer());
 
     assertThat(result).isEqualTo(detail);
   }

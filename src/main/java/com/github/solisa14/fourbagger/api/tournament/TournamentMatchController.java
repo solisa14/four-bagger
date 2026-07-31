@@ -40,8 +40,11 @@ class TournamentMatchController {
 
   @GetMapping("/{matchId}")
   ResponseEntity<TournamentMatchDetailResponse> getMatch(
-      @PathVariable UUID tournamentId, @PathVariable UUID matchId) {
-    return ResponseEntity.ok(tournamentMatchService.getMatchDetail(tournamentId, matchId));
+      @AuthenticationPrincipal User currentUser,
+      @PathVariable UUID tournamentId,
+      @PathVariable UUID matchId) {
+    return ResponseEntity.ok(
+        tournamentMatchService.getMatchDetail(tournamentId, matchId, currentUser));
   }
 
   @PostMapping("/{matchId}/games/{gameNumber}/result")

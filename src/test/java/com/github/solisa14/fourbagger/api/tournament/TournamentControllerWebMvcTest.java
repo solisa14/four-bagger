@@ -307,7 +307,7 @@ class TournamentControllerWebMvcTest {
     mockMvc
         .perform(get("/api/v1/tournaments/{id}", id).with(user(principal)))
         .andExpect(status().isForbidden())
-        .andExpect(jsonPath("$.message").value("You are not allowed to modify tournament: " + id));
+        .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + id));
   }
 
   // ── Get Tournament By Join Code ──────────────────────────────────
@@ -488,7 +488,7 @@ class TournamentControllerWebMvcTest {
     mockMvc
         .perform(post("/api/v1/tournaments/{id}/start", id).with(user(principal)))
         .andExpect(status().isForbidden())
-        .andExpect(jsonPath("$.message").value("You are not allowed to modify tournament: " + id));
+        .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + id));
   }
 
   // ── Generate Bracket ──────────────────────────────────────────
@@ -589,7 +589,7 @@ class TournamentControllerWebMvcTest {
     mockMvc
         .perform(post("/api/v1/tournaments/{id}/bracket", id).with(user(principal)))
         .andExpect(status().isForbidden())
-        .andExpect(jsonPath("$.message").value("You are not allowed to modify tournament: " + id));
+        .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + id));
   }
 
   // ── Join Tournament ───────────────────────────────────────────
@@ -907,7 +907,7 @@ class TournamentControllerWebMvcTest {
         .andExpect(status().isForbidden())
         .andExpect(
             jsonPath("$.message")
-                .value("You are not allowed to modify tournament: " + tournamentId));
+                .value("You are not allowed to access tournament: " + tournamentId));
   }
 
   // ── Leave Tournament ──────────────────────────────────────────
@@ -972,7 +972,7 @@ class TournamentControllerWebMvcTest {
         .andExpect(status().isForbidden())
         .andExpect(
             jsonPath("$.message")
-                .value("You are not allowed to modify tournament: " + tournamentId));
+                .value("You are not allowed to access tournament: " + tournamentId));
   }
 
   // ── Update Round Settings ─────────────────────────────────────
@@ -1104,6 +1104,6 @@ class TournamentControllerWebMvcTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
         .andExpect(status().isForbidden())
-        .andExpect(jsonPath("$.message").value("You are not allowed to modify tournament: " + id));
+        .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + id));
   }
 }

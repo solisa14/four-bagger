@@ -18,7 +18,7 @@ public class TournamentBracketEligibilityPolicy {
    */
   public BracketEligibility evaluate(Tournament tournament) {
     int participantCount = tournament.getParticipants().size();
-    int minimum = minimumParticipantCount(tournament.getGameType(), tournament.getFormat());
+    int minimum = minimumParticipantCount(tournament.getGameType(), tournament.effectiveFormat());
     boolean requiresEven = requiresEvenParticipantCount(tournament.getGameType());
     boolean eligible = isEligible(participantCount, minimum, requiresEven);
     String message = eligibilityMessage(participantCount, minimum, requiresEven, eligible);

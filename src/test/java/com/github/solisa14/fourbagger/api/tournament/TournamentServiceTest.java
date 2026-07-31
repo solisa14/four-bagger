@@ -44,7 +44,8 @@ class TournamentServiceTest {
             tournamentRepository,
             tournamentBracketService,
             bracketEligibilityPolicy,
-            tournamentGameResultRepository);
+            tournamentGameResultRepository,
+            new TournamentMatchAuthorizationService());
   }
 
   private User organizer() {

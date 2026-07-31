@@ -67,9 +67,11 @@ public class TournamentMatchService {
   }
 
   @Transactional(readOnly = true)
-  public TournamentMatchDetailResponse getMatchDetail(UUID tournamentId, UUID matchId) {
-    matchSupport.requireTournament(tournamentId);
+  public TournamentMatchDetailResponse getMatchDetail(
+      UUID tournamentId, UUID matchId, User currentUser) {
+    Tournament tournament = matchSupport.requireTournament(tournamentId);
     Match match = matchSupport.requireMatch(matchId, tournamentId);
+    authorizationService.authorizeTournamentAccess(currentUser, tournament);
     return matchSupport.toDetail(match);
   }
 
