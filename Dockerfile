@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
-# Local development image for docker compose up --build.
-# Compose supplies database and app env vars at runtime.
+# API runtime image. Profile and secrets must be supplied at runtime
+# (docker compose for local, ECS task definition for production).
+# Do not bake SPRING_PROFILES_ACTIVE or secrets into this image.
 
 # ---- Build stage -------------------------------------------------------------
 FROM maven:3.9-eclipse-temurin-25 AS build
@@ -26,7 +27,6 @@ RUN chown -R app:app /app
 USER app
 
 ENV SERVER_PORT=8080 \
-    SPRING_PROFILES_ACTIVE=dev \
     JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75"
 
 EXPOSE 8080

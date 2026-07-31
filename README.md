@@ -112,7 +112,13 @@ Start Postgres and the API with one command:
 docker compose up --build
 ```
 
-The API listens on `http://localhost:8080`. Flyway runs from `main()` before the Spring context starts, so there is no separate migration command.
+Compose sets `SPRING_PROFILES_ACTIVE=dev` and the local database env vars. The API listens on `http://localhost:8080`. Flyway runs from `main()` before the Spring context starts, so there is no separate migration command.
+
+To run the API on the host without Compose, activate the `dev` profile explicitly (there is no default profile):
+
+```bash
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
 
 To reset local state after Docker cleanup or schema changes:
 
@@ -130,6 +136,24 @@ Tests run on the host with Maven and use Testcontainers for PostgreSQL, so Docke
 ```
 
 CI runs the same command on pushes to `master` and `dev`, and on pull requests.
+
+## Production configuration
+
+Production uses the `prod` Spring profile and fails closed when required secrets are missing or unsafe.
+
+Copy [`.env.prod.example`](.env.prod.example) as a checklist of the runtime contract (do not commit real values):
+
+| Variable | Purpose |
+|----------|---------|
+| `SPRING_PROFILES_ACTIVE` | Must be `prod` |
+| `JWT_SECRET` | Base64-encoded signing key (≥ 256 bits). Known development placeholders are rejected at startup |
+| `DB_URL` | PostgreSQL JDBC URL (include `sslmode=require`; Hikari also forces TLS) |
+| `DB_USERNAME` | Database user |
+| `DB_PASSWORD` | Database password |
+| `ALLOWED_ORIGINS` | Comma-separated browser origins (no localhost / `127.0.0.1`) |
+| `REGISTRATION_ENABLED` | Optional; defaults to `false` in production |
+
+The Docker image does **not** default a Spring profile or bake secrets. Inject secrets at runtime from [AWS Secrets Manager via the ECS task definition](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data-secrets.html) (`valueFrom`), not into the image or the repository.
 
 ## API Reference
 
@@ -205,4 +229,4 @@ alone.
 
 - Build a lightweight frontend for demos and real usage
 - Continue refining the tournament experience (double-elimination edge cases, organizer workflows)
-- Revisit deployment when there is a sustainable hosting approach
+- Complete the lean AWS runtime (ECS, RDS, Secrets Manager wiring) for a portfolio demo deploy
