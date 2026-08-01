@@ -23,6 +23,17 @@ spring:
 app:
   cors:
     allowed-origins: http://localhost:3000,http://localhost:8080
+  auth:
+    registration:
+      enabled: true
+  rate-limit:
+    enabled: true
+    auth:
+      requests: 10000
+      window-seconds: 60
+    join-code:
+      requests: 10000
+      window-seconds: 60
   security:
     jwt:
       # test-only, 256-bit placeholder — DO NOT use in prod

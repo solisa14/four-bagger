@@ -1,8 +1,12 @@
 package com.github.solisa14.fourbagger.api.security;
 
+import com.github.solisa14.fourbagger.api.security.ratelimit.RateLimitFilter;
+import com.github.solisa14.fourbagger.api.security.ratelimit.RateLimitProperties;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,6 +26,8 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Provides Spring beans for application security components.
@@ -30,6 +36,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  */
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(RateLimitProperties.class)
 public class SecurityConfig {
 
   private final UserRepository userRepository;
@@ -63,13 +70,17 @@ public class SecurityConfig {
    * authentication filter.
    *
    * @param http the HttpSecurity object to configure
+   * @param rateLimitFilter the Bucket4j-backed request-throttling filter
    * @param jwtAuthenticationFilter the JWT authentication filter
    * @return the configured SecurityFilterChain
    * @throws Exception if an error occurs during configuration
    */
   @Bean
   public SecurityFilterChain securityFilterChain(
-      HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+      HttpSecurity http,
+      RateLimitFilter rateLimitFilter,
+      JwtAuthenticationFilter jwtAuthenticationFilter)
+      throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .authorizeHttpRequests(
@@ -85,6 +96,7 @@ public class SecurityConfig {
                     .authenticationEntryPoint(authenticationEntryPoint)
                     .accessDeniedHandler(accessDeniedHandler))
         .authenticationProvider(authenticationProvider())
+        .addFilterAfter(rateLimitFilter, CorsFilter.class)
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .headers(
             headers ->
@@ -95,6 +107,20 @@ public class SecurityConfig {
                                 .STRICT_ORIGIN_WHEN_CROSS_ORIGIN)));
 
     return http.build();
+  }
+
+  @Bean
+  RateLimitFilter rateLimitFilter(RateLimitProperties properties, ObjectMapper objectMapper) {
+    return new RateLimitFilter(properties, objectMapper);
+  }
+
+  @Bean
+  FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(
+      RateLimitFilter rateLimitFilter) {
+    FilterRegistrationBean<RateLimitFilter> registration =
+        new FilterRegistrationBean<>(rateLimitFilter);
+    registration.setEnabled(false);
+    return registration;
   }
 
   /**
@@ -158,6 +184,7 @@ public class SecurityConfig {
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
     configuration.setAllowedHeaders(
         List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Requested-With"));
+    configuration.setExposedHeaders(List.of("Retry-After"));
     configuration.setAllowCredentials(true);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

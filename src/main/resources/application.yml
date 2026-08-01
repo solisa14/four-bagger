@@ -14,6 +14,18 @@ spring:
 app:
   cors:
     allowed-origins: ${ALLOWED_ORIGINS}
+  auth:
+    registration:
+      enabled: ${REGISTRATION_ENABLED:true}
+  rate-limit:
+    enabled: true
+    auth:
+      requests: ${RATE_LIMIT_AUTH_REQUESTS:10}
+      window-seconds: ${RATE_LIMIT_AUTH_WINDOW_SECONDS:60}
+    join-code:
+      requests: ${RATE_LIMIT_JOIN_CODE_REQUESTS:30}
+      window-seconds: ${RATE_LIMIT_JOIN_CODE_WINDOW_SECONDS:60}
+    trusted-proxies: ${RATE_LIMIT_TRUSTED_PROXIES:}
   security:
     jwt:
       secret-key: ${JWT_SECRET}

@@ -5,6 +5,7 @@ import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import com.github.solisa14.fourbagger.api.user.UserService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class AuthenticationService {
   private final AuthenticationManager authenticationManager;
   private final JwtService jwtService;
   private final RefreshTokenService refreshTokenService;
+  private final boolean registrationEnabled;
 
   /**
    * Constructs an AuthenticationService.
@@ -31,18 +33,21 @@ public class AuthenticationService {
    * @param authenticationManager the authentication manager
    * @param jwtService the JWT service
    * @param refreshTokenService the refresh token service
+   * @param registrationEnabled whether new account registration is allowed
    */
   public AuthenticationService(
       UserService userService,
       UserRepository userRepository,
       AuthenticationManager authenticationManager,
       JwtService jwtService,
-      RefreshTokenService refreshTokenService) {
+      RefreshTokenService refreshTokenService,
+      @Value("${app.auth.registration.enabled:true}") boolean registrationEnabled) {
     this.userService = userService;
     this.userRepository = userRepository;
     this.authenticationManager = authenticationManager;
     this.jwtService = jwtService;
     this.refreshTokenService = refreshTokenService;
+    this.registrationEnabled = registrationEnabled;
   }
 
   /**
@@ -50,8 +55,12 @@ public class AuthenticationService {
    *
    * @param command registration details including credentials and optional profile fields
    * @return the created user entity
+   * @throws RegistrationDisabledException if registration is disabled by configuration
    */
   public User registerUser(CreateUserCommand command) {
+    if (!registrationEnabled) {
+      throw new RegistrationDisabledException();
+    }
     return userService.createUser(command);
   }
 

@@ -152,6 +152,13 @@ Copy [`.env.prod.example`](.env.prod.example) as a checklist of the runtime cont
 | `DB_PASSWORD` | Database password |
 | `ALLOWED_ORIGINS` | Comma-separated browser origins (no localhost / `127.0.0.1`) |
 | `REGISTRATION_ENABLED` | Optional; defaults to `false` in production |
+| `RATE_LIMIT_AUTH_REQUESTS` | Optional; auth token-bucket capacity and per-window refill amount (default `10`) |
+| `RATE_LIMIT_AUTH_WINDOW_SECONDS` | Optional; auth token-bucket refill period in seconds (default `60`) |
+| `RATE_LIMIT_JOIN_CODE_REQUESTS` | Optional; join-code token-bucket capacity and per-window refill amount (default `30`) |
+| `RATE_LIMIT_JOIN_CODE_WINDOW_SECONDS` | Optional; join-code token-bucket refill period in seconds (default `60`) |
+| `RATE_LIMIT_TRUSTED_PROXIES` | Optional; comma-separated proxy addresses allowed to supply `X-Forwarded-For` |
+
+Bucket4j token-bucket rate limiting returns HTTP `429` with `Retry-After` when exceeded (single-task scope; not shared across instances). Excess auth/join-code traffic is rejected before BCrypt/JWT work. Direct clients cannot choose their rate-limit key through `X-Forwarded-For`; configure trusted proxy addresses only when a proxy forwards the real client IP.
 
 The Docker image does **not** default a Spring profile or bake secrets. Inject secrets at runtime from [AWS Secrets Manager via the ECS task definition](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data-secrets.html) (`valueFrom`), not into the image or the repository.
 

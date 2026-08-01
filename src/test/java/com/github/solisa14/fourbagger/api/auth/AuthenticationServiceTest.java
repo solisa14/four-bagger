@@ -3,9 +3,11 @@ package com.github.solisa14.fourbagger.api.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.github.solisa14.fourbagger.api.security.JwtService;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
 import com.github.solisa14.fourbagger.api.user.Role;
@@ -14,9 +16,9 @@ import com.github.solisa14.fourbagger.api.user.UserRepository;
 import com.github.solisa14.fourbagger.api.user.UserService;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,11 +33,23 @@ class AuthenticationServiceTest {
 
   @Mock private AuthenticationManager authenticationManager;
 
-  @Mock private com.github.solisa14.fourbagger.api.security.JwtService jwtService;
+  @Mock private JwtService jwtService;
 
   @Mock private RefreshTokenService refreshTokenService;
 
-  @InjectMocks private AuthenticationService authenticationService;
+  private AuthenticationService authenticationService;
+
+  @BeforeEach
+  void setUp() {
+    authenticationService =
+        new AuthenticationService(
+            userService,
+            userRepository,
+            authenticationManager,
+            jwtService,
+            refreshTokenService,
+            true);
+  }
 
   @Test
   void registerUser_whenRequestIsValid_returnsUserDetails() {
@@ -51,6 +65,26 @@ class AuthenticationServiceTest {
     assertThat(response.getId()).isEqualTo(id);
     assertThat(response.getUsername()).isEqualTo(user.getUsername());
     assertThat(response.getRole()).isEqualTo(user.getRole());
+  }
+
+  @Test
+  void registerUser_whenRegistrationDisabled_throwsRegistrationDisabledException() {
+    AuthenticationService disabledService =
+        new AuthenticationService(
+            userService,
+            userRepository,
+            authenticationManager,
+            jwtService,
+            refreshTokenService,
+            false);
+    CreateUserCommand command =
+        new CreateUserCommand("user1", "Password1!", "Test", "User");
+
+    assertThatThrownBy(() -> disabledService.registerUser(command))
+        .isInstanceOf(RegistrationDisabledException.class)
+        .hasMessage("Registration is disabled");
+
+    verify(userService, never()).createUser(any());
   }
 
   @Test
