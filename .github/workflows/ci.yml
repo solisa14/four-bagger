@@ -13,6 +13,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build production image
+        env:
+          IMAGE_TAG: four-bagger-api:${{ github.sha }}
+        run: docker build --pull --tag "$IMAGE_TAG" .
+
+      - name: Validate production image
+        env:
+          IMAGE_TAG: four-bagger-api:${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          configured_user="$(docker image inspect "$IMAGE_TAG" --format '{{.Config.User}}')"
+          entrypoint="$(docker image inspect "$IMAGE_TAG" --format '{{json .Config.Entrypoint}}')"
+          baked_env="$(docker image inspect "$IMAGE_TAG" --format '{{json .Config.Env}}')"
+          runtime_identity="$(docker run --rm --entrypoint id "$IMAGE_TAG")"
+          runtime_uid="${runtime_identity#uid=}"
+          runtime_uid="${runtime_uid%%(*}"
+
+          test "$configured_user" = "app"
+          test "$runtime_uid" != "0"
+          test "$entrypoint" = '["java","-jar","/app/app.jar"]'
+
+          case "$baked_env" in
+            *SPRING_PROFILES_ACTIVE=*|*JWT_SECRET=*|*DB_PASSWORD=*)
+              echo "Production profile or secret was baked into the image"
+              exit 1
+              ;;
+          esac
+
+          printf 'Validated %s: user=%s runtime=%s entrypoint=%s\n' \
+            "$IMAGE_TAG" "$configured_user" "$runtime_identity" "$entrypoint"
+
       - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
