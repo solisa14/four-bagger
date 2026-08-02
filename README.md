@@ -162,6 +162,41 @@ Bucket4j token-bucket rate limiting returns HTTP `429` with `Retry-After` when e
 
 The Docker image does **not** default a Spring profile or bake secrets. Inject secrets at runtime from [AWS Secrets Manager via the ECS task definition](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data-secrets.html) (`valueFrom`), not into the image or the repository.
 
+## Publishing and deploying
+
+### Publish (automatic on `master`)
+
+Merges to `master` run CI verify, then a separate **Publish image to ECR** job that pushes
+`<aws-account-id>.dkr.ecr.<aws-region>.amazonaws.com/<ecr-repository>:<commit-sha>`. Publishing does **not**
+deploy to ECS.
+
+The publish job uses the GitHub `production` environment and assumes
+`vars.AWS_PRODUCTION_ROLE_ARN` via OIDC (`id-token: write`). If the environment has required
+reviewers, approve the pending deployment so the image can be pushed.
+
+### Deploy (manual)
+
+When you want production to run a published image:
+
+1. Copy the full commit SHA from the publish job summary (or from git / ECR).
+2. GitHub → **Actions** → **Deploy to ECS Express** → **Run workflow** on `master`.
+3. Paste the SHA into `image_sha` and run.
+4. Approve the `production` environment if prompted.
+5. The workflow updates ECS Express to that image and fails if the service does not become healthy.
+
+Do not deploy from the AWS console for day-to-day releases; use this workflow so auth, waiting, and failure reporting stay consistent.
+
+Required repository (or `production` environment) variables:
+
+| Variable | Example |
+|----------|---------|
+| `AWS_PRODUCTION_ROLE_ARN` | `<production-role-arn>` |
+| `AWS_REGION` | `<aws-region>` |
+| `AWS_ACCOUNT_ID` | `<aws-account-id>` |
+| `ECR_REPOSITORY` | `<ecr-repository>` |
+| `ECS_CLUSTER` | `<ecs-cluster>` |
+| `ECS_SERVICE` | `<ecs-service>` |
+
 ## API Reference
 
 All endpoints are served under `/api/v1`. Authenticated routes expect a JWT in the `accessToken` HttpOnly cookie (set by
@@ -236,4 +271,4 @@ alone.
 
 - Build a lightweight frontend for demos and real usage
 - Continue refining the tournament experience (double-elimination edge cases, organizer workflows)
-- Complete the lean AWS runtime (ECS, RDS, Secrets Manager wiring) for a portfolio demo deploy
+- Verify launch, rollback, and cost against the live ECS deploy path

@@ -1,0 +1,140 @@
+name: Deploy to ECS Express
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: Full git commit SHA of the image already published to ECR
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy image
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Validate image SHA
+        env:
+          IMAGE_SHA: ${{ inputs.image_sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$IMAGE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "image_sha must be a full 40-character lowercase git commit SHA" >&2
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ vars.AWS_PRODUCTION_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Resolve image URI
+        id: image
+        env:
+          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_SHA: ${{ inputs.image_sha }}
+        run: |
+          set -euo pipefail
+
+          for required in AWS_ACCOUNT_ID AWS_REGION ECR_REPOSITORY; do
+            if [ -z "${!required}" ]; then
+              echo "Repository variable ${required} is required" >&2
+              exit 1
+            fi
+          done
+
+          image_uri="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_SHA}"
+
+          aws ecr describe-images \
+            --repository-name "$ECR_REPOSITORY" \
+            --image-ids "imageTag=${IMAGE_SHA}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text > /tmp/image-digest.txt
+
+          digest="$(cat /tmp/image-digest.txt)"
+          if [ -z "$digest" ] || [ "$digest" = "None" ]; then
+            echo "No ECR image found for tag ${IMAGE_SHA}" >&2
+            exit 1
+          fi
+
+          {
+            echo "image_uri=${image_uri}"
+            echo "image_digest=${digest}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update ECS Express service
+        id: deploy
+        env:
+          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+          IMAGE_URI: ${{ steps.image.outputs.image_uri }}
+        run: |
+          set -euo pipefail
+
+          for required in ECS_CLUSTER ECS_SERVICE; do
+            if [ -z "${!required}" ]; then
+              echo "Repository variable ${required} is required" >&2
+              exit 1
+            fi
+          done
+
+          service_arn="arn:aws:ecs:${AWS_REGION}:${AWS_ACCOUNT_ID}:service/${ECS_CLUSTER}/${ECS_SERVICE}"
+
+          # Image-only update preserves existing env vars, secrets, and networking.
+          aws ecs update-express-gateway-service \
+            --service-arn "$service_arn" \
+            --primary-container "{\"image\": \"${IMAGE_URI}\"}"
+
+          echo "service_arn=${service_arn}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for service stability
+        env:
+          ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+          ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+        run: |
+          set -euo pipefail
+
+          # Fails the job if the rolling deploy does not become healthy/stable.
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+          rollout="$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0].deployments[?status==`PRIMARY`].rolloutState | [0]' \
+            --output text)"
+
+          echo "Primary deployment rollout state: ${rollout}"
+          if [ "$rollout" != "COMPLETED" ]; then
+            echo "Deploy finished waiting but primary rollout is not COMPLETED (${rollout})" >&2
+            exit 1
+          fi
+
+      - name: Write job summary
+        env:
+          IMAGE_SHA: ${{ inputs.image_sha }}
+          IMAGE_URI: ${{ steps.image.outputs.image_uri }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
+          SERVICE_ARN: ${{ steps.deploy.outputs.service_arn }}
+        run: |
+          {
+            echo "## Deployed image"
+            echo ""
+            echo "- Tag: \`${IMAGE_SHA}\`"
+            echo "- URI: \`${IMAGE_URI}\`"
+            echo "- Digest: \`${IMAGE_DIGEST}\`"
+            echo "- Service: \`${SERVICE_ARN}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
