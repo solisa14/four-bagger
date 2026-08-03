@@ -11,3 +11,9 @@ HELP.md
 docs/
 cookies.txt
 *.txt
+
+# Local environment files and runtime logs
+.env
+.env.*
+*.env.*
+*.log
