@@ -18,16 +18,6 @@ target/
 *.iml
 *.ipr
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
 ### VS Code ###
 .vscode/
 
@@ -38,15 +28,6 @@ build/
 
 ### macOS ###
 .DS_Store
-
-### Azure App Service log downloads ###
-applogs/
-applogs.zip
-cookies.txt
-p1.txt
-p2.txt
-p3.txt
-org.txt
 
 *.md
 !README.md
