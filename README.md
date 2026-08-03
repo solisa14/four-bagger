@@ -1,274 +1,236 @@
-![CI](https://github.com/solisa14/four-bagger-api/actions/workflows/ci.yml/badge.svg)
 # Four Bagger
 
-Four Bagger is a Spring Boot backend for organizing cornhole games and single- and double-elimination tournaments. It
-supports user authentication, standalone singles and doubles games, tournament registration via join codes, bracket
-generation, round-level best-of configuration, and automatic bracket progression as final match results are submitted.
+Four Bagger is a cornhole tournament application that organizes participants and teams, generates brackets, records
+results, and advances winners automatically across singles and doubles play.
 
-I built this project because I wanted something my family could actually use during cornhole tournaments at family
-functions, and I wanted a backend project that pushed me beyond basic CRUD. The goal was to practice backend engineering
-in a project with real domain rules and real state transitions.
+[View the live application](https://four-bagger.vercel.app)
 
-## Highlights
+Cornhole is a backyard game in which players or teams throw bags at raised boards; Four Bagger handles the tournament
+organization around the game.
 
-- JWT-based authentication with refresh-token rotation and HttpOnly cookies
-- Standalone singles and doubles game support
-- Single- and double-elimination tournament lifecycle from registration through bracket generation to live match
-  progression
-- Graph-based bracket routing — matches are wired as nodes with winner and loser edges that drive automatic advancement
-- Configurable round rules with `bestOf` series support
-- Final-result scoring for standalone games and tournament physical games (winner + both scores)
-- Immutable tournament result submission with duplicate-submission protection
-- Flyway-managed schema changes with Hibernate validation and PostgreSQL persistence
+## Why I built it
 
-## Tech Stack
+Most weekends, my family and I get together for a cookout and play cornhole. When we organized tournaments, we would
+manually draw brackets and assign teams.
 
-- Java 25
-- Spring Boot 4.0.1
-- Spring Web MVC
-- Spring Security
-- Spring Data JPA
-- Flyway
-- PostgreSQL
-- Testcontainers
-- JUnit 5 and Mockito
-- Maven (`./mvnw`)
-- Docker Compose (local API + Postgres via `docker-compose.yml`)
+I built Four Bagger to make that setup more streamlined while preserving the same playing experience we were already
+used to. The most technically challenging part was modeling the tournament domain and its state transitions.
+
+This repository contains the Spring Boot API. The React frontend is maintained separately as the deployed demonstration
+client for the application.
+
+## Technical highlights
+
+- Stateful single- and double-elimination tournament progression with seeded brackets, byes, and format-specific routing
+- HTTP-only cookie-based JWT authentication with rotating, one-way-hashed refresh tokens
+- PostgreSQL-backed full-workflow integration tests using Spring Boot and Testcontainers
+- GitHub Actions builds and validates a non-root container, publishes full-commit-SHA images to Amazon ECR, and supports
+  manual promotion to AWS ECS Express
+
+## Tournament workflows
+
+The tournament workflows include:
+
+- Tournament registration, lifecycle management, and completed-tournament retrieval
+- Singles and doubles tournaments with single- or double-elimination formats
+- Self-join tournaments using six-character join codes, or organizer-managed rosters with guest participants
+- Random or organizer-defined manual doubles pairings, seeded brackets, and automatic byes
+- Configurable best-of series by round, result recording, automatic progression, and organizer-only overrides while
+  downstream play has not started
+
+Tournaments move through four lifecycle stages:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Registration
+    Registration --> BracketReady: Generate bracket
+    BracketReady --> InProgress: Start tournament
+    InProgress --> InProgress: Submit game result
+    InProgress --> Completed: Terminal final resolved
+    Completed --> [*]
+```
+
+### Games within tournament matches
+
+Non-bye tournament matches contain one or more physical games, depending on the round's best-of configuration. Four
+Bagger supports:
+
+- Recording each physical game's two team scores
+- Best-of-1, best-of-3, best-of-5, and best-of-7 series configured by round
+- Sequential game-number validation with rejection of negative or tied scores
+- Idempotent identical retries, with conflicting reuse of a game number rejected
+- Match completion when a team clinches the series, followed by format-specific bracket progression
+
+## Authentication and security
+
+The API includes:
+
+- Registration, login, logout, profile workflows, and stateless request authentication through Spring Security
+- BCrypt password hashing; access JWTs and refresh tokens are issued in HTTP-only, `SameSite=Strict` cookies
+- Refresh tokens rotate on use, are stored as one-way SHA-256 hashes, expire after seven days, and are purged daily
+- Credential-aware CORS and in-process Bucket4j/Caffeine rate limiting protect authentication and join-code endpoints
+- Central JSON error handling and production startup validation enforce required database settings, non-local CORS
+  origins, secure cookies, and strong non-development JWT keys
+
+## Tournament domain and design
+
+The core domain is organized around the following relationships:
+
+```text
+Tournament
+├── Participants
+├── Teams
+├── Rounds
+│   └── Matches
+│       └── Game results
+```
+
+Bracket generation is separated from tournament lifecycle management. Single-elimination and double-elimination brackets
+each have dedicated generation and progression logic.
+
+The tournament implementation handles several non-trivial cases:
+
+- Power-of-two bracket sizing, top-seed byes, and automatic bye propagation
+- Winners- and losers-bracket routing with team loss tracking and second-loss elimination
+- Final and grand-final behavior, including reset-final routing when the first final does not eliminate the loser
+- Series-clinching logic across configurable round formats
+- Lifecycle and result invariants enforced in services, with optimistic locking on tournaments, matches, teams, and
+  result records
+
+These rules are kept in domain services and bracket components instead of being embedded directly in the HTTP
+controllers. This keeps the tournament behavior testable and allows the API layer to remain focused on request handling
+and response mapping.
 
 ## Architecture
 
-The project uses a layered, package-by-feature structure:
+Four Bagger is a single deployable Spring Boot service organized by feature.
 
-- `auth` handles registration, login, logout, refresh-token rotation, and persisted refresh tokens
-- `user` handles profile reads and account updates
-- `game` handles standalone game creation, final-result submission, and game state transitions
-- `tournament` handles tournament lifecycle, bracket generation, round configuration, and match progression
-- `security` contains JWT parsing, authentication filters, and Spring Security configuration
-- `common` contains shared exception handling and validation utilities
-
-Some of the main engineering decisions in the codebase:
-
-- Controllers use mapper classes to translate request DTOs into domain commands or responses (for example `GameMapper`,
-  `TournamentMapper`), which keeps service boundaries explicit
-- Tournament progression is result-driven: `TournamentMatchResultService` persists `TournamentGameResult` rows and
-  `TournamentProgressionService` applies best-of series wins and bracket advancement
-- Database changes are managed through Flyway migrations, while Hibernate runs in `validate` mode to prevent the schema
-  from drifting away from the entity model
-
-### Bracket graph architecture
-
-Tournament brackets are modeled as a directed graph of matches rather than being recomputed on every result.
-
-Each `Match` is a node. `winnerNextMatch` and `loserNextMatch` (plus their position fields) are edges to destination
-matches. When a match completes, progression handlers walk those edges to place teams into the next slot.
-
-```mermaid
-flowchart LR
-  m1[Match_R1_M1] -->|winner| m3[Match_R2_M1]
-  m2[Match_R1_M2] -->|winner| m3
-  m1 -->|loser_double_elim| losers[Losers_bracket_match]
+```text
+HTTP controllers
+    → Domain and lifecycle services
+    → Format-specific bracket generators and progression handlers
+    → Spring Data JPA repositories
+    → PostgreSQL
 ```
 
-At bracket generation time, `SingleEliminationBracketGenerator` and `DoubleEliminationBracketGenerator` build the full
-graph — creating rounds, seeding first-round matchups, assigning byes, and wiring winner (and, for double elimination,
-loser) routes between matches.
+Packages are organized by feature around authentication, games, users, tournaments, security, configuration, shared
+exceptions, and health checks.
 
-When a tournament physical-game result is submitted, `TournamentProgressionService` handles series wins and best-of logic, then delegates to the
-format-specific handler:
+- Controllers handle HTTP routes, request validation, and response mapping.
+- Services enforce lifecycle, authorization, transaction, and domain rules.
+- Dedicated bracket components isolate format-specific behavior.
+- Spring Data JPA repositories manage persistence, while Flyway versions the PostgreSQL schema.
+- Shared security and exception-handling components provide cross-cutting behavior.
 
-- `SingleEliminationProgressionHandler` routes the winner along the winner edge; when there is no next match, the
-  tournament completes
-- `DoubleEliminationProgressionHandler` routes both winner and loser edges, tracks per-team losses, and eliminates a team
-  after its second loss; it also handles the first-final / grand-final reset case
+## Technology stack
 
-Double-elimination rounds are tagged with `BracketType` (`WINNERS`, `LOSERS`, `FINAL`, `GRAND_FINAL`), and
-`TournamentMapper` exposes separate bracket sections in API responses (winners bracket, losers bracket, final,
-grand final).
+| Area                   | Technologies                                                                    |
+|------------------------|---------------------------------------------------------------------------------|
+| Language and framework | Java 25, Spring Boot 4.0.1                                                      |
+| Web and persistence    | Spring MVC, Spring Data JPA, Hibernate                                          |
+| Database               | PostgreSQL 16                                                                   |
+| Schema management      | Flyway migrations with Hibernate schema validation                              |
+| Authentication         | Spring Security, JJWT, BCrypt, HTTP-only cookies                                |
+| Rate limiting          | Bucket4j and Caffeine                                                           |
+| Testing                | JUnit, Mockito, Spring MVC tests, Spring Boot integration tests, Testcontainers |
+| Build and packaging    | Maven Wrapper, multi-stage Docker image                                         |
+| Delivery               | GitHub Actions, Amazon ECR, AWS ECS Express                                     |
+| Demo client (separate) | React/TypeScript/Vite frontend deployed through Vercel                          |
 
-## Testing Approach
-
-The project uses a layered test strategy instead of relying on only one kind of test:
-
-- Unit tests for service-level business logic
-- `@WebMvcTest` tests for controller behavior, validation, and HTTP responses
-- `@DataJpaTest` tests for repository behavior against PostgreSQL via Testcontainers
-- `@SpringBootTest` integration tests for full application flows
-
-Integration tests under `src/test/java/.../auth`, `game`, and `tournament` exercise end-to-end HTTP flows (for example
-`AuthFlowIntegrationTest`, `GameFlowIntegrationTest`, `TournamentLifecycleIntegrationTest`, and
-`TournamentGameProgressionIntegrationTest`, which covers double-elimination graph progression).
-
-## Local Development
+## Run locally
 
 ### Prerequisites
 
-- Docker Desktop (or Docker Engine + Compose)
+- Docker with Docker Compose
+- Java 25 is also required when running Maven commands directly
 
-### Run the application
+### Start the application
 
-Start Postgres and the API with one command:
+From the repository root:
 
 ```bash
 docker compose up --build
 ```
 
-Compose sets `SPRING_PROFILES_ACTIVE=dev` and the local database env vars. The API listens on `http://localhost:8080`. Spring Boot runs Flyway migrations during application startup, so there is no separate migration command. Automatic baselining is disabled; production databases must already have Flyway history or be explicitly baselined as a deployment operation.
+This starts:
 
-To run the API on the host without Compose, activate the `dev` profile explicitly (there is no default profile):
+- PostgreSQL 16 on port `5432`
+- The API on port `8080`
+- Flyway migrations during application startup
 
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+The local API is available at:
+
+```text
+http://localhost:8080
 ```
 
-To reset local state after Docker cleanup or schema changes:
+Check that the application process is running:
 
 ```bash
-docker compose down -v
-docker compose up --build
+curl http://localhost:8080/health
 ```
 
-### Run tests
-
-Tests run on the host with Maven and use Testcontainers for PostgreSQL, so Docker must be available:
+Stop the containers with:
 
 ```bash
-./mvnw clean verify
+docker compose down
 ```
 
-CI runs the same command on pushes to `master` and `dev`, and on pull requests.
+The Docker Compose configuration is intended for local development.
 
-## Production configuration
+## Configuration
 
-Production uses the `prod` Spring profile and fails closed when required secrets are missing or unsafe.
+Docker Compose supplies the local development configuration. Production configuration is provided through runtime
+environment variables.
 
-Copy [`.env.prod.example`](.env.prod.example) as a checklist of the runtime contract (do not commit real values):
+Required production variables include:
 
-| Variable | Purpose |
-|----------|---------|
-| `SPRING_PROFILES_ACTIVE` | Must be `prod` |
-| `JWT_SECRET` | Base64-encoded signing key (≥ 256 bits). Known development placeholders are rejected at startup |
-| `DB_URL` | PostgreSQL JDBC URL (include `sslmode=require`; Hikari also forces TLS) |
-| `DB_USERNAME` | Database user |
-| `DB_PASSWORD` | Database password |
-| `ALLOWED_ORIGINS` | Comma-separated browser origins (no localhost / `127.0.0.1`) |
-| `REGISTRATION_ENABLED` | Optional; defaults to `false` in production |
-| `RATE_LIMIT_AUTH_REQUESTS` | Optional; auth token-bucket capacity and per-window refill amount (default `10`) |
-| `RATE_LIMIT_AUTH_WINDOW_SECONDS` | Optional; auth token-bucket refill period in seconds (default `60`) |
-| `RATE_LIMIT_JOIN_CODE_REQUESTS` | Optional; join-code token-bucket capacity and per-window refill amount (default `30`) |
-| `RATE_LIMIT_JOIN_CODE_WINDOW_SECONDS` | Optional; join-code token-bucket refill period in seconds (default `60`) |
-| `RATE_LIMIT_TRUSTED_PROXIES` | Optional; comma-separated proxy addresses allowed to supply `X-Forwarded-For` |
+| Variable                 | Purpose                                                               |
+|--------------------------|-----------------------------------------------------------------------|
+| `SPRING_PROFILES_ACTIVE` | Must be set to `prod` for production configuration                    |
+| `DB_URL`                 | PostgreSQL JDBC connection URL                                        |
+| `DB_USERNAME`            | Database username                                                     |
+| `DB_PASSWORD`            | Database password                                                     |
+| `JWT_SECRET`             | Base64-encoded JWT signing key with at least 256 bits of key material |
+| `ALLOWED_ORIGINS`        | Comma-separated list of permitted frontend origins                    |
 
-Bucket4j token-bucket rate limiting returns HTTP `429` with `Retry-After` when exceeded (single-task scope; not shared across instances). Excess auth/join-code traffic is rejected before BCrypt/JWT work. Direct clients cannot choose their rate-limit key through `X-Forwarded-For`; configure trusted proxy addresses only when a proxy forwards the real client IP.
+Production startup validation rejects missing database settings, weak or known development JWT keys, localhost CORS
+origins, and insecure authentication-cookie configuration.
 
-The Docker image does **not** default a Spring profile or bake secrets. Inject secrets at runtime from [AWS Secrets Manager via the ECS task definition](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data-secrets.html) (`valueFrom`), not into the image or the repository.
+## Testing
 
-## Publishing and deploying
+The test suite includes unit, MVC-slice, repository, migration, security, and full-workflow integration coverage for:
 
-### Publish (automatic on `master`)
+- Authentication, refresh tokens, and user management
+- Tournament registration, lifecycle, bracket generation, and seeding
+- Single- and double-elimination progression
+- Guest rosters, result submission, and organizer overrides
+- Persistence, migrations, rate limiting, and production configuration
 
-Merges to `master` run CI verify, then a separate **Publish image to ECR** job that pushes
-`<aws-account-id>.dkr.ecr.<aws-region>.amazonaws.com/<ecr-repository>:<commit-sha>`. Publishing does **not**
-deploy to ECS.
+The full-workflow tests exercise backend HTTP flows with Spring Boot and MockMvc; they do not include the separate
+frontend or browser automation.
 
-The publish job uses the GitHub `production` environment and assumes
-`vars.AWS_PRODUCTION_ROLE_ARN` via OIDC (`id-token: write`). If the environment has required
-reviewers, approve the pending deployment so the image can be pushed.
-
-### Deploy (manual)
-
-When you want production to run a published image:
-
-1. Copy the full commit SHA from the publish job summary (or from git / ECR).
-2. GitHub → **Actions** → **Deploy to ECS Express** → **Run workflow** on `master`.
-3. Paste the SHA into `image_sha` and run.
-4. Approve the `production` environment if prompted.
-5. The workflow updates ECS Express to that image and fails if the service does not become healthy.
-
-Do not deploy from the AWS console for day-to-day releases; use this workflow so auth, waiting, and failure reporting stay consistent.
-
-Required repository (or `production` environment) variables:
-
-| Variable | Example |
-|----------|---------|
-| `AWS_PRODUCTION_ROLE_ARN` | `<production-role-arn>` |
-| `AWS_REGION` | `<aws-region>` |
-| `AWS_ACCOUNT_ID` | `<aws-account-id>` |
-| `ECR_REPOSITORY` | `<ecr-repository>` |
-| `ECS_CLUSTER` | `<ecs-cluster>` |
-| `ECS_SERVICE` | `<ecs-service>` |
-
-## API Reference
-
-All endpoints are served under `/api/v1`. Authenticated routes expect a JWT in the `accessToken` HttpOnly cookie (set by
-`POST /auth/register` or `POST /auth/login`).
-
-### Endpoints
-
-| Area | Endpoints |
-|------|-----------|
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh-token`, `POST /auth/logout` |
-| User | `GET /user/me`, `PATCH /user/me`, `PUT /user/me/password` |
-| Games | `POST /games`, `POST /games/{gameId}/start`, `POST /games/{gameId}/result`, `GET /games/{gameId}`, `GET /games/me`, `POST /games/{gameId}/cancel` |
-| Tournaments | `POST /tournaments`, `GET /tournaments/{id}`, `POST /tournaments/join`, `POST /tournaments/{id}/bracket`, `PATCH /tournaments/{id}/rounds/{roundNumber}`, `POST /tournaments/{id}/start`, `DELETE /tournaments/{id}/participants/{participantId}`, `DELETE /tournaments/{id}` |
-| Tournament Matches | `POST /tournaments/{tournamentId}/matches/{matchId}/start`, `GET /tournaments/{tournamentId}/matches/{matchId}`, `POST /tournaments/{tournamentId}/matches/{matchId}/games/{gameNumber}/result` |
-
-### Validation and rules (quick reference)
-
-- **Register**: username must be 5–30 alphanumeric characters or underscores; password must meet the strength rules
-  enforced by the API (mixed case, digit, special character). First and last name are optional.
-- **Create tournament**: `title` is required; `gameType` may be `SINGLES` or `DOUBLES` (defaults to singles);
-  `format` may be `SINGLE_ELIMINATION` or `DOUBLE_ELIMINATION` (defaults to single elimination).
-- **Bracket generation**: singles requires **more than two** registered participants; doubles requires an **even** count
-  of **at least six** participants.
-- **Standalone game mutations** (`start`, `result`, `cancel`): the caller must be a **participant** on the game or the
-  user who **created** the game.
-- **Tournament match start and result submission**: the **organizer** or any **assigned player** on either match team
-  may start a match and submit physical-game results. Accepted results are **immutable** during the MVP.
-- **Final results**: scores must be nonnegative, non-tied, and the declared winner must have the higher score.
-
-### Auth example
-
-Auth responses set `accessToken` and `refreshToken` as HttpOnly cookies. Use `-c` / `-b` with `curl` so authenticated
-calls work:
+Run the tests with:
 
 ```bash
-curl -i -c cookies.txt \
-  -X POST http://localhost:8080/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "player_one",
-    "password": "StrongPass1!",
-    "firstName": "Player",
-    "lastName": "One"
-  }'
+./mvnw -B -ntp test
 ```
 
-Create a double-elimination tournament:
+The test profile uses Testcontainers to start a PostgreSQL 16 database, so Docker must be running.
+
+The CI workflow also runs:
 
 ```bash
-curl -i -b cookies.txt \
-  -X POST http://localhost:8080/api/v1/tournaments \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Family Classic","gameType":"SINGLES","format":"DOUBLE_ELIMINATION"}'
+mvn -B -ntp clean verify
 ```
 
-For full end-to-end flows (standalone games, tournament lifecycle, bracket progression), see the integration tests:
+## Deployment
 
-- `src/test/java/.../auth/AuthFlowIntegrationTest.java`
-- `src/test/java/.../game/GameFlowIntegrationTest.java`
-- `src/test/java/.../tournament/TournamentLifecycleIntegrationTest.java`
-- `src/test/java/.../tournament/TournamentGameProgressionIntegrationTest.java`
+The backend is deployed through AWS ECS Express.
 
-## Project Status
+The separately maintained React frontend is deployed on Vercel and proxies `/api` requests to the deployed API; the live
+demonstration link is above.
 
-The backend implements auth, standalone games, and single/double-elimination tournaments with graph-based progression.
-It is actively developed and fully runnable locally.
-
-A companion frontend is planned so the project can be demonstrated through a complete user flow instead of API calls
-alone.
-
-## Next Steps
-
-- Build a lightweight frontend for demos and real usage
-- Continue refining the tournament experience (double-elimination edge cases, organizer workflows)
-- Verify launch, rollback, and cost against the live ECS deploy path
+GitHub Actions builds and tests the application and validates a non-root production Docker image. Successful pushes to
+`master` publish immutable full-commit-SHA images to Amazon ECR; a manual workflow promotes a selected SHA to AWS ECS
+Express and waits for service stability.
