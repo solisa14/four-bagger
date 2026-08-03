@@ -12,8 +12,8 @@ import com.github.solisa14.fourbagger.api.user.User;
  * @param participationMode how players enter the tournament; required, never defaulted
  */
 public record CreateTournamentCommand(
-    User organizer,
-    String title,
-    GameType gameType,
-    TournamentFormat format,
-    TournamentParticipationMode participationMode) {}
+        User organizer,
+        String title,
+        GameType gameType,
+        TournamentFormat format,
+        TournamentParticipationMode participationMode) {}

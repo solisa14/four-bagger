@@ -5,4 +5,4 @@ import java.util.UUID;
 
 /** Summary of a tournament for authenticated tournament lists. */
 public record TournamentSummaryResponse(
-    UUID id, String title, TournamentStatus status, TournamentFormat format, GameType gameType) {}
+        UUID id, String title, TournamentStatus status, TournamentFormat format, GameType gameType) {}

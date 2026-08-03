@@ -9,12 +9,12 @@ import org.springframework.http.HttpStatus;
  */
 public class InvalidGameStateException extends BusinessException {
 
-  /**
-   * Constructs an exception with the specified detail message.
-   *
-   * @param message the detail message.
-   */
-  public InvalidGameStateException(String message) {
-    super(message, HttpStatus.BAD_REQUEST);
-  }
+    /**
+     * Constructs an exception with the specified detail message.
+     *
+     * @param message the detail message.
+     */
+    public InvalidGameStateException(String message) {
+        super(message, HttpStatus.BAD_REQUEST);
+    }
 }

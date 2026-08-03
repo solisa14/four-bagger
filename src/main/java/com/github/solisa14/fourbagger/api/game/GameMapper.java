@@ -2,87 +2,85 @@ package com.github.solisa14.fourbagger.api.game;
 
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserService;
-import java.util.UUID;
 import org.springframework.stereotype.Component;
+
+import java.util.UUID;
 
 /** Mapper for game requests, commands, and responses. */
 @Component
 public class GameMapper {
 
-  private final UserService userService;
+    private final UserService userService;
 
-  public GameMapper(UserService userService) {
-    this.userService = userService;
-  }
-
-  public CreateGameCommand toCreateCommand(
-      User currentUser, CreateGameRequest request, UUID tournamentMatchId) {
-    User playerTwo = userService.getUser(request.playerTwoId());
-    GameType gameType = resolveGameType(request);
-    GameParticipants participants = resolveParticipants(currentUser, playerTwo, request, gameType);
-    return new CreateGameCommand(participants, tournamentMatchId, currentUser);
-  }
-
-  private GameParticipants resolveParticipants(
-      User currentUser, User playerTwo, CreateGameRequest request, GameType gameType) {
-    if (gameType == GameType.DOUBLES) {
-      if (request.playerOnePartnerId() == null || request.playerTwoPartnerId() == null) {
-        throw new InvalidGameConfigurationException(
-            "Doubles games require both partner IDs to be provided");
-      }
-      User playerOnePartner = userService.getUser(request.playerOnePartnerId());
-      User playerTwoPartner = userService.getUser(request.playerTwoPartnerId());
-      return GameParticipants.doubles(currentUser, playerOnePartner, playerTwo, playerTwoPartner);
+    public GameMapper(UserService userService) {
+        this.userService = userService;
     }
-    return GameParticipants.singles(currentUser, playerTwo);
-  }
 
-  private GameType resolveGameType(CreateGameRequest request) {
-    if (request.gameType() != null) {
-      return request.gameType();
+    public CreateGameCommand toCreateCommand(User currentUser, CreateGameRequest request, UUID tournamentMatchId) {
+        User playerTwo = userService.getUser(request.playerTwoId());
+        GameType gameType = resolveGameType(request);
+        GameParticipants participants = resolveParticipants(currentUser, playerTwo, request, gameType);
+        return new CreateGameCommand(participants, tournamentMatchId, currentUser);
     }
-    return request.playerOnePartnerId() != null || request.playerTwoPartnerId() != null
-        ? GameType.DOUBLES
-        : GameType.SINGLES;
-  }
 
-  public GameResponse toGameResponse(Game game) {
-    return new GameResponse(
-        game.getId(),
-        game.getGameType(),
-        toPlayerInfo(game.getPlayerOne()),
-        game.getPlayerOnePartner() != null ? toPlayerInfo(game.getPlayerOnePartner()) : null,
-        toPlayerInfo(game.getPlayerTwo()),
-        game.getPlayerTwoPartner() != null ? toPlayerInfo(game.getPlayerTwoPartner()) : null,
-        game.getPlayerOneScore(),
-        game.getPlayerTwoScore(),
-        game.getStatus(),
-        game.getWinner() != null ? toPlayerInfo(game.getWinner()) : null,
-        game.getSubmittedBy() != null ? toPlayerInfo(game.getSubmittedBy()) : null,
-        game.getCompletedAt(),
-        game.getCreatedAt(),
-        game.getUpdatedAt());
-  }
+    private GameParticipants resolveParticipants(
+            User currentUser, User playerTwo, CreateGameRequest request, GameType gameType) {
+        if (gameType == GameType.DOUBLES) {
+            if (request.playerOnePartnerId() == null || request.playerTwoPartnerId() == null) {
+                throw new InvalidGameConfigurationException("Doubles games require both partner IDs to be provided");
+            }
+            User playerOnePartner = userService.getUser(request.playerOnePartnerId());
+            User playerTwoPartner = userService.getUser(request.playerTwoPartnerId());
+            return GameParticipants.doubles(currentUser, playerOnePartner, playerTwo, playerTwoPartner);
+        }
+        return GameParticipants.singles(currentUser, playerTwo);
+    }
 
-  public GameSummaryResponse toGameSummaryResponse(Game game) {
-    return new GameSummaryResponse(
-        game.getId(),
-        game.getGameType(),
-        toPlayerInfo(game.getPlayerOne()),
-        game.getPlayerOnePartner() != null ? toPlayerInfo(game.getPlayerOnePartner()) : null,
-        toPlayerInfo(game.getPlayerTwo()),
-        game.getPlayerTwoPartner() != null ? toPlayerInfo(game.getPlayerTwoPartner()) : null,
-        game.getPlayerOneScore(),
-        game.getPlayerTwoScore(),
-        game.getStatus(),
-        game.getWinner() != null ? toPlayerInfo(game.getWinner()) : null,
-        game.getCompletedAt(),
-        game.getCreatedAt(),
-        game.getUpdatedAt());
-  }
+    private GameType resolveGameType(CreateGameRequest request) {
+        if (request.gameType() != null) {
+            return request.gameType();
+        }
+        return request.playerOnePartnerId() != null || request.playerTwoPartnerId() != null
+                ? GameType.DOUBLES
+                : GameType.SINGLES;
+    }
 
-  public PlayerInfo toPlayerInfo(User user) {
-    return new PlayerInfo(
-        user.getId(), user.getUsername(), user.getFirstName(), user.getLastName());
-  }
+    public GameResponse toGameResponse(Game game) {
+        return new GameResponse(
+                game.getId(),
+                game.getGameType(),
+                toPlayerInfo(game.getPlayerOne()),
+                game.getPlayerOnePartner() != null ? toPlayerInfo(game.getPlayerOnePartner()) : null,
+                toPlayerInfo(game.getPlayerTwo()),
+                game.getPlayerTwoPartner() != null ? toPlayerInfo(game.getPlayerTwoPartner()) : null,
+                game.getPlayerOneScore(),
+                game.getPlayerTwoScore(),
+                game.getStatus(),
+                game.getWinner() != null ? toPlayerInfo(game.getWinner()) : null,
+                game.getSubmittedBy() != null ? toPlayerInfo(game.getSubmittedBy()) : null,
+                game.getCompletedAt(),
+                game.getCreatedAt(),
+                game.getUpdatedAt());
+    }
+
+    public GameSummaryResponse toGameSummaryResponse(Game game) {
+        return new GameSummaryResponse(
+                game.getId(),
+                game.getGameType(),
+                toPlayerInfo(game.getPlayerOne()),
+                game.getPlayerOnePartner() != null ? toPlayerInfo(game.getPlayerOnePartner()) : null,
+                toPlayerInfo(game.getPlayerTwo()),
+                game.getPlayerTwoPartner() != null ? toPlayerInfo(game.getPlayerTwoPartner()) : null,
+                game.getPlayerOneScore(),
+                game.getPlayerTwoScore(),
+                game.getStatus(),
+                game.getWinner() != null ? toPlayerInfo(game.getWinner()) : null,
+                game.getCompletedAt(),
+                game.getCreatedAt(),
+                game.getUpdatedAt());
+    }
+
+    public PlayerInfo toPlayerInfo(User user) {
+        return new PlayerInfo(user.getId(), user.getUsername(), user.getFirstName(), user.getLastName());
+    }
 }

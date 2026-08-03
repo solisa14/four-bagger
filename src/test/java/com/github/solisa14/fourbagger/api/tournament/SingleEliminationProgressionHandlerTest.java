@@ -1,115 +1,122 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+
 @ExtendWith(MockitoExtension.class)
 class SingleEliminationProgressionHandlerTest {
 
-  @Mock private TournamentRepository tournamentRepository;
-  @Mock private MatchRepository matchRepository;
-  @InjectMocks private SingleEliminationProgressionHandler handler;
+    @Mock
+    private TournamentRepository tournamentRepository;
 
-  @Test
-  void progress_whenWinnerRouteExists_assignsConfiguredDestinationSlot() {
-    Tournament tournament = tournament();
-    TournamentTeam winner = team(tournament);
-    TournamentTeam loser = team(tournament);
-    Match destination = match(tournament, null, null);
-    Match source = match(tournament, winner, loser);
-    source.setWinnerNextMatch(destination);
-    source.setWinnerNextMatchPosition(2);
+    @Mock
+    private MatchRepository matchRepository;
 
-    handler.progress(source, winner, loser);
+    @InjectMocks
+    private SingleEliminationProgressionHandler handler;
 
-    assertThat(destination.getTeamTwo()).isSameAs(winner);
-    assertThat(loser.getLosses()).isZero();
-    assertThat(loser.isEliminated()).isFalse();
-    verify(matchRepository).save(destination);
-    verify(tournamentRepository, never()).save(tournament);
-  }
+    @Test
+    void progress_whenWinnerRouteExists_assignsConfiguredDestinationSlot() {
+        Tournament tournament = tournament();
+        TournamentTeam winner = team(tournament);
+        TournamentTeam loser = team(tournament);
+        Match destination = match(tournament, null, null);
+        Match source = match(tournament, winner, loser);
+        source.setWinnerNextMatch(destination);
+        source.setWinnerNextMatchPosition(2);
 
-  @Test
-  void progress_whenWinnerRouteIsTerminal_completesTournamentWithoutChangingLoserState() {
-    Tournament tournament = tournament();
-    TournamentTeam winner = team(tournament);
-    TournamentTeam loser = team(tournament);
-    Match source = match(tournament, winner, loser);
+        handler.progress(source, winner, loser);
 
-    handler.progress(source, winner, loser);
+        assertThat(destination.getTeamTwo()).isSameAs(winner);
+        assertThat(loser.getLosses()).isZero();
+        assertThat(loser.isEliminated()).isFalse();
+        verify(matchRepository).save(destination);
+        verify(tournamentRepository, never()).save(tournament);
+    }
 
-    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.COMPLETED);
-    assertThat(loser.getLosses()).isZero();
-    assertThat(loser.isEliminated()).isFalse();
-    verify(tournamentRepository).save(tournament);
-  }
+    @Test
+    void progress_whenWinnerRouteIsTerminal_completesTournamentWithoutChangingLoserState() {
+        Tournament tournament = tournament();
+        TournamentTeam winner = team(tournament);
+        TournamentTeam loser = team(tournament);
+        Match source = match(tournament, winner, loser);
 
-  @Test
-  void revert_whenWinnerRouteExists_clearsConfiguredDestinationSlot() {
-    Tournament tournament = tournament();
-    TournamentTeam winner = team(tournament);
-    TournamentTeam loser = team(tournament);
-    Match destination = match(tournament, null, null);
-    destination.setTeamTwo(winner);
-    Match source = match(tournament, winner, loser);
-    source.setWinnerNextMatch(destination);
-    source.setWinnerNextMatchPosition(2);
+        handler.progress(source, winner, loser);
 
-    handler.revert(source, winner);
+        assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.COMPLETED);
+        assertThat(loser.getLosses()).isZero();
+        assertThat(loser.isEliminated()).isFalse();
+        verify(tournamentRepository).save(tournament);
+    }
 
-    assertThat(destination.getTeamTwo()).isNull();
-    verify(matchRepository).save(destination);
-    verify(tournamentRepository, never()).save(tournament);
-  }
+    @Test
+    void revert_whenWinnerRouteExists_clearsConfiguredDestinationSlot() {
+        Tournament tournament = tournament();
+        TournamentTeam winner = team(tournament);
+        TournamentTeam loser = team(tournament);
+        Match destination = match(tournament, null, null);
+        destination.setTeamTwo(winner);
+        Match source = match(tournament, winner, loser);
+        source.setWinnerNextMatch(destination);
+        source.setWinnerNextMatchPosition(2);
 
-  @Test
-  void revert_whenWinnerRouteIsTerminal_reopensCompletedTournament() {
-    Tournament tournament = tournament();
-    tournament.setStatus(TournamentStatus.COMPLETED);
-    TournamentTeam winner = team(tournament);
-    TournamentTeam loser = team(tournament);
-    Match source = match(tournament, winner, loser);
+        handler.revert(source, winner);
 
-    handler.revert(source, winner);
+        assertThat(destination.getTeamTwo()).isNull();
+        verify(matchRepository).save(destination);
+        verify(tournamentRepository, never()).save(tournament);
+    }
 
-    assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
-    verify(tournamentRepository).save(tournament);
-  }
+    @Test
+    void revert_whenWinnerRouteIsTerminal_reopensCompletedTournament() {
+        Tournament tournament = tournament();
+        tournament.setStatus(TournamentStatus.COMPLETED);
+        TournamentTeam winner = team(tournament);
+        TournamentTeam loser = team(tournament);
+        Match source = match(tournament, winner, loser);
 
-  private Tournament tournament() {
-    return Tournament.builder()
-        .id(UUID.randomUUID())
-        .status(TournamentStatus.IN_PROGRESS)
-        .format(TournamentFormat.SINGLE_ELIMINATION)
-        .build();
-  }
+        handler.revert(source, winner);
 
-  private TournamentTeam team(Tournament tournament) {
-    return TournamentTeam.builder().id(UUID.randomUUID()).tournament(tournament).build();
-  }
+        assertThat(tournament.getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+        verify(tournamentRepository).save(tournament);
+    }
 
-  private Match match(
-      Tournament tournament, TournamentTeam teamOne, TournamentTeam teamTwo) {
-    TournamentRound round =
-        TournamentRound.builder()
-            .tournament(tournament)
-            .bracketType(BracketType.WINNERS)
-            .roundNumber(1)
-            .build();
-    return Match.builder()
-        .id(UUID.randomUUID())
-        .round(round)
-        .teamOne(teamOne)
-        .teamTwo(teamTwo)
-        .matchNumber(1)
-        .build();
-  }
+    private Tournament tournament() {
+        return Tournament.builder()
+                .id(UUID.randomUUID())
+                .status(TournamentStatus.IN_PROGRESS)
+                .format(TournamentFormat.SINGLE_ELIMINATION)
+                .build();
+    }
+
+    private TournamentTeam team(Tournament tournament) {
+        return TournamentTeam.builder()
+                .id(UUID.randomUUID())
+                .tournament(tournament)
+                .build();
+    }
+
+    private Match match(Tournament tournament, TournamentTeam teamOne, TournamentTeam teamTwo) {
+        TournamentRound round = TournamentRound.builder()
+                .tournament(tournament)
+                .bracketType(BracketType.WINNERS)
+                .roundNumber(1)
+                .build();
+        return Match.builder()
+                .id(UUID.randomUUID())
+                .round(round)
+                .teamOne(teamOne)
+                .teamTwo(teamTwo)
+                .matchNumber(1)
+                .build();
+    }
 }

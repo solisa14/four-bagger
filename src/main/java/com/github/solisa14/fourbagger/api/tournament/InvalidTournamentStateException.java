@@ -9,12 +9,12 @@ import org.springframework.http.HttpStatus;
  */
 public class InvalidTournamentStateException extends BusinessException {
 
-  /**
-   * Constructs a new {@code InvalidTournamentStateException} with the specified message.
-   *
-   * @param message the detail message explaining the invalid state transition
-   */
-  public InvalidTournamentStateException(String message) {
-    super(message, HttpStatus.BAD_REQUEST);
-  }
+    /**
+     * Constructs a new {@code InvalidTournamentStateException} with the specified message.
+     *
+     * @param message the detail message explaining the invalid state transition
+     */
+    public InvalidTournamentStateException(String message) {
+        super(message, HttpStatus.BAD_REQUEST);
+    }
 }

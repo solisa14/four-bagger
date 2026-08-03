@@ -6,8 +6,8 @@ import org.springframework.http.HttpStatus;
 /** Exception thrown when a user provides an incorrect current password during a password update. */
 public class InvalidPasswordException extends BusinessException {
 
-  /** Constructs a new InvalidPasswordException. */
-  public InvalidPasswordException() {
-    super("Invalid current password", HttpStatus.BAD_REQUEST);
-  }
+    /** Constructs a new InvalidPasswordException. */
+    public InvalidPasswordException() {
+        super("Invalid current password", HttpStatus.BAD_REQUEST);
+    }
 }

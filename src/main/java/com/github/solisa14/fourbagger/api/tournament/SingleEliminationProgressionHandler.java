@@ -6,65 +6,68 @@ import org.springframework.stereotype.Service;
 @Service
 class SingleEliminationProgressionHandler implements TournamentProgressionHandler {
 
-  private final TournamentRepository tournamentRepository;
-  private final MatchRepository matchRepository;
+    private final TournamentRepository tournamentRepository;
+    private final MatchRepository matchRepository;
 
-  SingleEliminationProgressionHandler(
-      TournamentRepository tournamentRepository, MatchRepository matchRepository) {
-    this.tournamentRepository = tournamentRepository;
-    this.matchRepository = matchRepository;
-  }
-
-  @Override
-  public void progress(Match match, TournamentTeam winningTeam, TournamentTeam losingTeam) {
-    Match destination = match.getWinnerNextMatch();
-    if (destination != null) {
-      assignTeam(winningTeam, destination, match.getWinnerNextMatchPosition());
-      matchRepository.save(destination);
-      return;
+    SingleEliminationProgressionHandler(TournamentRepository tournamentRepository, MatchRepository matchRepository) {
+        this.tournamentRepository = tournamentRepository;
+        this.matchRepository = matchRepository;
     }
 
-    completeTournament(match.getRound().getTournament());
-  }
+    @Override
+    public void progress(Match match, TournamentTeam winningTeam, TournamentTeam losingTeam) {
+        Match destination = match.getWinnerNextMatch();
+        if (destination != null) {
+            assignTeam(winningTeam, destination, match.getWinnerNextMatchPosition());
+            matchRepository.save(destination);
+            return;
+        }
 
-  void revert(Match match, TournamentTeam oldWinner) {
-    Match destination = match.getWinnerNextMatch();
-    if (destination != null) {
-      removeTeamFromSlot(oldWinner, destination, match.getWinnerNextMatchPosition());
-      matchRepository.save(destination);
-      return;
+        completeTournament(match.getRound().getTournament());
     }
 
-    reopenTournamentIfCompleted(match.getRound().getTournament());
-  }
+    void revert(Match match, TournamentTeam oldWinner) {
+        Match destination = match.getWinnerNextMatch();
+        if (destination != null) {
+            removeTeamFromSlot(oldWinner, destination, match.getWinnerNextMatchPosition());
+            matchRepository.save(destination);
+            return;
+        }
 
-  private void assignTeam(TournamentTeam team, Match destination, Integer position) {
-    if (position != null && position == 1) {
-      destination.setTeamOne(team);
-    } else if (position != null && position == 2) {
-      destination.setTeamTwo(team);
+        reopenTournamentIfCompleted(match.getRound().getTournament());
     }
-  }
 
-  private void removeTeamFromSlot(TournamentTeam team, Match destination, Integer position) {
-    if (position != null && position == 1 && destination.getTeamOne() != null
-        && destination.getTeamOne().getId().equals(team.getId())) {
-      destination.setTeamOne(null);
-    } else if (position != null && position == 2 && destination.getTeamTwo() != null
-        && destination.getTeamTwo().getId().equals(team.getId())) {
-      destination.setTeamTwo(null);
+    private void assignTeam(TournamentTeam team, Match destination, Integer position) {
+        if (position != null && position == 1) {
+            destination.setTeamOne(team);
+        } else if (position != null && position == 2) {
+            destination.setTeamTwo(team);
+        }
     }
-  }
 
-  private void completeTournament(Tournament tournament) {
-    tournament.setStatus(TournamentStatus.COMPLETED);
-    tournamentRepository.save(tournament);
-  }
-
-  private void reopenTournamentIfCompleted(Tournament tournament) {
-    if (tournament.getStatus() == TournamentStatus.COMPLETED) {
-      tournament.setStatus(TournamentStatus.IN_PROGRESS);
-      tournamentRepository.save(tournament);
+    private void removeTeamFromSlot(TournamentTeam team, Match destination, Integer position) {
+        if (position != null
+                && position == 1
+                && destination.getTeamOne() != null
+                && destination.getTeamOne().getId().equals(team.getId())) {
+            destination.setTeamOne(null);
+        } else if (position != null
+                && position == 2
+                && destination.getTeamTwo() != null
+                && destination.getTeamTwo().getId().equals(team.getId())) {
+            destination.setTeamTwo(null);
+        }
     }
-  }
+
+    private void completeTournament(Tournament tournament) {
+        tournament.setStatus(TournamentStatus.COMPLETED);
+        tournamentRepository.save(tournament);
+    }
+
+    private void reopenTournamentIfCompleted(Tournament tournament) {
+        if (tournament.getStatus() == TournamentStatus.COMPLETED) {
+            tournament.setStatus(TournamentStatus.IN_PROGRESS);
+            tournamentRepository.save(tournament);
+        }
+    }
 }

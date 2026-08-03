@@ -6,9 +6,7 @@ import org.springframework.http.HttpStatus;
 /** Thrown when a guest display name conflicts with another guest in the same tournament. */
 public class DuplicateGuestDisplayNameException extends BusinessException {
 
-  public DuplicateGuestDisplayNameException(String displayName) {
-    super(
-        "Guest display name '" + displayName + "' is already used in this tournament",
-        HttpStatus.CONFLICT);
-  }
+    public DuplicateGuestDisplayNameException(String displayName) {
+        super("Guest display name '" + displayName + "' is already used in this tournament", HttpStatus.CONFLICT);
+    }
 }

@@ -17,12 +17,12 @@ import java.util.UUID;
  *     number and empty when absent
  */
 public record TournamentResponse(
-    UUID id,
-    String title,
-    String joinCode,
-    TournamentStatus status,
-    GameType gameType,
-    TournamentFormat format,
-    TournamentParticipationMode participationMode,
-    DoublesPairingMode doublesPairingMode,
-    TournamentBracketsResponse brackets) {}
+        UUID id,
+        String title,
+        String joinCode,
+        TournamentStatus status,
+        GameType gameType,
+        TournamentFormat format,
+        TournamentParticipationMode participationMode,
+        DoublesPairingMode doublesPairingMode,
+        TournamentBracketsResponse brackets) {}

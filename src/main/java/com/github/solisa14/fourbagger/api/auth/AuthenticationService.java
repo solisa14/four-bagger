@@ -18,94 +18,91 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthenticationService {
 
-  private final UserService userService;
-  private final UserRepository userRepository;
-  private final AuthenticationManager authenticationManager;
-  private final JwtService jwtService;
-  private final RefreshTokenService refreshTokenService;
-  private final boolean registrationEnabled;
+    private final UserService userService;
+    private final UserRepository userRepository;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
+    private final boolean registrationEnabled;
 
-  /**
-   * Constructs an AuthenticationService.
-   *
-   * @param userService the user service
-   * @param userRepository the user repository
-   * @param authenticationManager the authentication manager
-   * @param jwtService the JWT service
-   * @param refreshTokenService the refresh token service
-   * @param registrationEnabled whether new account registration is allowed
-   */
-  public AuthenticationService(
-      UserService userService,
-      UserRepository userRepository,
-      AuthenticationManager authenticationManager,
-      JwtService jwtService,
-      RefreshTokenService refreshTokenService,
-      @Value("${app.auth.registration.enabled:true}") boolean registrationEnabled) {
-    this.userService = userService;
-    this.userRepository = userRepository;
-    this.authenticationManager = authenticationManager;
-    this.jwtService = jwtService;
-    this.refreshTokenService = refreshTokenService;
-    this.registrationEnabled = registrationEnabled;
-  }
-
-  /**
-   * Processes new user registration and prepares response with account details.
-   *
-   * @param command registration details including credentials and optional profile fields
-   * @return the created user entity
-   * @throws RegistrationDisabledException if registration is disabled by configuration
-   */
-  public User registerUser(CreateUserCommand command) {
-    if (!registrationEnabled) {
-      throw new RegistrationDisabledException();
+    /**
+     * Constructs an AuthenticationService.
+     *
+     * @param userService the user service
+     * @param userRepository the user repository
+     * @param authenticationManager the authentication manager
+     * @param jwtService the JWT service
+     * @param refreshTokenService the refresh token service
+     * @param registrationEnabled whether new account registration is allowed
+     */
+    public AuthenticationService(
+            UserService userService,
+            UserRepository userRepository,
+            AuthenticationManager authenticationManager,
+            JwtService jwtService,
+            RefreshTokenService refreshTokenService,
+            @Value("${app.auth.registration.enabled:true}") boolean registrationEnabled) {
+        this.userService = userService;
+        this.userRepository = userRepository;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
+        this.refreshTokenService = refreshTokenService;
+        this.registrationEnabled = registrationEnabled;
     }
-    return userService.createUser(command);
-  }
 
-  /**
-   * Authenticates a user with the provided credentials and generates a JWT and Refresh Token.
-   *
-   * @param command login command containing username and password
-   * @return the generated token pair
-   */
-  public TokenPair authenticate(LoginCommand command) {
-    authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(command.username(), command.password()));
+    /**
+     * Processes new user registration and prepares response with account details.
+     *
+     * @param command registration details including credentials and optional profile fields
+     * @return the created user entity
+     * @throws RegistrationDisabledException if registration is disabled by configuration
+     */
+    public User registerUser(CreateUserCommand command) {
+        if (!registrationEnabled) {
+            throw new RegistrationDisabledException();
+        }
+        return userService.createUser(command);
+    }
 
-    User user =
-        userRepository
-            .findUserByUsername(command.username())
-            .orElseThrow(AuthenticationFailedException::new);
+    /**
+     * Authenticates a user with the provided credentials and generates a JWT and Refresh Token.
+     *
+     * @param command login command containing username and password
+     * @return the generated token pair
+     */
+    public TokenPair authenticate(LoginCommand command) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(command.username(), command.password()));
 
-    String jwtToken = jwtService.generateToken(user);
-    RefreshTokenSession refreshTokenSession = refreshTokenService.issueRefreshToken(user.getId());
+        User user =
+                userRepository.findUserByUsername(command.username()).orElseThrow(AuthenticationFailedException::new);
 
-    return new TokenPair(jwtToken, refreshTokenSession.rawToken());
-  }
+        String jwtToken = jwtService.generateToken(user);
+        RefreshTokenSession refreshTokenSession = refreshTokenService.issueRefreshToken(user.getId());
 
-  /**
-   * Rotates the refresh token and generates a new access token.
-   *
-   * @param requestRefreshToken the refresh token string
-   * @return new JWT access token and new refresh token
-   */
-  public TokenPair refreshToken(String requestRefreshToken) {
-    RefreshTokenSession refreshTokenSession =
-        refreshTokenService.rotateRefreshToken(requestRefreshToken);
-    User user = refreshTokenSession.user();
-    String jwtToken = jwtService.generateToken(user);
+        return new TokenPair(jwtToken, refreshTokenSession.rawToken());
+    }
 
-    return new TokenPair(jwtToken, refreshTokenSession.rawToken());
-  }
+    /**
+     * Rotates the refresh token and generates a new access token.
+     *
+     * @param requestRefreshToken the refresh token string
+     * @return new JWT access token and new refresh token
+     */
+    public TokenPair refreshToken(String requestRefreshToken) {
+        RefreshTokenSession refreshTokenSession = refreshTokenService.rotateRefreshToken(requestRefreshToken);
+        User user = refreshTokenSession.user();
+        String jwtToken = jwtService.generateToken(user);
 
-  /**
-   * Logs out the user by deleting the refresh token.
-   *
-   * @param refreshToken the refresh token string
-   */
-  public void logout(String refreshToken) {
-    refreshTokenService.deleteByToken(refreshToken);
-  }
+        return new TokenPair(jwtToken, refreshTokenSession.rawToken());
+    }
+
+    /**
+     * Logs out the user by deleting the refresh token.
+     *
+     * @param refreshToken the refresh token string
+     */
+    public void logout(String refreshToken) {
+        refreshTokenService.deleteByToken(refreshToken);
+    }
 }

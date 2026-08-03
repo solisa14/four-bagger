@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface TournamentBracketGenerator {
 
-  TournamentFormat format();
+    TournamentFormat format();
 
-  void planBracket(Tournament tournament, List<TournamentTeam> seededTeams);
+    void planBracket(Tournament tournament, List<TournamentTeam> seededTeams);
 }

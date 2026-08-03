@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.common.exception;
 
-import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -15,6 +14,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.Instant;
+
 /**
  * Centralized exception handling for REST API endpoints.
  *
@@ -25,132 +26,128 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-  private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-  /**
-   * Converts application business exceptions into standardized error responses.
-   *
-   * <p>Extracts the HTTP status and message from the BusinessException and wraps them in an
-   * ErrorResponse with the current timestamp.
-   *
-   * @param ex the caught business exception
-   * @return response entity with the exception's status code and formatted error details
-   */
-  @ExceptionHandler(BusinessException.class)
-  public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex) {
-    return buildResponse(ex.getStatus(), ex.getMessage());
-  }
-
-  /**
-   * Handles Jakarta Bean Validation failures on request body parameters.
-   *
-   * <p>Extracts the first validation error and formats it as "fieldName: error message" for the
-   * client. Returns HTTP 400 Bad Request.
-   *
-   * @param e the validation exception containing field-level errors
-   * @return response entity with HTTP 400 and the first validation error message
-   */
-  @ExceptionHandler(MethodArgumentNotValidException.class)
-  public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(
-      MethodArgumentNotValidException e) {
-    String message;
-    if (!e.getFieldErrors().isEmpty()) {
-      FieldError fieldError = e.getFieldErrors().getFirst();
-      message = fieldError.getField() + ": " + fieldError.getDefaultMessage();
-    } else {
-      message = e.getAllErrors().getFirst().getDefaultMessage();
+    /**
+     * Converts application business exceptions into standardized error responses.
+     *
+     * <p>Extracts the HTTP status and message from the BusinessException and wraps them in an
+     * ErrorResponse with the current timestamp.
+     *
+     * @param ex the caught business exception
+     * @return response entity with the exception's status code and formatted error details
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex) {
+        return buildResponse(ex.getStatus(), ex.getMessage());
     }
-    return buildResponse(HttpStatus.valueOf(e.getStatusCode().value()), message);
-  }
 
-  /**
-   * Handles authentication failures.
-   *
-   * <p>Returns HTTP 401 Unauthorized when authentication fails (e.g., invalid credentials).
-   *
-   * @param ex the authentication exception
-   * @return response entity with HTTP 401 and a generic error message
-   */
-  @ExceptionHandler({AuthenticationException.class})
-  public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
-    return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid username or password");
-  }
+    /**
+     * Handles Jakarta Bean Validation failures on request body parameters.
+     *
+     * <p>Extracts the first validation error and formats it as "fieldName: error message" for the
+     * client. Returns HTTP 400 Bad Request.
+     *
+     * @param e the validation exception containing field-level errors
+     * @return response entity with HTTP 400 and the first validation error message
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        String message;
+        if (!e.getFieldErrors().isEmpty()) {
+            FieldError fieldError = e.getFieldErrors().getFirst();
+            message = fieldError.getField() + ": " + fieldError.getDefaultMessage();
+        } else {
+            message = e.getAllErrors().getFirst().getDefaultMessage();
+        }
+        return buildResponse(HttpStatus.valueOf(e.getStatusCode().value()), message);
+    }
 
-  /**
-   * Handles token refresh exceptions.
-   *
-   * <p>Returns HTTP 403 Forbidden when a token refresh fails (e.g., expired or invalid token).
-   *
-   * @param ex the token refresh exception
-   * @return response entity with HTTP 403 and the error message
-   */
-  @ExceptionHandler(TokenRefreshException.class)
-  public ResponseEntity<ErrorResponse> handleTokenRefreshException(TokenRefreshException ex) {
-    return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
-  }
+    /**
+     * Handles authentication failures.
+     *
+     * <p>Returns HTTP 401 Unauthorized when authentication fails (e.g., invalid credentials).
+     *
+     * @param ex the authentication exception
+     * @return response entity with HTTP 401 and a generic error message
+     */
+    @ExceptionHandler({AuthenticationException.class})
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid username or password");
+    }
 
-  /**
-   * Handles missing request cookie exceptions.
-   *
-   * <p>Returns HTTP 401 Unauthorized when a required cookie is missing from the request.
-   *
-   * @param ex the missing request cookie exception
-   * @return response entity with HTTP 401 and an error message specifying the missing cookie
-   */
-  @ExceptionHandler(MissingRequestCookieException.class)
-  public ResponseEntity<ErrorResponse> handleMissingRequestCookieException(
-      MissingRequestCookieException ex) {
-    String message =
-        switch (ex.getCookieName()) {
-          case "refreshToken" -> "Refresh token is required";
-          case "accessToken" -> "Access token is required";
-          default -> ex.getCookieName() + " cookie is required";
-        };
-    return buildResponse(HttpStatus.UNAUTHORIZED, message);
-  }
+    /**
+     * Handles token refresh exceptions.
+     *
+     * <p>Returns HTTP 403 Forbidden when a token refresh fails (e.g., expired or invalid token).
+     *
+     * @param ex the token refresh exception
+     * @return response entity with HTTP 403 and the error message
+     */
+    @ExceptionHandler(TokenRefreshException.class)
+    public ResponseEntity<ErrorResponse> handleTokenRefreshException(TokenRefreshException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
 
-  /**
-   * Handles data integrity violation exceptions.
-   *
-   * <p>Returns HTTP 409 Conflict when a database operation violates integrity constraints.
-   *
-   * @param ex the data integrity violation exception
-   * @return response entity with HTTP 409 and a conflict error message
-   */
-  @ExceptionHandler(DataIntegrityViolationException.class)
-  public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
-      DataIntegrityViolationException ex) {
-    return buildResponse(HttpStatus.CONFLICT, "Request conflicts with existing data");
-  }
+    /**
+     * Handles missing request cookie exceptions.
+     *
+     * <p>Returns HTTP 401 Unauthorized when a required cookie is missing from the request.
+     *
+     * @param ex the missing request cookie exception
+     * @return response entity with HTTP 401 and an error message specifying the missing cookie
+     */
+    @ExceptionHandler(MissingRequestCookieException.class)
+    public ResponseEntity<ErrorResponse> handleMissingRequestCookieException(MissingRequestCookieException ex) {
+        String message =
+                switch (ex.getCookieName()) {
+                    case "refreshToken" -> "Refresh token is required";
+                    case "accessToken" -> "Access token is required";
+                    default -> ex.getCookieName() + " cookie is required";
+                };
+        return buildResponse(HttpStatus.UNAUTHORIZED, message);
+    }
 
-  @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-  public ResponseEntity<ErrorResponse> handleMethodNotSupported(
-      HttpRequestMethodNotSupportedException ex) {
-    return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed");
-  }
+    /**
+     * Handles data integrity violation exceptions.
+     *
+     * <p>Returns HTTP 409 Conflict when a database operation violates integrity constraints.
+     *
+     * @param ex the data integrity violation exception
+     * @return response entity with HTTP 409 and a conflict error message
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        return buildResponse(HttpStatus.CONFLICT, "Request conflicts with existing data");
+    }
 
-  @ExceptionHandler(NoResourceFoundException.class)
-  public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex) {
-    return buildResponse(HttpStatus.NOT_FOUND, "Resource not found");
-  }
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed");
+    }
 
-  /**
-   * Handles any uncaught exception not mapped above.
-   *
-   * <p>Logs the full exception server-side and returns HTTP 500 with a generic message so clients
-   * do not receive Spring Boot's default {@code /error} payload or internal details.
-   *
-   * @param ex the unexpected exception
-   * @return response entity with HTTP 500 and a generic error message
-   */
-  @ExceptionHandler(Exception.class)
-  public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception ex) {
-    log.error("Unhandled exception", ex);
-    return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
-  }
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex) {
+        return buildResponse(HttpStatus.NOT_FOUND, "Resource not found");
+    }
 
-  private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message) {
-    ErrorResponse errorResponse = new ErrorResponse(Instant.now(), status.value(), message);
-    return new ResponseEntity<>(errorResponse, status);
-  }
+    /**
+     * Handles any uncaught exception not mapped above.
+     *
+     * <p>Logs the full exception server-side and returns HTTP 500 with a generic message so clients
+     * do not receive Spring Boot's default {@code /error} payload or internal details.
+     *
+     * @param ex the unexpected exception
+     * @return response entity with HTTP 500 and a generic error message
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception ex) {
+        log.error("Unhandled exception", ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+    }
+
+    private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message) {
+        ErrorResponse errorResponse = new ErrorResponse(Instant.now(), status.value(), message);
+        return new ResponseEntity<>(errorResponse, status);
+    }
 }

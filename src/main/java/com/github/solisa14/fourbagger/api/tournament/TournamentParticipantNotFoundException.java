@@ -6,11 +6,11 @@ import org.springframework.http.HttpStatus;
 /** Exception thrown when a specific tournament participant cannot be found. */
 public class TournamentParticipantNotFoundException extends BusinessException {
 
-  /**
-   * Constructs a new {@code TournamentParticipantNotFoundException} with a default message and
-   * NOT_FOUND status.
-   */
-  public TournamentParticipantNotFoundException() {
-    super("Tournament participant not found", HttpStatus.NOT_FOUND);
-  }
+    /**
+     * Constructs a new {@code TournamentParticipantNotFoundException} with a default message and
+     * NOT_FOUND status.
+     */
+    public TournamentParticipantNotFoundException() {
+        super("Tournament participant not found", HttpStatus.NOT_FOUND);
+    }
 }

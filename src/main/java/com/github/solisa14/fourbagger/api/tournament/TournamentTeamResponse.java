@@ -15,11 +15,11 @@ import java.util.UUID;
  * @param seed bracket seed when assigned; null during manual draft registration
  */
 public record TournamentTeamResponse(
-    UUID id,
-    UUID playerOneParticipantId,
-    String playerOneDisplayName,
-    String playerOneUsername,
-    UUID playerTwoParticipantId,
-    String playerTwoDisplayName,
-    String playerTwoUsername,
-    Integer seed) {}
+        UUID id,
+        UUID playerOneParticipantId,
+        String playerOneDisplayName,
+        String playerOneUsername,
+        UUID playerTwoParticipantId,
+        String playerTwoDisplayName,
+        String playerTwoUsername,
+        Integer seed) {}

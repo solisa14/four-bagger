@@ -10,8 +10,8 @@ package com.github.solisa14.fourbagger.api.tournament;
  * @param message user-facing eligibility explanation
  */
 public record TournamentBracketEligibilityResponse(
-    boolean eligible,
-    int participantCount,
-    int minimumParticipantCount,
-    boolean requiresEvenParticipantCount,
-    String message) {}
+        boolean eligible,
+        int participantCount,
+        int minimumParticipantCount,
+        boolean requiresEvenParticipantCount,
+        String message) {}

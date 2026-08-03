@@ -8,12 +8,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class FinalScoreValidator {
 
-  public void validateScores(int sideOneScore, int sideTwoScore) {
-    if (sideOneScore < 0 || sideTwoScore < 0) {
-      throw new BusinessException("Scores must be nonnegative", HttpStatus.BAD_REQUEST);
+    public void validateScores(int sideOneScore, int sideTwoScore) {
+        if (sideOneScore < 0 || sideTwoScore < 0) {
+            throw new BusinessException("Scores must be nonnegative", HttpStatus.BAD_REQUEST);
+        }
+        if (sideOneScore == sideTwoScore) {
+            throw new BusinessException("Scores cannot be tied", HttpStatus.BAD_REQUEST);
+        }
     }
-    if (sideOneScore == sideTwoScore) {
-      throw new BusinessException("Scores cannot be tied", HttpStatus.BAD_REQUEST);
-    }
-  }
 }

@@ -7,27 +7,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class GameCreationService {
 
-  private final GameRepository gameRepository;
+    private final GameRepository gameRepository;
 
-  public GameCreationService(GameRepository gameRepository) {
-    this.gameRepository = gameRepository;
-  }
+    public GameCreationService(GameRepository gameRepository) {
+        this.gameRepository = gameRepository;
+    }
 
-  @Transactional
-  public Game createPendingGame(CreateGameCommand command) {
-    GameParticipants participants = command.participants();
-    Game game =
-        Game.builder()
-            .playerOne(participants.teamOne().player())
-            .playerOnePartner(participants.teamOne().partner())
-            .playerTwo(participants.teamTwo().player())
-            .playerTwoPartner(participants.teamTwo().partner())
-            .gameType(participants.gameType())
-            .status(GameStatus.PENDING)
-            .createdBy(command.createdBy())
-            .tournamentMatchId(command.tournamentMatchId())
-            .build();
+    @Transactional
+    public Game createPendingGame(CreateGameCommand command) {
+        GameParticipants participants = command.participants();
+        Game game = Game.builder()
+                .playerOne(participants.teamOne().player())
+                .playerOnePartner(participants.teamOne().partner())
+                .playerTwo(participants.teamTwo().player())
+                .playerTwoPartner(participants.teamTwo().partner())
+                .gameType(participants.gameType())
+                .status(GameStatus.PENDING)
+                .createdBy(command.createdBy())
+                .tournamentMatchId(command.tournamentMatchId())
+                .build();
 
-    return gameRepository.save(game);
-  }
+        return gameRepository.save(game);
+    }
 }

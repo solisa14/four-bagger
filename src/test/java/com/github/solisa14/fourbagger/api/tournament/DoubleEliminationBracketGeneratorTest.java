@@ -1,514 +1,474 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
 import static com.github.solisa14.fourbagger.api.testsupport.TestDataFactory.seededTeams;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.List;
-import org.junit.jupiter.api.Test;
-
 class DoubleEliminationBracketGeneratorTest {
 
-  private final DoubleEliminationBracketGenerator generator =
-      new DoubleEliminationBracketGenerator(new DoubleEliminationByeResolver());
+    private final DoubleEliminationBracketGenerator generator =
+            new DoubleEliminationBracketGenerator(new DoubleEliminationByeResolver());
 
-  @Test
-  void format_returnsDoubleElimination() {
-    assertThat(generator.format()).isEqualTo(TournamentFormat.DOUBLE_ELIMINATION);
-  }
-
-  @Test
-  void planBracket_whenFourTeams_createsWiredDoubleEliminationTree() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 4);
-
-    generator.planBracket(tournament, teams);
-
-    assertThat(tournament.getRounds()).hasSize(6);
-    TournamentRound winnerRoundOne = round(tournament, BracketType.WINNERS, 1);
-    TournamentRound winnerRoundTwo = round(tournament, BracketType.WINNERS, 2);
-    TournamentRound loserRoundOne = round(tournament, BracketType.LOSERS, 1);
-    TournamentRound loserRoundTwo = round(tournament, BracketType.LOSERS, 2);
-    TournamentRound finalRound = round(tournament, BracketType.FINAL, 1);
-    TournamentRound resetRound = round(tournament, BracketType.GRAND_FINAL, 1);
-
-    assertThat(winnerRoundOne.getMatches()).hasSize(2);
-    assertThat(winnerRoundTwo.getMatches()).hasSize(1);
-    assertThat(loserRoundOne.getMatches()).hasSize(1);
-    assertThat(loserRoundTwo.getMatches()).hasSize(1);
-    assertThat(finalRound.getMatches()).hasSize(1);
-    assertThat(resetRound.getMatches()).hasSize(1);
-
-    Match winnerFinal = winnerRoundTwo.getMatches().getFirst();
-    Match loserRoundOneMatch = loserRoundOne.getMatches().getFirst();
-    Match loserFinal = loserRoundTwo.getMatches().getFirst();
-    Match championshipMatch = finalRound.getMatches().getFirst();
-    Match resetMatch = resetRound.getMatches().getFirst();
-
-    assertThat(winnerRoundOne.getMatches())
-        .allSatisfy(
-            match -> {
-              assertThat(match.getWinnerNextMatch()).isSameAs(winnerFinal);
-              assertThat(match.getLoserNextMatch()).isSameAs(loserRoundOneMatch);
-            });
-    assertThat(winnerRoundOne.getMatches())
-        .extracting(Match::getWinnerNextMatchPosition)
-        .containsExactly(1, 2);
-    assertThat(winnerRoundOne.getMatches())
-        .extracting(Match::getLoserNextMatchPosition)
-        .containsExactly(1, 2);
-
-    assertRoute(loserRoundOneMatch, loserFinal, 1);
-    assertThat(loserRoundOneMatch.getLoserNextMatch()).isNull();
-    assertThat(loserRoundOneMatch.getLoserNextMatchPosition()).isNull();
-
-    assertRoute(winnerFinal, championshipMatch, 1);
-    assertThat(winnerFinal.getLoserNextMatch()).isSameAs(loserFinal);
-    assertThat(winnerFinal.getLoserNextMatchPosition()).isEqualTo(2);
-
-    assertRoute(loserFinal, championshipMatch, 2);
-    assertThat(loserFinal.getLoserNextMatch()).isNull();
-    assertThat(loserFinal.getLoserNextMatchPosition()).isNull();
-
-    assertRoute(championshipMatch, resetMatch, 2);
-    assertLoserRoute(championshipMatch, resetMatch, 1);
-    assertThat(resetMatch.getTeamOne()).isNull();
-    assertThat(resetMatch.getTeamTwo()).isNull();
-    assertThat(resetMatch.getStatus()).isEqualTo(MatchStatus.PENDING);
-    assertThat(resetMatch.getWinnerNextMatch()).isNull();
-    assertThat(resetMatch.getLoserNextMatch()).isNull();
-
-    assertThat(winnerRoundOne.getMatches().getFirst().getTeamOne().getSeed()).isEqualTo(1);
-    assertThat(winnerRoundOne.getMatches().getFirst().getTeamTwo().getSeed()).isEqualTo(4);
-    assertThat(winnerRoundOne.getMatches().getLast().getTeamOne().getSeed()).isEqualTo(2);
-    assertThat(winnerRoundOne.getMatches().getLast().getTeamTwo().getSeed()).isEqualTo(3);
-  }
-
-  @Test
-  void planBracket_whenEightTeams_createsAllRoundsAndCrossoverRoutes() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 8);
-
-    generator.planBracket(tournament, teams);
-
-    List<TournamentRound> winners = rounds(tournament, BracketType.WINNERS);
-    List<TournamentRound> losers = rounds(tournament, BracketType.LOSERS);
-    Match championship = round(tournament, BracketType.FINAL, 1).getMatches().getFirst();
-    Match reset = round(tournament, BracketType.GRAND_FINAL, 1).getMatches().getFirst();
-
-    assertThat(winners).hasSize(3);
-    assertThat(winners)
-        .extracting(round -> round.getMatches().size())
-        .containsExactly(4, 2, 1);
-    assertThat(losers).hasSize(4);
-    assertThat(losers)
-        .extracting(round -> round.getMatches().size())
-        .containsExactly(2, 2, 1, 1);
-
-    List<Match> winnerRoundOne = winners.getFirst().getMatches();
-    for (int matchIndex = 0; matchIndex < winnerRoundOne.size(); matchIndex++) {
-      assertRoute(
-          winnerRoundOne.get(matchIndex),
-          winners.get(1).getMatches().get(matchIndex / 2),
-          (matchIndex % 2) + 1);
-      assertLoserRoute(
-          winnerRoundOne.get(matchIndex),
-          losers.getFirst().getMatches().get(matchIndex / 2),
-          (matchIndex % 2) + 1);
+    @Test
+    void format_returnsDoubleElimination() {
+        assertThat(generator.format()).isEqualTo(TournamentFormat.DOUBLE_ELIMINATION);
     }
 
-    List<Match> winnerRoundTwo = winners.get(1).getMatches();
-    for (int matchIndex = 0; matchIndex < winnerRoundTwo.size(); matchIndex++) {
-      assertRoute(
-          winnerRoundTwo.get(matchIndex),
-          winners.getLast().getMatches().getFirst(),
-          matchIndex + 1);
-      assertLoserRoute(
-          winnerRoundTwo.get(matchIndex),
-          losers.get(1).getMatches().get(1 - matchIndex),
-          2);
+    @Test
+    void planBracket_whenFourTeams_createsWiredDoubleEliminationTree() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 4);
+
+        generator.planBracket(tournament, teams);
+
+        assertThat(tournament.getRounds()).hasSize(6);
+        TournamentRound winnerRoundOne = round(tournament, BracketType.WINNERS, 1);
+        TournamentRound winnerRoundTwo = round(tournament, BracketType.WINNERS, 2);
+        TournamentRound loserRoundOne = round(tournament, BracketType.LOSERS, 1);
+        TournamentRound loserRoundTwo = round(tournament, BracketType.LOSERS, 2);
+        TournamentRound finalRound = round(tournament, BracketType.FINAL, 1);
+        TournamentRound resetRound = round(tournament, BracketType.GRAND_FINAL, 1);
+
+        assertThat(winnerRoundOne.getMatches()).hasSize(2);
+        assertThat(winnerRoundTwo.getMatches()).hasSize(1);
+        assertThat(loserRoundOne.getMatches()).hasSize(1);
+        assertThat(loserRoundTwo.getMatches()).hasSize(1);
+        assertThat(finalRound.getMatches()).hasSize(1);
+        assertThat(resetRound.getMatches()).hasSize(1);
+
+        Match winnerFinal = winnerRoundTwo.getMatches().getFirst();
+        Match loserRoundOneMatch = loserRoundOne.getMatches().getFirst();
+        Match loserFinal = loserRoundTwo.getMatches().getFirst();
+        Match championshipMatch = finalRound.getMatches().getFirst();
+        Match resetMatch = resetRound.getMatches().getFirst();
+
+        assertThat(winnerRoundOne.getMatches()).allSatisfy(match -> {
+            assertThat(match.getWinnerNextMatch()).isSameAs(winnerFinal);
+            assertThat(match.getLoserNextMatch()).isSameAs(loserRoundOneMatch);
+        });
+        assertThat(winnerRoundOne.getMatches())
+                .extracting(Match::getWinnerNextMatchPosition)
+                .containsExactly(1, 2);
+        assertThat(winnerRoundOne.getMatches())
+                .extracting(Match::getLoserNextMatchPosition)
+                .containsExactly(1, 2);
+
+        assertRoute(loserRoundOneMatch, loserFinal, 1);
+        assertThat(loserRoundOneMatch.getLoserNextMatch()).isNull();
+        assertThat(loserRoundOneMatch.getLoserNextMatchPosition()).isNull();
+
+        assertRoute(winnerFinal, championshipMatch, 1);
+        assertThat(winnerFinal.getLoserNextMatch()).isSameAs(loserFinal);
+        assertThat(winnerFinal.getLoserNextMatchPosition()).isEqualTo(2);
+
+        assertRoute(loserFinal, championshipMatch, 2);
+        assertThat(loserFinal.getLoserNextMatch()).isNull();
+        assertThat(loserFinal.getLoserNextMatchPosition()).isNull();
+
+        assertRoute(championshipMatch, resetMatch, 2);
+        assertLoserRoute(championshipMatch, resetMatch, 1);
+        assertThat(resetMatch.getTeamOne()).isNull();
+        assertThat(resetMatch.getTeamTwo()).isNull();
+        assertThat(resetMatch.getStatus()).isEqualTo(MatchStatus.PENDING);
+        assertThat(resetMatch.getWinnerNextMatch()).isNull();
+        assertThat(resetMatch.getLoserNextMatch()).isNull();
+
+        assertThat(winnerRoundOne.getMatches().getFirst().getTeamOne().getSeed())
+                .isEqualTo(1);
+        assertThat(winnerRoundOne.getMatches().getFirst().getTeamTwo().getSeed())
+                .isEqualTo(4);
+        assertThat(winnerRoundOne.getMatches().getLast().getTeamOne().getSeed()).isEqualTo(2);
+        assertThat(winnerRoundOne.getMatches().getLast().getTeamTwo().getSeed()).isEqualTo(3);
     }
 
-    Match winnerFinal = winners.getLast().getMatches().getFirst();
-    assertRoute(winnerFinal, championship, 1);
-    assertLoserRoute(winnerFinal, losers.getLast().getMatches().getFirst(), 2);
+    @Test
+    void planBracket_whenEightTeams_createsAllRoundsAndCrossoverRoutes() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 8);
 
-    assertRoute(
-        losers.getFirst().getMatches().getFirst(),
-        losers.get(1).getMatches().getFirst(),
-        1);
-    assertRoute(
-        losers.getFirst().getMatches().getLast(),
-        losers.get(1).getMatches().getLast(),
-        1);
-    assertRoute(
-        losers.get(1).getMatches().getFirst(),
-        losers.get(2).getMatches().getFirst(),
-        1);
-    assertRoute(
-        losers.get(1).getMatches().getLast(),
-        losers.get(2).getMatches().getFirst(),
-        2);
-    assertRoute(
-        losers.get(2).getMatches().getFirst(),
-        losers.getLast().getMatches().getFirst(),
-        1);
-    assertRoute(losers.getLast().getMatches().getFirst(), championship, 2);
-    assertRoute(championship, reset, 2);
-    assertLoserRoute(championship, reset, 1);
-    assertThat(losers)
-        .flatExtracting(TournamentRound::getMatches)
-        .allSatisfy(
-            match -> {
-              assertThat(match.getLoserNextMatch()).isNull();
-              assertThat(match.getLoserNextMatchPosition()).isNull();
-            });
-  }
+        generator.planBracket(tournament, teams);
 
-  @Test
-  void planBracket_whenFiveTeams_assignsByesToTopSeedsAndResolvesEmptyLosersPath() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 5);
+        List<TournamentRound> winners = rounds(tournament, BracketType.WINNERS);
+        List<TournamentRound> losers = rounds(tournament, BracketType.LOSERS);
+        Match championship =
+                round(tournament, BracketType.FINAL, 1).getMatches().getFirst();
+        Match reset = round(tournament, BracketType.GRAND_FINAL, 1).getMatches().getFirst();
 
-    generator.planBracket(tournament, teams);
+        assertThat(winners).hasSize(3);
+        assertThat(winners).extracting(round -> round.getMatches().size()).containsExactly(4, 2, 1);
+        assertThat(losers).hasSize(4);
+        assertThat(losers).extracting(round -> round.getMatches().size()).containsExactly(2, 2, 1, 1);
 
-    List<Match> firstWinnerRound = round(tournament, BracketType.WINNERS, 1).getMatches();
-    List<Match> byeMatches = firstWinnerRound.stream().filter(Match::isBye).toList();
-    assertThat(byeMatches).hasSize(3);
-    assertThat(byeMatches)
-        .extracting(match -> match.getWinner().getSeed())
-        .containsExactly(1, 2, 3);
-    assertThat(byeMatches)
-        .allSatisfy(
-            match -> {
-              assertThat(match.getStatus()).isEqualTo(MatchStatus.COMPLETED);
-              assertThat(match.getTeamTwo()).isNull();
-            });
+        List<Match> winnerRoundOne = winners.getFirst().getMatches();
+        for (int matchIndex = 0; matchIndex < winnerRoundOne.size(); matchIndex++) {
+            assertRoute(
+                    winnerRoundOne.get(matchIndex),
+                    winners.get(1).getMatches().get(matchIndex / 2),
+                    (matchIndex % 2) + 1);
+            assertLoserRoute(
+                    winnerRoundOne.get(matchIndex),
+                    losers.getFirst().getMatches().get(matchIndex / 2),
+                    (matchIndex % 2) + 1);
+        }
 
-    TournamentRound winnerRoundTwo = round(tournament, BracketType.WINNERS, 2);
-    assertThat(winnerRoundTwo.getMatches().getFirst().getTeamOne().getSeed()).isEqualTo(1);
-    assertThat(winnerRoundTwo.getMatches().getFirst().getTeamTwo().getSeed()).isEqualTo(2);
-    assertThat(winnerRoundTwo.getMatches().getLast().getTeamOne().getSeed()).isEqualTo(3);
-    assertThat(winnerRoundTwo.getMatches().getLast().getTeamTwo()).isNull();
+        List<Match> winnerRoundTwo = winners.get(1).getMatches();
+        for (int matchIndex = 0; matchIndex < winnerRoundTwo.size(); matchIndex++) {
+            assertRoute(
+                    winnerRoundTwo.get(matchIndex),
+                    winners.getLast().getMatches().getFirst(),
+                    matchIndex + 1);
+            assertLoserRoute(
+                    winnerRoundTwo.get(matchIndex), losers.get(1).getMatches().get(1 - matchIndex), 2);
+        }
 
-    Match emptyLosersMatch = round(tournament, BracketType.LOSERS, 1).getMatches().getFirst();
-    assertThat(emptyLosersMatch.isBye()).isTrue();
-    assertThat(emptyLosersMatch.getStatus()).isEqualTo(MatchStatus.COMPLETED);
-    assertThat(emptyLosersMatch.getWinner()).isNull();
-  }
+        Match winnerFinal = winners.getLast().getMatches().getFirst();
+        assertRoute(winnerFinal, championship, 1);
+        assertLoserRoute(winnerFinal, losers.getLast().getMatches().getFirst(), 2);
 
-  @Test
-  void planBracket_whenSixTeams_assignsByesAndResolvesEmptyLosersPath() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 6);
+        assertRoute(
+                losers.getFirst().getMatches().getFirst(),
+                losers.get(1).getMatches().getFirst(),
+                1);
+        assertRoute(
+                losers.getFirst().getMatches().getLast(),
+                losers.get(1).getMatches().getLast(),
+                1);
+        assertRoute(
+                losers.get(1).getMatches().getFirst(),
+                losers.get(2).getMatches().getFirst(),
+                1);
+        assertRoute(
+                losers.get(1).getMatches().getLast(), losers.get(2).getMatches().getFirst(), 2);
+        assertRoute(
+                losers.get(2).getMatches().getFirst(),
+                losers.getLast().getMatches().getFirst(),
+                1);
+        assertRoute(losers.getLast().getMatches().getFirst(), championship, 2);
+        assertRoute(championship, reset, 2);
+        assertLoserRoute(championship, reset, 1);
+        assertThat(losers).flatExtracting(TournamentRound::getMatches).allSatisfy(match -> {
+            assertThat(match.getLoserNextMatch()).isNull();
+            assertThat(match.getLoserNextMatchPosition()).isNull();
+        });
+    }
 
-    generator.planBracket(tournament, teams);
+    @Test
+    void planBracket_whenFiveTeams_assignsByesToTopSeedsAndResolvesEmptyLosersPath() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 5);
 
-    List<Match> firstWinnerRound = round(tournament, BracketType.WINNERS, 1).getMatches();
-    List<Match> byeMatches = firstWinnerRound.stream().filter(Match::isBye).toList();
-    assertThat(byeMatches).hasSize(2);
-    assertThat(byeMatches)
-        .extracting(match -> match.getWinner().getSeed())
-        .containsExactly(1, 2);
-    assertThat(firstWinnerRound.stream().filter(match -> !match.isBye())).hasSize(2);
+        generator.planBracket(tournament, teams);
 
-    List<Match> losersRoundOne = round(tournament, BracketType.LOSERS, 1).getMatches();
-    assertThat(losersRoundOne).hasSize(2);
-    Match emptyLosersMatch = losersRoundOne.getFirst();
-    assertThat(emptyLosersMatch.isBye()).isTrue();
-    assertThat(emptyLosersMatch.getStatus()).isEqualTo(MatchStatus.COMPLETED);
-    assertThat(emptyLosersMatch.getWinner()).isNull();
-    Match pendingLosersMatch = losersRoundOne.getLast();
-    assertThat(pendingLosersMatch.isBye()).isFalse();
-    assertThat(pendingLosersMatch.getStatus()).isEqualTo(MatchStatus.PENDING);
-  }
-
-  @Test
-  void planBracket_whenRoundsAlreadyConfigured_preservesRulesAndRemovesUnusedRounds() {
-    Tournament tournament = tournament();
-    TournamentRound winnerRound = configuredRound(tournament, BracketType.WINNERS, 1, 3);
-    TournamentRound loserRound = configuredRound(tournament, BracketType.LOSERS, 1, 5);
-    TournamentRound finalRound = configuredRound(tournament, BracketType.FINAL, 1, 7);
-    TournamentRound extraWinnerRound =
-        configuredRound(tournament, BracketType.WINNERS, 3, 1);
-    TournamentRound grandFinal =
-        configuredRound(tournament, BracketType.GRAND_FINAL, 1, 1);
-    tournament
-        .getRounds()
-        .addAll(
-            List.of(
-                winnerRound,
-                loserRound,
-                finalRound,
-                extraWinnerRound,
-                grandFinal));
-    List<TournamentTeam> teams = addTeams(tournament, 4);
-
-    generator.planBracket(tournament, teams);
-
-    assertThat(tournament.getRounds()).contains(winnerRound, loserRound, finalRound, grandFinal);
-    assertThat(tournament.getRounds()).doesNotContain(extraWinnerRound);
-    assertThat(winnerRound.getBestOf()).isEqualTo(3);
-    assertThat(loserRound.getBestOf()).isEqualTo(5);
-    assertThat(finalRound.getBestOf()).isEqualTo(7);
-    assertThat(tournament.getRounds()).hasSize(6);
-  }
-
-  @Test
-  void planBracket_whenCalledAgain_replacesMatchesWithoutDuplicatingRounds() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 4);
-    generator.planBracket(tournament, teams);
-    List<Match> originalMatches =
-        tournament.getRounds().stream().flatMap(round -> round.getMatches().stream()).toList();
-
-    generator.planBracket(tournament, teams);
-
-    List<Match> rebuiltMatches =
-        tournament.getRounds().stream().flatMap(round -> round.getMatches().stream()).toList();
-    assertThat(tournament.getRounds()).hasSize(6);
-    assertThat(rebuiltMatches).hasSize(7);
-    assertThat(rebuiltMatches).doesNotContainAnyElementsOf(originalMatches);
-  }
-
-  @Test
-  void planBracket_resetsTeamLossAndEliminationState() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 4);
-    teams.forEach(
-        team -> {
-          team.setLosses(2);
-          team.setEliminated(true);
+        List<Match> firstWinnerRound = round(tournament, BracketType.WINNERS, 1).getMatches();
+        List<Match> byeMatches = firstWinnerRound.stream().filter(Match::isBye).toList();
+        assertThat(byeMatches).hasSize(3);
+        assertThat(byeMatches).extracting(match -> match.getWinner().getSeed()).containsExactly(1, 2, 3);
+        assertThat(byeMatches).allSatisfy(match -> {
+            assertThat(match.getStatus()).isEqualTo(MatchStatus.COMPLETED);
+            assertThat(match.getTeamTwo()).isNull();
         });
 
-    generator.planBracket(tournament, teams);
+        TournamentRound winnerRoundTwo = round(tournament, BracketType.WINNERS, 2);
+        assertThat(winnerRoundTwo.getMatches().getFirst().getTeamOne().getSeed())
+                .isEqualTo(1);
+        assertThat(winnerRoundTwo.getMatches().getFirst().getTeamTwo().getSeed())
+                .isEqualTo(2);
+        assertThat(winnerRoundTwo.getMatches().getLast().getTeamOne().getSeed()).isEqualTo(3);
+        assertThat(winnerRoundTwo.getMatches().getLast().getTeamTwo()).isNull();
 
-    assertThat(teams)
-        .allSatisfy(
-            team -> {
-              assertThat(team.getLosses()).isZero();
-              assertThat(team.isEliminated()).isFalse();
-            });
-  }
-
-  @Test
-  void planBracket_whenFewerThanFourTeams_throwsInvalidTournamentStateException() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 3);
-
-    assertThatThrownBy(() -> generator.planBracket(tournament, teams))
-        .isInstanceOf(InvalidTournamentStateException.class)
-        .hasMessageContaining("at least 4 teams");
-    assertThat(tournament.getRounds()).isEmpty();
-  }
-
-  @Test
-  void planBracket_whenSevenTeams_createsEightSlotBracketWithOneByeAndAutoAdvance() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 7);
-
-    generator.planBracket(tournament, teams);
-
-    List<TournamentRound> winners = rounds(tournament, BracketType.WINNERS);
-    List<TournamentRound> losers = rounds(tournament, BracketType.LOSERS);
-    Match championship = round(tournament, BracketType.FINAL, 1).getMatches().getFirst();
-    Match reset = round(tournament, BracketType.GRAND_FINAL, 1).getMatches().getFirst();
-
-    assertThat(tournament.getRounds()).hasSize(9);
-    assertThat(winners).hasSize(3);
-    assertThat(winners)
-        .extracting(round -> round.getMatches().size())
-        .containsExactly(4, 2, 1);
-    assertThat(losers).hasSize(4);
-    assertThat(losers)
-        .extracting(round -> round.getMatches().size())
-        .containsExactly(2, 2, 1, 1);
-
-    List<Match> firstWinnerRound = winners.getFirst().getMatches();
-    List<Match> byeMatches = firstWinnerRound.stream().filter(Match::isBye).toList();
-    assertThat(byeMatches).hasSize(1);
-    assertThat(byeMatches.getFirst().getWinner().getSeed()).isEqualTo(1);
-    assertThat(byeMatches.getFirst().getStatus()).isEqualTo(MatchStatus.COMPLETED);
-
-    Match winnerRoundTwoMatch =
-        winners.get(1).getMatches().stream()
-            .filter(match -> match.getTeamOne() != null && match.getTeamOne().getSeed() == 1)
-            .findFirst()
-            .orElseThrow();
-    assertThat(winnerRoundTwoMatch.getTeamOne().getSeed()).isEqualTo(1);
-
-    List<Match> winnerRoundOne = winners.getFirst().getMatches();
-    for (int matchIndex = 0; matchIndex < winnerRoundOne.size(); matchIndex++) {
-      assertRoute(
-          winnerRoundOne.get(matchIndex),
-          winners.get(1).getMatches().get(matchIndex / 2),
-          (matchIndex % 2) + 1);
-      assertLoserRoute(
-          winnerRoundOne.get(matchIndex),
-          losers.getFirst().getMatches().get(matchIndex / 2),
-          (matchIndex % 2) + 1);
+        Match emptyLosersMatch =
+                round(tournament, BracketType.LOSERS, 1).getMatches().getFirst();
+        assertThat(emptyLosersMatch.isBye()).isTrue();
+        assertThat(emptyLosersMatch.getStatus()).isEqualTo(MatchStatus.COMPLETED);
+        assertThat(emptyLosersMatch.getWinner()).isNull();
     }
 
-    Match winnerFinal = winners.getLast().getMatches().getFirst();
-    assertRoute(winnerFinal, championship, 1);
-    assertLoserRoute(winnerFinal, losers.getLast().getMatches().getFirst(), 2);
-    assertRoute(losers.getLast().getMatches().getFirst(), championship, 2);
-    assertRoute(championship, reset, 2);
-    assertLoserRoute(championship, reset, 1);
-  }
+    @Test
+    void planBracket_whenSixTeams_assignsByesAndResolvesEmptyLosersPath() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 6);
 
-  @Test
-  void planBracket_whenSixteenTeams_createsAllRoundsAndCrossoverRoutes() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 16);
+        generator.planBracket(tournament, teams);
 
-    generator.planBracket(tournament, teams);
+        List<Match> firstWinnerRound = round(tournament, BracketType.WINNERS, 1).getMatches();
+        List<Match> byeMatches = firstWinnerRound.stream().filter(Match::isBye).toList();
+        assertThat(byeMatches).hasSize(2);
+        assertThat(byeMatches).extracting(match -> match.getWinner().getSeed()).containsExactly(1, 2);
+        assertThat(firstWinnerRound.stream().filter(match -> !match.isBye())).hasSize(2);
 
-    List<TournamentRound> winners = rounds(tournament, BracketType.WINNERS);
-    List<TournamentRound> losers = rounds(tournament, BracketType.LOSERS);
-    Match championship = round(tournament, BracketType.FINAL, 1).getMatches().getFirst();
-    Match reset = round(tournament, BracketType.GRAND_FINAL, 1).getMatches().getFirst();
-
-    assertThat(winners).hasSize(4);
-    assertThat(winners)
-        .extracting(round -> round.getMatches().size())
-        .containsExactly(8, 4, 2, 1);
-    assertThat(losers).hasSize(6);
-    assertThat(losers)
-        .extracting(round -> round.getMatches().size())
-        .containsExactly(4, 4, 2, 2, 1, 1);
-    assertThat(winners.getFirst().getMatches()).filteredOn(Match::isBye).isEmpty();
-
-    List<Match> winnerRoundOne = winners.getFirst().getMatches();
-    for (int matchIndex = 0; matchIndex < winnerRoundOne.size(); matchIndex++) {
-      assertRoute(
-          winnerRoundOne.get(matchIndex),
-          winners.get(1).getMatches().get(matchIndex / 2),
-          (matchIndex % 2) + 1);
-      assertLoserRoute(
-          winnerRoundOne.get(matchIndex),
-          losers.getFirst().getMatches().get(matchIndex / 2),
-          (matchIndex % 2) + 1);
+        List<Match> losersRoundOne = round(tournament, BracketType.LOSERS, 1).getMatches();
+        assertThat(losersRoundOne).hasSize(2);
+        Match emptyLosersMatch = losersRoundOne.getFirst();
+        assertThat(emptyLosersMatch.isBye()).isTrue();
+        assertThat(emptyLosersMatch.getStatus()).isEqualTo(MatchStatus.COMPLETED);
+        assertThat(emptyLosersMatch.getWinner()).isNull();
+        Match pendingLosersMatch = losersRoundOne.getLast();
+        assertThat(pendingLosersMatch.isBye()).isFalse();
+        assertThat(pendingLosersMatch.getStatus()).isEqualTo(MatchStatus.PENDING);
     }
 
-    List<Match> winnerRoundTwo = winners.get(1).getMatches();
-    for (int matchIndex = 0; matchIndex < winnerRoundTwo.size(); matchIndex++) {
-      assertRoute(
-          winnerRoundTwo.get(matchIndex),
-          winners.get(2).getMatches().get(matchIndex / 2),
-          (matchIndex % 2) + 1);
-      assertLoserRoute(
-          winnerRoundTwo.get(matchIndex),
-          losers.get(1).getMatches().get(3 - matchIndex),
-          2);
+    @Test
+    void planBracket_whenRoundsAlreadyConfigured_preservesRulesAndRemovesUnusedRounds() {
+        Tournament tournament = tournament();
+        TournamentRound winnerRound = configuredRound(tournament, BracketType.WINNERS, 1, 3);
+        TournamentRound loserRound = configuredRound(tournament, BracketType.LOSERS, 1, 5);
+        TournamentRound finalRound = configuredRound(tournament, BracketType.FINAL, 1, 7);
+        TournamentRound extraWinnerRound = configuredRound(tournament, BracketType.WINNERS, 3, 1);
+        TournamentRound grandFinal = configuredRound(tournament, BracketType.GRAND_FINAL, 1, 1);
+        tournament.getRounds().addAll(List.of(winnerRound, loserRound, finalRound, extraWinnerRound, grandFinal));
+        List<TournamentTeam> teams = addTeams(tournament, 4);
+
+        generator.planBracket(tournament, teams);
+
+        assertThat(tournament.getRounds()).contains(winnerRound, loserRound, finalRound, grandFinal);
+        assertThat(tournament.getRounds()).doesNotContain(extraWinnerRound);
+        assertThat(winnerRound.getBestOf()).isEqualTo(3);
+        assertThat(loserRound.getBestOf()).isEqualTo(5);
+        assertThat(finalRound.getBestOf()).isEqualTo(7);
+        assertThat(tournament.getRounds()).hasSize(6);
     }
 
-    List<Match> winnerRoundThree = winners.get(2).getMatches();
-    for (int matchIndex = 0; matchIndex < winnerRoundThree.size(); matchIndex++) {
-      assertRoute(
-          winnerRoundThree.get(matchIndex),
-          winners.getLast().getMatches().getFirst(),
-          matchIndex + 1);
-      assertLoserRoute(
-          winnerRoundThree.get(matchIndex),
-          losers.get(3).getMatches().get(1 - matchIndex),
-          2);
+    @Test
+    void planBracket_whenCalledAgain_replacesMatchesWithoutDuplicatingRounds() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 4);
+        generator.planBracket(tournament, teams);
+        List<Match> originalMatches = tournament.getRounds().stream()
+                .flatMap(round -> round.getMatches().stream())
+                .toList();
+
+        generator.planBracket(tournament, teams);
+
+        List<Match> rebuiltMatches = tournament.getRounds().stream()
+                .flatMap(round -> round.getMatches().stream())
+                .toList();
+        assertThat(tournament.getRounds()).hasSize(6);
+        assertThat(rebuiltMatches).hasSize(7);
+        assertThat(rebuiltMatches).doesNotContainAnyElementsOf(originalMatches);
     }
 
-    Match winnerFinal = winners.getLast().getMatches().getFirst();
-    assertRoute(winnerFinal, championship, 1);
-    assertLoserRoute(winnerFinal, losers.getLast().getMatches().getFirst(), 2);
-    assertRoute(losers.getLast().getMatches().getFirst(), championship, 2);
-    assertRoute(championship, reset, 2);
-    assertLoserRoute(championship, reset, 1);
-    assertThat(losers)
-        .flatExtracting(TournamentRound::getMatches)
-        .allSatisfy(
-            match -> {
-              assertThat(match.getLoserNextMatch()).isNull();
-              assertThat(match.getLoserNextMatchPosition()).isNull();
-            });
-  }
+    @Test
+    void planBracket_resetsTeamLossAndEliminationState() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 4);
+        teams.forEach(team -> {
+            team.setLosses(2);
+            team.setEliminated(true);
+        });
 
-  @Test
-  void planBracket_whenSeedIsMissing_throwsInvalidTournamentStateException() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 4);
-    teams.getFirst().setSeed(null);
+        generator.planBracket(tournament, teams);
 
-    assertInvalidSeed(tournament, teams);
-  }
+        assertThat(teams).allSatisfy(team -> {
+            assertThat(team.getLosses()).isZero();
+            assertThat(team.isEliminated()).isFalse();
+        });
+    }
 
-  @Test
-  void planBracket_whenSeedIsDuplicated_throwsInvalidTournamentStateException() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 4);
-    teams.getLast().setSeed(teams.getFirst().getSeed());
+    @Test
+    void planBracket_whenFewerThanFourTeams_throwsInvalidTournamentStateException() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 3);
 
-    assertInvalidSeed(tournament, teams);
-  }
+        assertThatThrownBy(() -> generator.planBracket(tournament, teams))
+                .isInstanceOf(InvalidTournamentStateException.class)
+                .hasMessageContaining("at least 4 teams");
+        assertThat(tournament.getRounds()).isEmpty();
+    }
 
-  @Test
-  void planBracket_whenSeedExceedsBracketSize_throwsInvalidTournamentStateException() {
-    Tournament tournament = tournament();
-    List<TournamentTeam> teams = addTeams(tournament, 4);
-    teams.getLast().setSeed(5);
+    @Test
+    void planBracket_whenSevenTeams_createsEightSlotBracketWithOneByeAndAutoAdvance() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 7);
 
-    assertInvalidSeed(tournament, teams);
-  }
+        generator.planBracket(tournament, teams);
 
-  private Tournament tournament() {
-    return Tournament.builder().format(TournamentFormat.DOUBLE_ELIMINATION).build();
-  }
+        List<TournamentRound> winners = rounds(tournament, BracketType.WINNERS);
+        List<TournamentRound> losers = rounds(tournament, BracketType.LOSERS);
+        Match championship =
+                round(tournament, BracketType.FINAL, 1).getMatches().getFirst();
+        Match reset = round(tournament, BracketType.GRAND_FINAL, 1).getMatches().getFirst();
 
-  private List<TournamentTeam> addTeams(Tournament tournament, int count) {
-    List<TournamentTeam> teams = seededTeams(tournament, count);
-    tournament.getTeams().addAll(teams);
-    return teams;
-  }
+        assertThat(tournament.getRounds()).hasSize(9);
+        assertThat(winners).hasSize(3);
+        assertThat(winners).extracting(round -> round.getMatches().size()).containsExactly(4, 2, 1);
+        assertThat(losers).hasSize(4);
+        assertThat(losers).extracting(round -> round.getMatches().size()).containsExactly(2, 2, 1, 1);
 
-  private TournamentRound configuredRound(
-      Tournament tournament, BracketType bracketType, int roundNumber, int bestOf) {
-    return TournamentRound.builder()
-        .tournament(tournament)
-        .bracketType(bracketType)
-        .roundNumber(roundNumber)
-        .bestOf(bestOf)
-        .build();
-  }
+        List<Match> firstWinnerRound = winners.getFirst().getMatches();
+        List<Match> byeMatches = firstWinnerRound.stream().filter(Match::isBye).toList();
+        assertThat(byeMatches).hasSize(1);
+        assertThat(byeMatches.getFirst().getWinner().getSeed()).isEqualTo(1);
+        assertThat(byeMatches.getFirst().getStatus()).isEqualTo(MatchStatus.COMPLETED);
 
-  private List<TournamentRound> rounds(Tournament tournament, BracketType bracketType) {
-    return tournament.getRounds().stream()
-        .filter(round -> round.getBracketType() == bracketType)
-        .sorted(java.util.Comparator.comparing(TournamentRound::getRoundNumber))
-        .toList();
-  }
+        Match winnerRoundTwoMatch = winners.get(1).getMatches().stream()
+                .filter(match ->
+                        match.getTeamOne() != null && match.getTeamOne().getSeed() == 1)
+                .findFirst()
+                .orElseThrow();
+        assertThat(winnerRoundTwoMatch.getTeamOne().getSeed()).isEqualTo(1);
 
-  private TournamentRound round(
-      Tournament tournament, BracketType bracketType, int roundNumber) {
-    return tournament.getRounds().stream()
-        .filter(
-            round ->
-                round.getBracketType() == bracketType
-                    && round.getRoundNumber() == roundNumber)
-        .findFirst()
-        .orElseThrow();
-  }
+        List<Match> winnerRoundOne = winners.getFirst().getMatches();
+        for (int matchIndex = 0; matchIndex < winnerRoundOne.size(); matchIndex++) {
+            assertRoute(
+                    winnerRoundOne.get(matchIndex),
+                    winners.get(1).getMatches().get(matchIndex / 2),
+                    (matchIndex % 2) + 1);
+            assertLoserRoute(
+                    winnerRoundOne.get(matchIndex),
+                    losers.getFirst().getMatches().get(matchIndex / 2),
+                    (matchIndex % 2) + 1);
+        }
 
-  private void assertRoute(Match source, Match destination, int position) {
-    assertThat(source.getWinnerNextMatch()).isSameAs(destination);
-    assertThat(source.getWinnerNextMatchPosition()).isEqualTo(position);
-  }
+        Match winnerFinal = winners.getLast().getMatches().getFirst();
+        assertRoute(winnerFinal, championship, 1);
+        assertLoserRoute(winnerFinal, losers.getLast().getMatches().getFirst(), 2);
+        assertRoute(losers.getLast().getMatches().getFirst(), championship, 2);
+        assertRoute(championship, reset, 2);
+        assertLoserRoute(championship, reset, 1);
+    }
 
-  private void assertLoserRoute(Match source, Match destination, int position) {
-    assertThat(source.getLoserNextMatch()).isSameAs(destination);
-    assertThat(source.getLoserNextMatchPosition()).isEqualTo(position);
-  }
+    @Test
+    void planBracket_whenSixteenTeams_createsAllRoundsAndCrossoverRoutes() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 16);
 
-  private void assertInvalidSeed(Tournament tournament, List<TournamentTeam> teams) {
-    assertThatThrownBy(() -> generator.planBracket(tournament, teams))
-        .isInstanceOf(InvalidTournamentStateException.class)
-        .hasMessageContaining("Invalid seed assignment");
-    assertThat(tournament.getRounds()).isEmpty();
-  }
+        generator.planBracket(tournament, teams);
+
+        List<TournamentRound> winners = rounds(tournament, BracketType.WINNERS);
+        List<TournamentRound> losers = rounds(tournament, BracketType.LOSERS);
+        Match championship =
+                round(tournament, BracketType.FINAL, 1).getMatches().getFirst();
+        Match reset = round(tournament, BracketType.GRAND_FINAL, 1).getMatches().getFirst();
+
+        assertThat(winners).hasSize(4);
+        assertThat(winners).extracting(round -> round.getMatches().size()).containsExactly(8, 4, 2, 1);
+        assertThat(losers).hasSize(6);
+        assertThat(losers).extracting(round -> round.getMatches().size()).containsExactly(4, 4, 2, 2, 1, 1);
+        assertThat(winners.getFirst().getMatches()).filteredOn(Match::isBye).isEmpty();
+
+        List<Match> winnerRoundOne = winners.getFirst().getMatches();
+        for (int matchIndex = 0; matchIndex < winnerRoundOne.size(); matchIndex++) {
+            assertRoute(
+                    winnerRoundOne.get(matchIndex),
+                    winners.get(1).getMatches().get(matchIndex / 2),
+                    (matchIndex % 2) + 1);
+            assertLoserRoute(
+                    winnerRoundOne.get(matchIndex),
+                    losers.getFirst().getMatches().get(matchIndex / 2),
+                    (matchIndex % 2) + 1);
+        }
+
+        List<Match> winnerRoundTwo = winners.get(1).getMatches();
+        for (int matchIndex = 0; matchIndex < winnerRoundTwo.size(); matchIndex++) {
+            assertRoute(
+                    winnerRoundTwo.get(matchIndex),
+                    winners.get(2).getMatches().get(matchIndex / 2),
+                    (matchIndex % 2) + 1);
+            assertLoserRoute(
+                    winnerRoundTwo.get(matchIndex), losers.get(1).getMatches().get(3 - matchIndex), 2);
+        }
+
+        List<Match> winnerRoundThree = winners.get(2).getMatches();
+        for (int matchIndex = 0; matchIndex < winnerRoundThree.size(); matchIndex++) {
+            assertRoute(
+                    winnerRoundThree.get(matchIndex),
+                    winners.getLast().getMatches().getFirst(),
+                    matchIndex + 1);
+            assertLoserRoute(
+                    winnerRoundThree.get(matchIndex), losers.get(3).getMatches().get(1 - matchIndex), 2);
+        }
+
+        Match winnerFinal = winners.getLast().getMatches().getFirst();
+        assertRoute(winnerFinal, championship, 1);
+        assertLoserRoute(winnerFinal, losers.getLast().getMatches().getFirst(), 2);
+        assertRoute(losers.getLast().getMatches().getFirst(), championship, 2);
+        assertRoute(championship, reset, 2);
+        assertLoserRoute(championship, reset, 1);
+        assertThat(losers).flatExtracting(TournamentRound::getMatches).allSatisfy(match -> {
+            assertThat(match.getLoserNextMatch()).isNull();
+            assertThat(match.getLoserNextMatchPosition()).isNull();
+        });
+    }
+
+    @Test
+    void planBracket_whenSeedIsMissing_throwsInvalidTournamentStateException() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 4);
+        teams.getFirst().setSeed(null);
+
+        assertInvalidSeed(tournament, teams);
+    }
+
+    @Test
+    void planBracket_whenSeedIsDuplicated_throwsInvalidTournamentStateException() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 4);
+        teams.getLast().setSeed(teams.getFirst().getSeed());
+
+        assertInvalidSeed(tournament, teams);
+    }
+
+    @Test
+    void planBracket_whenSeedExceedsBracketSize_throwsInvalidTournamentStateException() {
+        Tournament tournament = tournament();
+        List<TournamentTeam> teams = addTeams(tournament, 4);
+        teams.getLast().setSeed(5);
+
+        assertInvalidSeed(tournament, teams);
+    }
+
+    private Tournament tournament() {
+        return Tournament.builder().format(TournamentFormat.DOUBLE_ELIMINATION).build();
+    }
+
+    private List<TournamentTeam> addTeams(Tournament tournament, int count) {
+        List<TournamentTeam> teams = seededTeams(tournament, count);
+        tournament.getTeams().addAll(teams);
+        return teams;
+    }
+
+    private TournamentRound configuredRound(
+            Tournament tournament, BracketType bracketType, int roundNumber, int bestOf) {
+        return TournamentRound.builder()
+                .tournament(tournament)
+                .bracketType(bracketType)
+                .roundNumber(roundNumber)
+                .bestOf(bestOf)
+                .build();
+    }
+
+    private List<TournamentRound> rounds(Tournament tournament, BracketType bracketType) {
+        return tournament.getRounds().stream()
+                .filter(round -> round.getBracketType() == bracketType)
+                .sorted(java.util.Comparator.comparing(TournamentRound::getRoundNumber))
+                .toList();
+    }
+
+    private TournamentRound round(Tournament tournament, BracketType bracketType, int roundNumber) {
+        return tournament.getRounds().stream()
+                .filter(round -> round.getBracketType() == bracketType && round.getRoundNumber() == roundNumber)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private void assertRoute(Match source, Match destination, int position) {
+        assertThat(source.getWinnerNextMatch()).isSameAs(destination);
+        assertThat(source.getWinnerNextMatchPosition()).isEqualTo(position);
+    }
+
+    private void assertLoserRoute(Match source, Match destination, int position) {
+        assertThat(source.getLoserNextMatch()).isSameAs(destination);
+        assertThat(source.getLoserNextMatchPosition()).isEqualTo(position);
+    }
+
+    private void assertInvalidSeed(Tournament tournament, List<TournamentTeam> teams) {
+        assertThatThrownBy(() -> generator.planBracket(tournament, teams))
+                .isInstanceOf(InvalidTournamentStateException.class)
+                .hasMessageContaining("Invalid seed assignment");
+        assertThat(tournament.getRounds()).isEmpty();
+    }
 }

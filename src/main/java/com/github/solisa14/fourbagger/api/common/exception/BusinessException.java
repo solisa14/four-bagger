@@ -11,16 +11,16 @@ import org.springframework.http.HttpStatus;
  */
 @Getter
 public class BusinessException extends RuntimeException {
-  private final HttpStatus status;
+    private final HttpStatus status;
 
-  /**
-   * Creates an exception with a user-facing message and corresponding HTTP status.
-   *
-   * @param message descriptive error message to include in the API response
-   * @param status HTTP status code to return (e.g., 400 BAD_REQUEST, 409 CONFLICT)
-   */
-  public BusinessException(String message, HttpStatus status) {
-    super(message);
-    this.status = status;
-  }
+    /**
+     * Creates an exception with a user-facing message and corresponding HTTP status.
+     *
+     * @param message descriptive error message to include in the API response
+     * @param status HTTP status code to return (e.g., 400 BAD_REQUEST, 409 CONFLICT)
+     */
+    public BusinessException(String message, HttpStatus status) {
+        super(message);
+        this.status = status;
+    }
 }

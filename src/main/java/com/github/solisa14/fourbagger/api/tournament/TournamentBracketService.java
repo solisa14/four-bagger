@@ -1,32 +1,33 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import java.util.List;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class TournamentBracketService {
 
-  private final TournamentBracketGenerator singleEliminationGenerator;
-  private final TournamentBracketGenerator doubleEliminationGenerator;
+    private final TournamentBracketGenerator singleEliminationGenerator;
+    private final TournamentBracketGenerator doubleEliminationGenerator;
 
-  public TournamentBracketService(
-      SingleEliminationBracketGenerator singleEliminationGenerator,
-      DoubleEliminationBracketGenerator doubleEliminationGenerator) {
-    this.singleEliminationGenerator = singleEliminationGenerator;
-    this.doubleEliminationGenerator = doubleEliminationGenerator;
-  }
-
-  public void planBracket(Tournament tournament, List<TournamentTeam> seededTeams) {
-    generatorFor(tournament.effectiveFormat()).planBracket(tournament, seededTeams);
-  }
-
-  private TournamentBracketGenerator generatorFor(TournamentFormat format) {
-    if (format == TournamentFormat.SINGLE_ELIMINATION) {
-      return singleEliminationGenerator;
+    public TournamentBracketService(
+            SingleEliminationBracketGenerator singleEliminationGenerator,
+            DoubleEliminationBracketGenerator doubleEliminationGenerator) {
+        this.singleEliminationGenerator = singleEliminationGenerator;
+        this.doubleEliminationGenerator = doubleEliminationGenerator;
     }
-    if (format == TournamentFormat.DOUBLE_ELIMINATION) {
-      return doubleEliminationGenerator;
+
+    public void planBracket(Tournament tournament, List<TournamentTeam> seededTeams) {
+        generatorFor(tournament.effectiveFormat()).planBracket(tournament, seededTeams);
     }
-    throw new InvalidTournamentStateException("Unsupported tournament format: " + format);
-  }
+
+    private TournamentBracketGenerator generatorFor(TournamentFormat format) {
+        if (format == TournamentFormat.SINGLE_ELIMINATION) {
+            return singleEliminationGenerator;
+        }
+        if (format == TournamentFormat.DOUBLE_ELIMINATION) {
+            return doubleEliminationGenerator;
+        }
+        throw new InvalidTournamentStateException("Unsupported tournament format: " + format);
+    }
 }

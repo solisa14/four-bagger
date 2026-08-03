@@ -10,8 +10,8 @@ package com.github.solisa14.fourbagger.api.tournament;
  * @param canOverrideMatchResults whether the organizer may override match results during play
  */
 public record TournamentViewerCapabilitiesResponse(
-    boolean canManageTournament,
-    boolean canGenerateBracket,
-    boolean canRemoveParticipants,
-    boolean canLeaveRegistration,
-    boolean canOverrideMatchResults) {}
+        boolean canManageTournament,
+        boolean canGenerateBracket,
+        boolean canRemoveParticipants,
+        boolean canLeaveRegistration,
+        boolean canOverrideMatchResults) {}

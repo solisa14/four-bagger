@@ -6,12 +6,12 @@ import org.springframework.http.HttpStatus;
 /** Exception thrown when a tournament round configuration is invalid. */
 public class InvalidRoundConfigurationException extends BusinessException {
 
-  /**
-   * Constructs a new {@code InvalidRoundConfigurationException} with the specified message.
-   *
-   * @param message the detail message explaining why the round configuration is invalid
-   */
-  public InvalidRoundConfigurationException(String message) {
-    super(message, HttpStatus.BAD_REQUEST);
-  }
+    /**
+     * Constructs a new {@code InvalidRoundConfigurationException} with the specified message.
+     *
+     * @param message the detail message explaining why the round configuration is invalid
+     */
+    public InvalidRoundConfigurationException(String message) {
+        super(message, HttpStatus.BAD_REQUEST);
+    }
 }

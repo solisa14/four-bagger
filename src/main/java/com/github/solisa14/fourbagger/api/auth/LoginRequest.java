@@ -11,5 +11,5 @@ import jakarta.validation.constraints.NotBlank;
  * @param password the user's password
  */
 public record LoginRequest(
-    @NotBlank(message = "Username is required") String username,
-    @NotBlank(message = "Password is required") String password) {}
+        @NotBlank(message = "Username is required") String username,
+        @NotBlank(message = "Password is required") String password) {}

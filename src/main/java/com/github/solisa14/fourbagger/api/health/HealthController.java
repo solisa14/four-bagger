@@ -13,13 +13,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HealthController {
 
-  /**
-   * Returns 200 when the process is up.
-   *
-   * @return empty 200 response
-   */
-  @GetMapping("/health")
-  public ResponseEntity<Void> health() {
-    return ResponseEntity.ok().build();
-  }
+    /**
+     * Returns 200 when the process is up.
+     *
+     * @return empty 200 response
+     */
+    @GetMapping("/health")
+    public ResponseEntity<Void> health() {
+        return ResponseEntity.ok().build();
+    }
 }

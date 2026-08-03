@@ -11,7 +11,7 @@ import java.util.List;
  * @param grandFinal grand-final reset rounds
  */
 public record TournamentBracketsResponse(
-    List<TournamentRoundResponse> winners,
-    List<TournamentRoundResponse> losers,
-    List<TournamentRoundResponse> finalRounds,
-    List<TournamentRoundResponse> grandFinal) {}
+        List<TournamentRoundResponse> winners,
+        List<TournamentRoundResponse> losers,
+        List<TournamentRoundResponse> finalRounds,
+        List<TournamentRoundResponse> grandFinal) {}

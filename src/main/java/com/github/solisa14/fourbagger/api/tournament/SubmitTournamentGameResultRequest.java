@@ -5,4 +5,5 @@ import jakarta.validation.constraints.NotNull;
 
 /** Request payload for submitting a tournament physical game result. */
 public record SubmitTournamentGameResultRequest(
-    @NotNull @Min(0) Integer teamOneScore, @NotNull @Min(0) Integer teamTwoScore) {}
+        @NotNull @Min(0) Integer teamOneScore,
+        @NotNull @Min(0) Integer teamTwoScore) {}

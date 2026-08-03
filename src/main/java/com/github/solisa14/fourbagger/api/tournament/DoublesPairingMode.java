@@ -11,6 +11,6 @@ package com.github.solisa14.fourbagger.api.tournament;
  * <p>Only meaningful for organizer-managed doubles. Self-join and singles leave this unset.
  */
 public enum DoublesPairingMode {
-  RANDOM,
-  MANUAL
+    RANDOM,
+    MANUAL
 }

@@ -1,28 +1,13 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.user.User;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
-import jakarta.persistence.Version;
-import java.time.Instant;
-import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.Instant;
+import java.util.UUID;
 
 /** Represents a single contest between two teams within a tournament round. */
 @NoArgsConstructor
@@ -32,84 +17,84 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Builder
 @Entity
 @Table(
-    name = "tournament_matches",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_tournament_matches_round_match_number",
-          columnNames = {"round_id", "match_number"})
-    })
+        name = "tournament_matches",
+        uniqueConstraints = {
+            @UniqueConstraint(
+                    name = "uk_tournament_matches_round_match_number",
+                    columnNames = {"round_id", "match_number"})
+        })
 public class Match {
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.UUID)
-  private UUID id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "round_id", nullable = false)
-  private TournamentRound round;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "round_id", nullable = false)
+    private TournamentRound round;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "team_one_id")
-  private TournamentTeam teamOne;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_one_id")
+    private TournamentTeam teamOne;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "team_two_id")
-  private TournamentTeam teamTwo;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_two_id")
+    private TournamentTeam teamTwo;
 
-  @Column(name = "match_number", nullable = false)
-  private Integer matchNumber;
+    @Column(name = "match_number", nullable = false)
+    private Integer matchNumber;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "winner_next_match_id")
-  private Match winnerNextMatch;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "winner_next_match_id")
+    private Match winnerNextMatch;
 
-  @Column(name = "winner_next_match_position")
-  private Integer winnerNextMatchPosition;
+    @Column(name = "winner_next_match_position")
+    private Integer winnerNextMatchPosition;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "loser_next_match_id")
-  private Match loserNextMatch;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "loser_next_match_id")
+    private Match loserNextMatch;
 
-  @Column(name = "loser_next_match_position")
-  private Integer loserNextMatchPosition;
+    @Column(name = "loser_next_match_position")
+    private Integer loserNextMatchPosition;
 
-  @Column(name = "is_bye", nullable = false)
-  @Builder.Default
-  private boolean isBye = false;
+    @Column(name = "is_bye", nullable = false)
+    @Builder.Default
+    private boolean isBye = false;
 
-  @Enumerated(EnumType.STRING)
-  @Column(name = "status", nullable = false)
-  @Builder.Default
-  private MatchStatus status = MatchStatus.PENDING;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    @Builder.Default
+    private MatchStatus status = MatchStatus.PENDING;
 
-  @Column(name = "team_one_wins", nullable = false)
-  @Builder.Default
-  private Integer teamOneWins = 0;
+    @Column(name = "team_one_wins", nullable = false)
+    @Builder.Default
+    private Integer teamOneWins = 0;
 
-  @Column(name = "team_two_wins", nullable = false)
-  @Builder.Default
-  private Integer teamTwoWins = 0;
+    @Column(name = "team_two_wins", nullable = false)
+    @Builder.Default
+    private Integer teamTwoWins = 0;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "winner_id")
-  private TournamentTeam winner;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "winner_id")
+    private TournamentTeam winner;
 
-  @Column(name = "started_at")
-  private Instant startedAt;
+    @Column(name = "started_at")
+    private Instant startedAt;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "started_by_id")
-  private User startedBy;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "started_by_id")
+    private User startedBy;
 
-  @Version
-  @Column(name = "version", nullable = false)
-  private long version;
+    @Version
+    @Column(name = "version", nullable = false)
+    private long version;
 
-  @CreationTimestamp
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
-  @UpdateTimestamp
-  @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt;
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 }

@@ -13,12 +13,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class FourBaggerApiApplication {
 
-  /**
-   * Launches the Spring Boot application.
-   *
-   * @param args command line arguments passed to the application
-   */
-  public static void main(String[] args) {
-    SpringApplication.run(FourBaggerApiApplication.class, args);
-  }
+    /**
+     * Launches the Spring Boot application.
+     *
+     * @param args command line arguments passed to the application
+     */
+    public static void main(String[] args) {
+        SpringApplication.run(FourBaggerApiApplication.class, args);
+    }
 }

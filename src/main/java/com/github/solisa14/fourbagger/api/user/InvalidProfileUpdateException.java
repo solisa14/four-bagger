@@ -6,8 +6,8 @@ import org.springframework.http.HttpStatus;
 /** Exception thrown when a profile update request omits all updatable fields. */
 public class InvalidProfileUpdateException extends BusinessException {
 
-  /** Constructs a new InvalidProfileUpdateException. */
-  public InvalidProfileUpdateException() {
-    super("At least one field must be provided", HttpStatus.BAD_REQUEST);
-  }
+    /** Constructs a new InvalidProfileUpdateException. */
+    public InvalidProfileUpdateException() {
+        super("At least one field must be provided", HttpStatus.BAD_REQUEST);
+    }
 }

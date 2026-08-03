@@ -1,31 +1,14 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 /** Represents a specific round within a tournament bracket. */
 @NoArgsConstructor
@@ -35,43 +18,43 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Builder
 @Entity
 @Table(
-    name = "tournament_rounds",
-    uniqueConstraints = {
-      @UniqueConstraint(
-          name = "uk_tournament_rounds_tournament_bracket_round_number",
-          columnNames = {"tournament_id", "bracket_type", "round_number"})
-    })
+        name = "tournament_rounds",
+        uniqueConstraints = {
+            @UniqueConstraint(
+                    name = "uk_tournament_rounds_tournament_bracket_round_number",
+                    columnNames = {"tournament_id", "bracket_type", "round_number"})
+        })
 public class TournamentRound {
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.UUID)
-  private UUID id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "tournament_id", nullable = false)
-  private Tournament tournament;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "tournament_id", nullable = false)
+    private Tournament tournament;
 
-  @Column(name = "bracket_type", nullable = false)
-  @Enumerated(EnumType.STRING)
-  private BracketType bracketType;
+    @Column(name = "bracket_type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private BracketType bracketType;
 
-  @Column(name = "round_number", nullable = false)
-  private Integer roundNumber;
+    @Column(name = "round_number", nullable = false)
+    private Integer roundNumber;
 
-  @Column(name = "best_of", nullable = false)
-  @Builder.Default
-  private Integer bestOf = 1;
+    @Column(name = "best_of", nullable = false)
+    @Builder.Default
+    private Integer bestOf = 1;
 
-  @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
-  @OrderBy("matchNumber ASC")
-  @Builder.Default
-  private List<Match> matches = new ArrayList<>();
+    @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("matchNumber ASC")
+    @Builder.Default
+    private List<Match> matches = new ArrayList<>();
 
-  @CreationTimestamp
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 
-  @UpdateTimestamp
-  @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt;
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
 }

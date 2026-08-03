@@ -5,9 +5,4 @@ import java.util.UUID;
 
 /** Summary of one tournament physical game result. */
 public record TournamentGameResultResponse(
-    int gameNumber,
-    UUID winnerTeamId,
-    int teamOneScore,
-    int teamTwoScore,
-    UUID submittedBy,
-    Instant submittedAt) {}
+        int gameNumber, UUID winnerTeamId, int teamOneScore, int teamTwoScore, UUID submittedBy, Instant submittedAt) {}

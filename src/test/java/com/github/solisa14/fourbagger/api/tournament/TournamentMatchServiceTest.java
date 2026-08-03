@@ -1,331 +1,316 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
 class TournamentMatchServiceTest {
 
-  @Mock private TournamentRepository tournamentRepository;
-  @Mock private MatchRepository matchRepository;
-  @Mock private TournamentMatchAuthorizationService authorizationService;
-  @Mock private TournamentMapper tournamentMapper;
-  @Mock private TournamentGameResultRepository resultRepository;
-  @Mock private TournamentProgressionService progressionService;
+    @Mock
+    private TournamentRepository tournamentRepository;
 
-  private TournamentMatchService tournamentMatchService;
+    @Mock
+    private MatchRepository matchRepository;
 
-  @BeforeEach
-  void setUp() {
-    TournamentMatchSupport matchSupport =
-        new TournamentMatchSupport(
-            tournamentRepository,
-            matchRepository,
-            resultRepository,
-            tournamentMapper,
-            progressionService);
-    tournamentMatchService =
-        new TournamentMatchService(matchSupport, matchRepository, authorizationService);
-  }
+    @Mock
+    private TournamentMatchAuthorizationService authorizationService;
 
-  @Test
-  void startMatch_whenTournamentNotInProgress_throwsInvalidTournamentStateException() {
-    Tournament tournament = tournament(TournamentStatus.BRACKET_READY);
-    Match match = match(tournament, false);
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+    @Mock
+    private TournamentMapper tournamentMapper;
 
-    assertThatThrownBy(
-            () ->
-                tournamentMatchService.startMatch(
-                    tournament.getId(), match.getId(), tournament.getOrganizer()))
-        .isInstanceOf(InvalidTournamentStateException.class);
-  }
+    @Mock
+    private TournamentGameResultRepository resultRepository;
 
-  @Test
-  void startMatch_whenUserIsNotAuthorized_throwsTournamentAccessDeniedException() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, false);
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
-    doThrow(new TournamentAccessDeniedException(tournament.getId()))
-        .when(authorizationService)
-        .authorizeMatchMutation(any(), eq(tournament), eq(match));
+    @Mock
+    private TournamentProgressionService progressionService;
 
-    assertThatThrownBy(
-            () ->
-                tournamentMatchService.startMatch(
-                    tournament.getId(), match.getId(), user("outsider")))
-        .isInstanceOf(TournamentAccessDeniedException.class);
-  }
+    private TournamentMatchService tournamentMatchService;
 
-  @Test
-  void startMatch_whenPending_marksMatchInProgressAndReturnsDetail() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, false);
-    User starter = tournament.getOrganizer();
-    TournamentMatchDetailResponse detail = detailResponse(match);
+    @BeforeEach
+    void setUp() {
+        TournamentMatchSupport matchSupport = new TournamentMatchSupport(
+                tournamentRepository, matchRepository, resultRepository, tournamentMapper, progressionService);
+        tournamentMatchService = new TournamentMatchService(matchSupport, matchRepository, authorizationService);
+    }
 
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
-    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
-    when(progressionService.nextGameNumber(match)).thenReturn(1);
-    when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
-        .thenReturn(detail);
+    @Test
+    void startMatch_whenTournamentNotInProgress_throwsInvalidTournamentStateException() {
+        Tournament tournament = tournament(TournamentStatus.BRACKET_READY);
+        Match match = match(tournament, false);
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
-    TournamentMatchDetailResponse result =
-        tournamentMatchService.startMatch(tournament.getId(), match.getId(), starter);
+        assertThatThrownBy(() ->
+                        tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer()))
+                .isInstanceOf(InvalidTournamentStateException.class);
+    }
 
-    assertThat(result).isEqualTo(detail);
-    assertThat(match.getStatus()).isEqualTo(MatchStatus.IN_PROGRESS);
-    assertThat(match.getStartedAt()).isNotNull();
-    assertThat(match.getStartedBy()).isEqualTo(starter);
-    verify(matchRepository).save(match);
-  }
+    @Test
+    void startMatch_whenUserIsNotAuthorized_throwsTournamentAccessDeniedException() {
+        Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+        Match match = match(tournament, false);
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+        doThrow(new TournamentAccessDeniedException(tournament.getId()))
+                .when(authorizationService)
+                .authorizeMatchMutation(any(), eq(tournament), eq(match));
 
-  @Test
-  void startMatch_whenParticipantStarts_authorizesAndMarksInProgress() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, false);
-    User participant = match.getTeamOne().getPlayerOne().getUser();
-    TournamentMatchDetailResponse detail = detailResponse(match);
+        assertThatThrownBy(() -> tournamentMatchService.startMatch(tournament.getId(), match.getId(), user("outsider")))
+                .isInstanceOf(TournamentAccessDeniedException.class);
+    }
 
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
-    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
-    when(progressionService.nextGameNumber(match)).thenReturn(1);
-    when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
-        .thenReturn(detail);
+    @Test
+    void startMatch_whenPending_marksMatchInProgressAndReturnsDetail() {
+        Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+        Match match = match(tournament, false);
+        User starter = tournament.getOrganizer();
+        TournamentMatchDetailResponse detail = detailResponse(match);
 
-    tournamentMatchService.startMatch(tournament.getId(), match.getId(), participant);
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+        when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
+        when(progressionService.nextGameNumber(match)).thenReturn(1);
+        when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
+                .thenReturn(detail);
 
-    verify(authorizationService).authorizeMatchMutation(participant, tournament, match);
-    verify(matchRepository).save(match);
-  }
+        TournamentMatchDetailResponse result =
+                tournamentMatchService.startMatch(tournament.getId(), match.getId(), starter);
 
-  @Test
-  void startMatch_whenAlreadyInProgressWithStartedAt_isIdempotentAndDoesNotSaveAgain() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, false);
-    Instant startedAt = Instant.parse("2026-01-01T12:00:00Z");
-    match.setStatus(MatchStatus.IN_PROGRESS);
-    match.setStartedAt(startedAt);
-    match.setStartedBy(tournament.getOrganizer());
-    TournamentMatchDetailResponse detail = detailResponse(match);
+        assertThat(result).isEqualTo(detail);
+        assertThat(match.getStatus()).isEqualTo(MatchStatus.IN_PROGRESS);
+        assertThat(match.getStartedAt()).isNotNull();
+        assertThat(match.getStartedBy()).isEqualTo(starter);
+        verify(matchRepository).save(match);
+    }
 
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
-    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
-    when(progressionService.nextGameNumber(match)).thenReturn(1);
-    when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
-        .thenReturn(detail);
+    @Test
+    void startMatch_whenParticipantStarts_authorizesAndMarksInProgress() {
+        Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+        Match match = match(tournament, false);
+        User participant = match.getTeamOne().getPlayerOne().getUser();
+        TournamentMatchDetailResponse detail = detailResponse(match);
 
-    TournamentMatchDetailResponse result =
-        tournamentMatchService.startMatch(
-            tournament.getId(), match.getId(), tournament.getOrganizer());
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+        when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
+        when(progressionService.nextGameNumber(match)).thenReturn(1);
+        when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
+                .thenReturn(detail);
 
-    assertThat(result).isEqualTo(detail);
-    verify(matchRepository, never()).save(match);
-  }
+        tournamentMatchService.startMatch(tournament.getId(), match.getId(), participant);
 
-  @Test
-  void startMatch_whenMatchIsBye_throwsInvalidTournamentStateException() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, false);
-    match.setBye(true);
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+        verify(authorizationService).authorizeMatchMutation(participant, tournament, match);
+        verify(matchRepository).save(match);
+    }
 
-    assertThatThrownBy(
-            () ->
-                tournamentMatchService.startMatch(
-                    tournament.getId(), match.getId(), tournament.getOrganizer()))
-        .isInstanceOf(InvalidTournamentStateException.class);
-  }
+    @Test
+    void startMatch_whenAlreadyInProgressWithStartedAt_isIdempotentAndDoesNotSaveAgain() {
+        Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+        Match match = match(tournament, false);
+        Instant startedAt = Instant.parse("2026-01-01T12:00:00Z");
+        match.setStatus(MatchStatus.IN_PROGRESS);
+        match.setStartedAt(startedAt);
+        match.setStartedBy(tournament.getOrganizer());
+        TournamentMatchDetailResponse detail = detailResponse(match);
 
-  @Test
-  void startMatch_whenMatchTeamMissing_throwsInvalidTournamentStateException() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, false);
-    match.setTeamTwo(null);
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+        when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
+        when(progressionService.nextGameNumber(match)).thenReturn(1);
+        when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
+                .thenReturn(detail);
 
-    assertThatThrownBy(
-            () ->
-                tournamentMatchService.startMatch(
-                    tournament.getId(), match.getId(), tournament.getOrganizer()))
-        .isInstanceOf(InvalidTournamentStateException.class);
-  }
+        TournamentMatchDetailResponse result =
+                tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer());
 
-  @Test
-  void startMatch_whenMatchBelongsToDifferentTournament_throwsInvalidTournamentStateException() {
-    Tournament requestedTournament = tournament(TournamentStatus.IN_PROGRESS);
-    Tournament ownerTournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(ownerTournament, false);
-    when(tournamentRepository.findById(requestedTournament.getId()))
-        .thenReturn(Optional.of(requestedTournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+        assertThat(result).isEqualTo(detail);
+        verify(matchRepository, never()).save(match);
+    }
 
-    assertThatThrownBy(
-            () ->
-                tournamentMatchService.startMatch(
-                    requestedTournament.getId(), match.getId(), requestedTournament.getOrganizer()))
-        .isInstanceOf(InvalidTournamentStateException.class);
-  }
+    @Test
+    void startMatch_whenMatchIsBye_throwsInvalidTournamentStateException() {
+        Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+        Match match = match(tournament, false);
+        match.setBye(true);
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
-  @Test
-  void getMatchDetail_whenFound_returnsDetail() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, false);
-    TournamentMatchDetailResponse detail = detailResponse(match);
+        assertThatThrownBy(() ->
+                        tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer()))
+                .isInstanceOf(InvalidTournamentStateException.class);
+    }
 
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
-    when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
-    when(progressionService.nextGameNumber(match)).thenReturn(1);
-    when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
-        .thenReturn(detail);
+    @Test
+    void startMatch_whenMatchTeamMissing_throwsInvalidTournamentStateException() {
+        Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+        Match match = match(tournament, false);
+        match.setTeamTwo(null);
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
-    TournamentMatchDetailResponse result =
-        tournamentMatchService.getMatchDetail(
-            tournament.getId(), match.getId(), tournament.getOrganizer());
+        assertThatThrownBy(() ->
+                        tournamentMatchService.startMatch(tournament.getId(), match.getId(), tournament.getOrganizer()))
+                .isInstanceOf(InvalidTournamentStateException.class);
+    }
 
-    assertThat(result).isEqualTo(detail);
-  }
+    @Test
+    void startMatch_whenMatchBelongsToDifferentTournament_throwsInvalidTournamentStateException() {
+        Tournament requestedTournament = tournament(TournamentStatus.IN_PROGRESS);
+        Tournament ownerTournament = tournament(TournamentStatus.IN_PROGRESS);
+        Match match = match(ownerTournament, false);
+        when(tournamentRepository.findById(requestedTournament.getId())).thenReturn(Optional.of(requestedTournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
-  @Test
-  void getMatch_whenFound_returnsMatch() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    Match match = match(tournament, false);
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+        assertThatThrownBy(() -> tournamentMatchService.startMatch(
+                        requestedTournament.getId(), match.getId(), requestedTournament.getOrganizer()))
+                .isInstanceOf(InvalidTournamentStateException.class);
+    }
 
-    Match result = tournamentMatchService.getMatch(tournament.getId(), match.getId());
+    @Test
+    void getMatchDetail_whenFound_returnsDetail() {
+        Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+        Match match = match(tournament, false);
+        TournamentMatchDetailResponse detail = detailResponse(match);
 
-    assertThat(result).isEqualTo(match);
-  }
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
+        when(resultRepository.findByMatchIdOrderByGameNumberAsc(match.getId())).thenReturn(List.of());
+        when(progressionService.nextGameNumber(match)).thenReturn(1);
+        when(tournamentMapper.toMatchDetailResponse(eq(match), eq(List.of()), eq(1)))
+                .thenReturn(detail);
 
-  @Test
-  void getMatch_whenTournamentNotFound_throwsTournamentNotFoundException() {
-    UUID tournamentId = UUID.randomUUID();
-    UUID matchId = UUID.randomUUID();
-    when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
+        TournamentMatchDetailResponse result =
+                tournamentMatchService.getMatchDetail(tournament.getId(), match.getId(), tournament.getOrganizer());
 
-    assertThatThrownBy(() -> tournamentMatchService.getMatch(tournamentId, matchId))
-        .isInstanceOf(TournamentNotFoundException.class);
-  }
+        assertThat(result).isEqualTo(detail);
+    }
 
-  @Test
-  void getMatch_whenMatchNotFound_throwsMatchNotFoundException() {
-    Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
-    UUID matchId = UUID.randomUUID();
-    when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
-    when(matchRepository.findForResponseById(matchId)).thenReturn(Optional.empty());
+    @Test
+    void getMatch_whenFound_returnsMatch() {
+        Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+        Match match = match(tournament, false);
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
 
-    assertThatThrownBy(() -> tournamentMatchService.getMatch(tournament.getId(), matchId))
-        .isInstanceOf(MatchNotFoundException.class);
-  }
+        Match result = tournamentMatchService.getMatch(tournament.getId(), match.getId());
 
-  private TournamentMatchDetailResponse detailResponse(Match match) {
-    return new TournamentMatchDetailResponse(
-        match.getId(),
-        match.getMatchNumber(),
-        match.getStatus(),
-        match.isBye(),
-        null,
-        null,
-        match.getTeamOneWins(),
-        match.getTeamTwoWins(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        match.getStartedAt(),
-        match.getStartedBy() != null ? match.getStartedBy().getId() : null,
-        match.getRound().getBestOf(),
-        1,
-        1,
-        List.of());
-  }
+        assertThat(result).isEqualTo(match);
+    }
 
-  private Tournament tournament(TournamentStatus status) {
-    return Tournament.builder()
-        .id(UUID.randomUUID())
-        .organizer(user("organizer"))
-        .title("Tournament")
-        .status(status)
-        .joinCode("ABC123")
-        .participationMode(TournamentParticipationMode.SELF_JOIN)
-        .build();
-  }
+    @Test
+    void getMatch_whenTournamentNotFound_throwsTournamentNotFoundException() {
+        UUID tournamentId = UUID.randomUUID();
+        UUID matchId = UUID.randomUUID();
+        when(tournamentRepository.findById(tournamentId)).thenReturn(Optional.empty());
 
-  private Match match(Tournament tournament, boolean doubles) {
-    TournamentRound round =
-        TournamentRound.builder()
-            .id(UUID.randomUUID())
-            .tournament(tournament)
-            .bracketType(BracketType.WINNERS)
-            .roundNumber(1)
-            .bestOf(1)
-            .build();
-    TournamentTeam teamOne =
-        TournamentTeam.builder()
-            .id(UUID.randomUUID())
-            .tournament(tournament)
-            .playerOne(participant(tournament, "team1-a"))
-            .playerTwo(doubles ? participant(tournament, "team1-b") : null)
-            .seed(1)
-            .build();
-    TournamentTeam teamTwo =
-        TournamentTeam.builder()
-            .id(UUID.randomUUID())
-            .tournament(tournament)
-            .playerOne(participant(tournament, "team2-a"))
-            .playerTwo(doubles ? participant(tournament, "team2-b") : null)
-            .seed(2)
-            .build();
+        assertThatThrownBy(() -> tournamentMatchService.getMatch(tournamentId, matchId))
+                .isInstanceOf(TournamentNotFoundException.class);
+    }
 
-    return Match.builder()
-        .id(UUID.randomUUID())
-        .round(round)
-        .teamOne(teamOne)
-        .teamTwo(teamTwo)
-        .matchNumber(1)
-        .status(MatchStatus.PENDING)
-        .build();
-  }
+    @Test
+    void getMatch_whenMatchNotFound_throwsMatchNotFoundException() {
+        Tournament tournament = tournament(TournamentStatus.IN_PROGRESS);
+        UUID matchId = UUID.randomUUID();
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+        when(matchRepository.findForResponseById(matchId)).thenReturn(Optional.empty());
 
+        assertThatThrownBy(() -> tournamentMatchService.getMatch(tournament.getId(), matchId))
+                .isInstanceOf(MatchNotFoundException.class);
+    }
 
-  private TournamentParticipant participant(Tournament tournament, String suffix) {
-    return TournamentParticipant.builder()
-        .id(UUID.randomUUID())
-        .tournament(tournament)
-        .user(user(suffix))
-        .build();
-  }
+    private TournamentMatchDetailResponse detailResponse(Match match) {
+        return new TournamentMatchDetailResponse(
+                match.getId(),
+                match.getMatchNumber(),
+                match.getStatus(),
+                match.isBye(),
+                null,
+                null,
+                match.getTeamOneWins(),
+                match.getTeamTwoWins(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                match.getStartedAt(),
+                match.getStartedBy() != null ? match.getStartedBy().getId() : null,
+                match.getRound().getBestOf(),
+                1,
+                1,
+                List.of());
+    }
 
-  private User user(String suffix) {
-    return TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER);
-  }
+    private Tournament tournament(TournamentStatus status) {
+        return Tournament.builder()
+                .id(UUID.randomUUID())
+                .organizer(user("organizer"))
+                .title("Tournament")
+                .status(status)
+                .joinCode("ABC123")
+                .participationMode(TournamentParticipationMode.SELF_JOIN)
+                .build();
+    }
+
+    private Match match(Tournament tournament, boolean doubles) {
+        TournamentRound round = TournamentRound.builder()
+                .id(UUID.randomUUID())
+                .tournament(tournament)
+                .bracketType(BracketType.WINNERS)
+                .roundNumber(1)
+                .bestOf(1)
+                .build();
+        TournamentTeam teamOne = TournamentTeam.builder()
+                .id(UUID.randomUUID())
+                .tournament(tournament)
+                .playerOne(participant(tournament, "team1-a"))
+                .playerTwo(doubles ? participant(tournament, "team1-b") : null)
+                .seed(1)
+                .build();
+        TournamentTeam teamTwo = TournamentTeam.builder()
+                .id(UUID.randomUUID())
+                .tournament(tournament)
+                .playerOne(participant(tournament, "team2-a"))
+                .playerTwo(doubles ? participant(tournament, "team2-b") : null)
+                .seed(2)
+                .build();
+
+        return Match.builder()
+                .id(UUID.randomUUID())
+                .round(round)
+                .teamOne(teamOne)
+                .teamTwo(teamTwo)
+                .matchNumber(1)
+                .status(MatchStatus.PENDING)
+                .build();
+    }
+
+    private TournamentParticipant participant(Tournament tournament, String suffix) {
+        return TournamentParticipant.builder()
+                .id(UUID.randomUUID())
+                .tournament(tournament)
+                .user(user(suffix))
+                .build();
+    }
+
+    private User user(String suffix) {
+        return TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER);
+    }
 }

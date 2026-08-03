@@ -17,17 +17,22 @@ import jakarta.validation.constraints.Size;
  * @param lastName optional last name
  */
 public record RegisterUserRequest(
-    @NotBlank(message = "Username is required")
+        @NotBlank(message = "Username is required")
         @Size(min = 5, max = 30, message = "Username must be between 5 and 30 characters")
         @Pattern(
-            regexp = "^[a-zA-Z0-9_]+$",
-            message = "Username must contain only alphanumeric characters and underscores")
+                regexp = "^[a-zA-Z0-9_]+$",
+                message = "Username must contain only alphanumeric characters and underscores")
         String username,
-    @NotBlank(message = "Password is required")
+
+        @NotBlank(message = "Password is required")
         @Pattern(
-            regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$",
-            message =
-                "Password must be at least 8 characters long, contain at least one digit, one lowercase letter, one uppercase letter, and one special character")
+                regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$",
+                message = "Password must be at least 8 characters long, contain at least one digit, one lowercase"
+                        + " letter, one uppercase letter, and one special character")
         String password,
-    @Size(max = 255, message = "First name must be at most 255 characters") String firstName,
-    @Size(max = 255, message = "Last name must be at most 255 characters") String lastName) {}
+
+        @Size(max = 255, message = "First name must be at most 255 characters")
+        String firstName,
+
+        @Size(max = 255, message = "Last name must be at most 255 characters")
+        String lastName) {}

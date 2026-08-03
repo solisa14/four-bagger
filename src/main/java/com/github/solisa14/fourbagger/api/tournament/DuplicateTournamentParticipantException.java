@@ -9,11 +9,11 @@ import org.springframework.http.HttpStatus;
  */
 public class DuplicateTournamentParticipantException extends BusinessException {
 
-  /**
-   * Constructs a new {@code DuplicateTournamentParticipantException} with a predefined message and
-   * a CONFLICT status.
-   */
-  public DuplicateTournamentParticipantException() {
-    super("User is already registered in this tournament", HttpStatus.CONFLICT);
-  }
+    /**
+     * Constructs a new {@code DuplicateTournamentParticipantException} with a predefined message and
+     * a CONFLICT status.
+     */
+    public DuplicateTournamentParticipantException() {
+        super("User is already registered in this tournament", HttpStatus.CONFLICT);
+    }
 }

@@ -12,7 +12,7 @@ import jakarta.validation.constraints.NotNull;
  * @param participationMode how players enter; required with no server-side default
  */
 public record CreateTournamentRequest(
-    @NotBlank String title,
-    GameType gameType,
-    TournamentFormat format,
-    @NotNull TournamentParticipationMode participationMode) {}
+        @NotBlank String title,
+        GameType gameType,
+        TournamentFormat format,
+        @NotNull TournamentParticipationMode participationMode) {}

@@ -1,16 +1,7 @@
 package com.github.solisa14.fourbagger.api.user;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import com.github.solisa14.fourbagger.api.auth.RefreshTokenService;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
-import java.util.Optional;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,116 +10,118 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
-  private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-  @Mock private UserRepository userRepository;
-  @Mock private RefreshTokenService refreshTokenService;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-  private UserService userService;
+    @Mock
+    private UserRepository userRepository;
 
-  @BeforeEach
-  void setUp() {
-    userService = new UserService(userRepository, passwordEncoder, refreshTokenService);
-  }
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
-  @Test
-  void createUser_whenUsernameExists_throwsUserAlreadyExistsException() {
-    CreateUserCommand command =
-        new CreateUserCommand("user1", "Password1!", "Test", "User");
-    when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.of(new User()));
+    private UserService userService;
 
-    assertThatThrownBy(() -> userService.createUser(command))
-        .isInstanceOf(UserAlreadyExistsException.class);
-  }
+    @BeforeEach
+    void setUp() {
+        userService = new UserService(userRepository, passwordEncoder, refreshTokenService);
+    }
 
-  @Test
-  void createUser_whenRequestIsValid_savesUserWithEncodedPasswordAndRole() {
-    CreateUserCommand command =
-        new CreateUserCommand("user1", "Password1!", "Test", "User");
-    when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.<User>empty());
-    when(userRepository.save(any(User.class)))
-        .thenAnswer(
-            invocation -> {
-              User user = invocation.getArgument(0, User.class);
-              user.setId(UUID.randomUUID());
-              return user;
-            });
+    @Test
+    void createUser_whenUsernameExists_throwsUserAlreadyExistsException() {
+        CreateUserCommand command = new CreateUserCommand("user1", "Password1!", "Test", "User");
+        when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.of(new User()));
 
-    User created = userService.createUser(command);
+        assertThatThrownBy(() -> userService.createUser(command)).isInstanceOf(UserAlreadyExistsException.class);
+    }
 
-    ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-    verify(userRepository).save(captor.capture());
-    User saved = captor.getValue();
-    assertThat(saved.getUsername()).isEqualTo(command.username());
-    assertThat(saved.getPassword()).isNotEqualTo(command.password());
-    assertThat(passwordEncoder.matches(command.password(), saved.getPassword())).isTrue();
-    assertThat(saved.getRole()).isEqualTo(Role.USER);
-    assertThat(created.getId()).isNotNull();
-  }
+    @Test
+    void createUser_whenRequestIsValid_savesUserWithEncodedPasswordAndRole() {
+        CreateUserCommand command = new CreateUserCommand("user1", "Password1!", "Test", "User");
+        when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.<User>empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0, User.class);
+            user.setId(UUID.randomUUID());
+            return user;
+        });
 
-  @Test
-  void getUser_whenUserNotFound_throwsUserNotFoundException() {
-    UUID id = UUID.randomUUID();
-    when(userRepository.findById(id)).thenReturn(Optional.empty());
+        User created = userService.createUser(command);
 
-    assertThatThrownBy(() -> userService.getUser(id)).isInstanceOf(UserNotFoundException.class);
-  }
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        User saved = captor.getValue();
+        assertThat(saved.getUsername()).isEqualTo(command.username());
+        assertThat(saved.getPassword()).isNotEqualTo(command.password());
+        assertThat(passwordEncoder.matches(command.password(), saved.getPassword()))
+                .isTrue();
+        assertThat(saved.getRole()).isEqualTo(Role.USER);
+        assertThat(created.getId()).isNotNull();
+    }
 
-  @Test
-  void updateProfile_whenRequestHasNames_updatesNames() {
-    UUID id = UUID.randomUUID();
-    User user = TestDataFactory.user(id, "user1", "encoded", Role.USER);
-    when(userRepository.findById(id)).thenReturn(Optional.of(user));
-    when(userRepository.save(any(User.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0, User.class));
-    UpdateProfileCommand command = new UpdateProfileCommand("New", "Name");
+    @Test
+    void getUser_whenUserNotFound_throwsUserNotFoundException() {
+        UUID id = UUID.randomUUID();
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
 
-    User updated = userService.updateProfile(id, command);
+        assertThatThrownBy(() -> userService.getUser(id)).isInstanceOf(UserNotFoundException.class);
+    }
 
-    assertThat(updated.getFirstName()).isEqualTo("New");
-    assertThat(updated.getLastName()).isEqualTo("Name");
-  }
+    @Test
+    void updateProfile_whenRequestHasNames_updatesNames() {
+        UUID id = UUID.randomUUID();
+        User user = TestDataFactory.user(id, "user1", "encoded", Role.USER);
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0, User.class));
+        UpdateProfileCommand command = new UpdateProfileCommand("New", "Name");
 
-  @Test
-  void updateProfile_whenBothFieldsNull_throwsInvalidProfileUpdateException() {
-    UUID id = UUID.randomUUID();
+        User updated = userService.updateProfile(id, command);
 
-    assertThatThrownBy(() -> userService.updateProfile(id, new UpdateProfileCommand(null, null)))
-        .isInstanceOf(InvalidProfileUpdateException.class);
+        assertThat(updated.getFirstName()).isEqualTo("New");
+        assertThat(updated.getLastName()).isEqualTo("Name");
+    }
 
-    verify(userRepository, never()).findById(any());
-  }
+    @Test
+    void updateProfile_whenBothFieldsNull_throwsInvalidProfileUpdateException() {
+        UUID id = UUID.randomUUID();
 
-  @Test
-  void updatePassword_whenCurrentPasswordIsInvalid_throwsInvalidPasswordException() {
-    UUID id = UUID.randomUUID();
-    User user =
-        TestDataFactory.user(
-            id, "user1", passwordEncoder.encode("current"), Role.USER);
-    when(userRepository.findById(id)).thenReturn(Optional.of(user));
+        assertThatThrownBy(() -> userService.updateProfile(id, new UpdateProfileCommand(null, null)))
+                .isInstanceOf(InvalidProfileUpdateException.class);
 
-    assertThatThrownBy(
-            () -> userService.updatePassword(id, new UpdatePasswordCommand("bad", "NewPassword1!")))
-        .isInstanceOf(InvalidPasswordException.class);
-  }
+        verify(userRepository, never()).findById(any());
+    }
 
-  @Test
-  void updatePassword_whenCurrentPasswordIsValid_updatesPasswordAndInvalidatesSessions() {
-    UUID id = UUID.randomUUID();
-    String currentPasswordHash = passwordEncoder.encode("current");
-    User user =
-        TestDataFactory.user(id, "user1", currentPasswordHash, Role.USER);
-    when(userRepository.findById(id)).thenReturn(Optional.of(user));
-    when(userRepository.save(any(User.class)))
-        .thenAnswer(invocation -> invocation.getArgument(0, User.class));
+    @Test
+    void updatePassword_whenCurrentPasswordIsInvalid_throwsInvalidPasswordException() {
+        UUID id = UUID.randomUUID();
+        User user = TestDataFactory.user(id, "user1", passwordEncoder.encode("current"), Role.USER);
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
 
-    userService.updatePassword(id, new UpdatePasswordCommand("current", "NewPassword1!"));
+        assertThatThrownBy(() -> userService.updatePassword(id, new UpdatePasswordCommand("bad", "NewPassword1!")))
+                .isInstanceOf(InvalidPasswordException.class);
+    }
 
-    assertThat(user.getPassword()).isNotEqualTo(currentPasswordHash);
-    assertThat(passwordEncoder.matches("NewPassword1!", user.getPassword())).isTrue();
-    verify(userRepository).save(user);
-    verify(refreshTokenService).deleteByUserId(id);
-  }
+    @Test
+    void updatePassword_whenCurrentPasswordIsValid_updatesPasswordAndInvalidatesSessions() {
+        UUID id = UUID.randomUUID();
+        String currentPasswordHash = passwordEncoder.encode("current");
+        User user = TestDataFactory.user(id, "user1", currentPasswordHash, Role.USER);
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0, User.class));
+
+        userService.updatePassword(id, new UpdatePasswordCommand("current", "NewPassword1!"));
+
+        assertThat(user.getPassword()).isNotEqualTo(currentPasswordHash);
+        assertThat(passwordEncoder.matches("NewPassword1!", user.getPassword())).isTrue();
+        verify(userRepository).save(user);
+        verify(refreshTokenService).deleteByUserId(id);
+    }
 }

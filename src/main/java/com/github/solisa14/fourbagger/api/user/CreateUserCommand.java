@@ -8,5 +8,4 @@ package com.github.solisa14.fourbagger.api.user;
  * @param firstName the user's optional first name
  * @param lastName the user's optional last name
  */
-public record CreateUserCommand(
-    String username, String password, String firstName, String lastName) {}
+public record CreateUserCommand(String username, String password, String firstName, String lastName) {}

@@ -9,6 +9,6 @@ package com.github.solisa14.fourbagger.api.tournament;
  * </ul>
  */
 public enum TournamentParticipationMode {
-  SELF_JOIN,
-  ORGANIZER_MANAGED
+    SELF_JOIN,
+    ORGANIZER_MANAGED
 }

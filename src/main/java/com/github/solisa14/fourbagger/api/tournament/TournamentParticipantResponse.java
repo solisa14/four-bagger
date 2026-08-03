@@ -10,5 +10,4 @@ import java.util.UUID;
  * @param displayName the guest display name, or null for account participants
  * @param currentViewer whether the requesting viewer is this participant
  */
-public record TournamentParticipantResponse(
-    UUID id, String username, String displayName, boolean currentViewer) {}
+public record TournamentParticipantResponse(UUID id, String username, String displayName, boolean currentViewer) {}

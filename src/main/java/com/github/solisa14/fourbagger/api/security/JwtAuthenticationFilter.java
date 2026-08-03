@@ -5,9 +5,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,6 +16,10 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Optional;
+
 /**
  * Filter that validates JWT tokens on incoming HTTP requests.
  *
@@ -29,67 +30,66 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-  private final JwtService jwtService;
-  private final UserDetailsService userDetailsService;
+    private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
 
-  /**
-   * Constructs a JwtAuthenticationFilter.
-   *
-   * @param jwtService the service used for JWT operations
-   * @param userDetailsService the service used to load user details
-   */
-  public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
-    this.jwtService = jwtService;
-    this.userDetailsService = userDetailsService;
-  }
-
-  @Override
-  protected void doFilterInternal(
-      @NonNull HttpServletRequest request,
-      @NonNull HttpServletResponse response,
-      @NonNull FilterChain filterChain)
-      throws ServletException, IOException {
-
-    final String jwt;
-    final String username;
-
-    Optional<Cookie> jwtCookie = Optional.empty();
-    if (request.getCookies() != null) {
-      jwtCookie =
-          Arrays.stream(request.getCookies())
-              .filter(cookie -> "accessToken".equals(cookie.getName()))
-              .findFirst();
+    /**
+     * Constructs a JwtAuthenticationFilter.
+     *
+     * @param jwtService the service used for JWT operations
+     * @param userDetailsService the service used to load user details
+     */
+    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+        this.jwtService = jwtService;
+        this.userDetailsService = userDetailsService;
     }
 
-    if (jwtCookie.isEmpty()) {
-      filterChain.doFilter(request, response);
-      return;
-    }
+    @Override
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
 
-    jwt = jwtCookie.get().getValue();
-    try {
-      username = jwtService.extractUsername(jwt);
+        final String jwt;
+        final String username;
 
-      if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        if (jwtService.isTokenValid(jwt) && username.equals(userDetails.getUsername())) {
-          var authorities = jwtService.extractAuthorities(jwt);
-
-          UsernamePasswordAuthenticationToken authToken =
-              new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
-
-          authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-          SecurityContextHolder.getContext().setAuthentication(authToken);
+        Optional<Cookie> jwtCookie = Optional.empty();
+        if (request.getCookies() != null) {
+            jwtCookie = Arrays.stream(request.getCookies())
+                    .filter(cookie -> "accessToken".equals(cookie.getName()))
+                    .findFirst();
         }
-      }
-    } catch (io.jsonwebtoken.JwtException e) {
-      log.warn("JWT validation failed: {}", e.getMessage());
-      SecurityContextHolder.clearContext();
-    } catch (UsernameNotFoundException e) {
-      log.warn("JWT subject does not map to an active user: {}", e.getMessage());
-      SecurityContextHolder.clearContext();
+
+        if (jwtCookie.isEmpty()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        jwt = jwtCookie.get().getValue();
+        try {
+            username = jwtService.extractUsername(jwt);
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                if (jwtService.isTokenValid(jwt) && username.equals(userDetails.getUsername())) {
+                    var authorities = jwtService.extractAuthorities(jwt);
+
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
+
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            }
+        } catch (io.jsonwebtoken.JwtException e) {
+            log.warn("JWT validation failed: {}", e.getMessage());
+            SecurityContextHolder.clearContext();
+        } catch (UsernameNotFoundException e) {
+            log.warn("JWT subject does not map to an active user: {}", e.getMessage());
+            SecurityContextHolder.clearContext();
+        }
+        filterChain.doFilter(request, response);
     }
-    filterChain.doFilter(request, response);
-  }
 }

@@ -10,12 +10,12 @@ import org.springframework.http.HttpStatus;
  * HTTP 409 Conflict response to inform the client to choose a different username.
  */
 public class UserAlreadyExistsException extends BusinessException {
-  /**
-   * Creates an exception indicating the specific username that conflicts.
-   *
-   * @param username the username that already exists in the system
-   */
-  public UserAlreadyExistsException(String username) {
-    super("User with username '" + username + "' may already exist.", HttpStatus.CONFLICT);
-  }
+    /**
+     * Creates an exception indicating the specific username that conflicts.
+     *
+     * @param username the username that already exists in the system
+     */
+    public UserAlreadyExistsException(String username) {
+        super("User with username '" + username + "' may already exist.", HttpStatus.CONFLICT);
+    }
 }

@@ -2,32 +2,16 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.user.User;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
-import jakarta.persistence.Version;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 /**
  * Represents a cornhole tournament. A tournament goes through various states, from registration to
@@ -43,160 +27,158 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Table(name = "tournaments")
 public class Tournament {
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.UUID)
-  private UUID id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "organizer_id", nullable = false)
-  private User organizer;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "organizer_id", nullable = false)
+    private User organizer;
 
-  @Column(nullable = false)
-  @Enumerated(EnumType.STRING)
-  private TournamentStatus status;
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private TournamentStatus status;
 
-  @Column(nullable = false)
-  @Enumerated(EnumType.STRING)
-  @Builder.Default
-  private GameType gameType = GameType.SINGLES;
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private GameType gameType = GameType.SINGLES;
 
-  @Column(nullable = false)
-  @Enumerated(EnumType.STRING)
-  @Builder.Default
-  private TournamentFormat format = TournamentFormat.SINGLE_ELIMINATION;
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private TournamentFormat format = TournamentFormat.SINGLE_ELIMINATION;
 
-  @Column(nullable = false)
-  private String title;
+    @Column(nullable = false)
+    private String title;
 
-  @Column(name = "participation_mode", nullable = false, updatable = false)
-  @Enumerated(EnumType.STRING)
-  @Setter(lombok.AccessLevel.NONE)
-  private TournamentParticipationMode participationMode;
+    @Column(name = "participation_mode", nullable = false, updatable = false)
+    @Enumerated(EnumType.STRING)
+    @Setter(lombok.AccessLevel.NONE)
+    private TournamentParticipationMode participationMode;
 
-  /**
-   * Partner assignment strategy for organizer-managed doubles. Null for singles and self-join
-   * tournaments.
-   */
-  @Column(name = "doubles_pairing_mode")
-  @Enumerated(EnumType.STRING)
-  private DoublesPairingMode doublesPairingMode;
+    /**
+     * Partner assignment strategy for organizer-managed doubles. Null for singles and self-join
+     * tournaments.
+     */
+    @Column(name = "doubles_pairing_mode")
+    @Enumerated(EnumType.STRING)
+    private DoublesPairingMode doublesPairingMode;
 
-  /** Present for {@link TournamentParticipationMode#SELF_JOIN}; null for organizer-managed. */
-  @Column(unique = true)
-  private String joinCode;
+    /** Present for {@link TournamentParticipationMode#SELF_JOIN}; null for organizer-managed. */
+    @Column(unique = true)
+    private String joinCode;
 
-  @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
-  @Builder.Default
-  private List<TournamentParticipant> participants = new ArrayList<>();
+    @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TournamentParticipant> participants = new ArrayList<>();
 
-  @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
-  @Builder.Default
-  private List<TournamentTeam> teams = new ArrayList<>();
+    @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TournamentTeam> teams = new ArrayList<>();
 
-  @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
-  @Builder.Default
-  private List<TournamentRound> rounds = new ArrayList<>();
+    @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TournamentRound> rounds = new ArrayList<>();
 
-  @Version
-  @Column(name = "version", nullable = false)
-  private long version;
+    @Version
+    @Column(name = "version", nullable = false)
+    private long version;
 
-  /**
-   * Adds a guest participant with a required display name unique within this tournament after trim
-   * and case-insensitive comparison. Preserves the organizer's chosen casing for display.
-   *
-   * @param rawDisplayName organizer-entered name
-   * @return the created guest participant attached to this tournament
-   * @throws InvalidTournamentStateException if this is not an organizer-managed tournament or the
-   *     name is blank
-   * @throws DuplicateGuestDisplayNameException if the normalized name is already used
-   */
-  public TournamentParticipant addGuestParticipant(String rawDisplayName) {
-    if (participationMode != TournamentParticipationMode.ORGANIZER_MANAGED) {
-      throw new InvalidTournamentStateException(
-          "Guest participants are only allowed on organizer-managed tournaments");
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private Instant updatedAt;
+
+    /**
+     * Adds a guest participant with a required display name unique within this tournament after trim
+     * and case-insensitive comparison. Preserves the organizer's chosen casing for display.
+     *
+     * @param rawDisplayName organizer-entered name
+     * @return the created guest participant attached to this tournament
+     * @throws InvalidTournamentStateException if this is not an organizer-managed tournament or the
+     *     name is blank
+     * @throws DuplicateGuestDisplayNameException if the normalized name is already used
+     */
+    public TournamentParticipant addGuestParticipant(String rawDisplayName) {
+        if (participationMode != TournamentParticipationMode.ORGANIZER_MANAGED) {
+            throw new InvalidTournamentStateException(
+                    "Guest participants are only allowed on organizer-managed tournaments");
+        }
+        String displayName = requireGuestDisplayName(rawDisplayName);
+        assertGuestDisplayNameAvailable(displayName, null);
+        TournamentParticipant guest = TournamentParticipant.builder()
+                .tournament(this)
+                .displayName(displayName)
+                .build();
+        participants.add(guest);
+        return guest;
     }
-    String displayName = requireGuestDisplayName(rawDisplayName);
-    assertGuestDisplayNameAvailable(displayName, null);
-    TournamentParticipant guest =
-        TournamentParticipant.builder().tournament(this).displayName(displayName).build();
-    participants.add(guest);
-    return guest;
-  }
 
-  /**
-   * Updates a guest participant's display name with the same normalization and uniqueness rules as
-   * {@link #addGuestParticipant(String)}.
-   *
-   * @param participantId the guest participant to rename
-   * @param rawDisplayName the new organizer-entered name
-   * @return the updated guest participant
-   * @throws TournamentParticipantNotFoundException if no participant matches the id
-   * @throws InvalidTournamentStateException if the participant is not a guest or the name is blank
-   * @throws DuplicateGuestDisplayNameException if the normalized name is already used by another
-   *     guest
-   */
-  public TournamentParticipant updateGuestDisplayName(UUID participantId, String rawDisplayName) {
-    if (participationMode != TournamentParticipationMode.ORGANIZER_MANAGED) {
-      throw new InvalidTournamentStateException(
-          "Guest participants are only allowed on organizer-managed tournaments");
+    /**
+     * Updates a guest participant's display name with the same normalization and uniqueness rules as
+     * {@link #addGuestParticipant(String)}.
+     *
+     * @param participantId the guest participant to rename
+     * @param rawDisplayName the new organizer-entered name
+     * @return the updated guest participant
+     * @throws TournamentParticipantNotFoundException if no participant matches the id
+     * @throws InvalidTournamentStateException if the participant is not a guest or the name is blank
+     * @throws DuplicateGuestDisplayNameException if the normalized name is already used by another
+     *     guest
+     */
+    public TournamentParticipant updateGuestDisplayName(UUID participantId, String rawDisplayName) {
+        if (participationMode != TournamentParticipationMode.ORGANIZER_MANAGED) {
+            throw new InvalidTournamentStateException(
+                    "Guest participants are only allowed on organizer-managed tournaments");
+        }
+        TournamentParticipant participant = participants.stream()
+                .filter(candidate -> participantId.equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow(TournamentParticipantNotFoundException::new);
+        if (!participant.isGuest()) {
+            throw new InvalidTournamentStateException("Only guest participants can be renamed");
+        }
+        String displayName = requireGuestDisplayName(rawDisplayName);
+        assertGuestDisplayNameAvailable(displayName, participantId);
+        participant.setDisplayName(displayName);
+        return participant;
     }
-    TournamentParticipant participant =
-        participants.stream()
-            .filter(candidate -> participantId.equals(candidate.getId()))
-            .findFirst()
-            .orElseThrow(TournamentParticipantNotFoundException::new);
-    if (!participant.isGuest()) {
-      throw new InvalidTournamentStateException("Only guest participants can be renamed");
+
+    private String requireGuestDisplayName(String rawDisplayName) {
+        String displayName = rawDisplayName == null ? null : rawDisplayName.trim();
+        if (displayName == null || displayName.isBlank()) {
+            throw new InvalidTournamentStateException("Guest display name is required");
+        }
+        return displayName;
     }
-    String displayName = requireGuestDisplayName(rawDisplayName);
-    assertGuestDisplayNameAvailable(displayName, participantId);
-    participant.setDisplayName(displayName);
-    return participant;
-  }
 
-  private String requireGuestDisplayName(String rawDisplayName) {
-    String displayName = rawDisplayName == null ? null : rawDisplayName.trim();
-    if (displayName == null || displayName.isBlank()) {
-      throw new InvalidTournamentStateException("Guest display name is required");
+    private void assertGuestDisplayNameAvailable(String displayName, UUID excludeParticipantId) {
+        String key = displayName.toLowerCase(Locale.ROOT);
+        boolean duplicate = participants.stream()
+                .filter(TournamentParticipant::isGuest)
+                .filter(guest -> excludeParticipantId == null || !excludeParticipantId.equals(guest.getId()))
+                .anyMatch(guest -> key.equals(guest.getDisplayName().toLowerCase(Locale.ROOT)));
+        if (duplicate) {
+            throw new DuplicateGuestDisplayNameException(displayName);
+        }
     }
-    return displayName;
-  }
 
-  private void assertGuestDisplayNameAvailable(String displayName, UUID excludeParticipantId) {
-    String key = displayName.toLowerCase(Locale.ROOT);
-    boolean duplicate =
-        participants.stream()
-            .filter(TournamentParticipant::isGuest)
-            .filter(
-                guest ->
-                    excludeParticipantId == null || !excludeParticipantId.equals(guest.getId()))
-            .anyMatch(guest -> key.equals(guest.getDisplayName().toLowerCase(Locale.ROOT)));
-    if (duplicate) {
-      throw new DuplicateGuestDisplayNameException(displayName);
+    /**
+     * Whether this tournament uses organizer-defined doubles pairs (seed-only shuffle on generate /
+     * reshuffle).
+     */
+    public boolean isManualDoubles() {
+        return participationMode == TournamentParticipationMode.ORGANIZER_MANAGED
+                && gameType == GameType.DOUBLES
+                && doublesPairingMode == DoublesPairingMode.MANUAL;
     }
-  }
 
-  /**
-   * Whether this tournament uses organizer-defined doubles pairs (seed-only shuffle on generate /
-   * reshuffle).
-   */
-  public boolean isManualDoubles() {
-    return participationMode == TournamentParticipationMode.ORGANIZER_MANAGED
-        && gameType == GameType.DOUBLES
-        && doublesPairingMode == DoublesPairingMode.MANUAL;
-  }
-
-  /** Format used for bracket planning and progression; defaults to single elimination. */
-  public TournamentFormat effectiveFormat() {
-    return format != null ? format : TournamentFormat.SINGLE_ELIMINATION;
-  }
-
-  @CreationTimestamp
-  @Column(nullable = false, updatable = false)
-  private Instant createdAt;
-
-  @UpdateTimestamp
-  @Column(nullable = false)
-  private Instant updatedAt;
+    /** Format used for bracket planning and progression; defaults to single elimination. */
+    public TournamentFormat effectiveFormat() {
+        return format != null ? format : TournamentFormat.SINGLE_ELIMINATION;
+    }
 }

@@ -1,8 +1,9 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.UUID;
-import org.springframework.stereotype.Service;
 
 /**
  * Advances both teams through a double-elimination graph and eliminates a team after its second
@@ -11,163 +12,163 @@ import org.springframework.stereotype.Service;
 @Service
 class DoubleEliminationProgressionHandler implements TournamentProgressionHandler {
 
-  private static final int LOSSES_TO_ELIMINATE = 2;
+    private static final int LOSSES_TO_ELIMINATE = 2;
 
-  private final TournamentRepository tournamentRepository;
-  private final MatchRepository matchRepository;
-  private final DoubleEliminationByeResolver byeResolver;
+    private final TournamentRepository tournamentRepository;
+    private final MatchRepository matchRepository;
+    private final DoubleEliminationByeResolver byeResolver;
 
-  DoubleEliminationProgressionHandler(
-      TournamentRepository tournamentRepository,
-      MatchRepository matchRepository,
-      DoubleEliminationByeResolver byeResolver) {
-    this.tournamentRepository = tournamentRepository;
-    this.matchRepository = matchRepository;
-    this.byeResolver = byeResolver;
-  }
-
-  @Override
-  public void progress(Match match, TournamentTeam winningTeam, TournamentTeam losingTeam) {
-    losingTeam.setLosses(losingTeam.getLosses() + 1);
-    losingTeam.setEliminated(losingTeam.getLosses() >= LOSSES_TO_ELIMINATE);
-
-    if (isFirstFinal(match)) {
-      progressFirstFinal(match, winningTeam, losingTeam);
-      resolveAndPersistByes(match);
-      return;
+    DoubleEliminationProgressionHandler(
+            TournamentRepository tournamentRepository,
+            MatchRepository matchRepository,
+            DoubleEliminationByeResolver byeResolver) {
+        this.tournamentRepository = tournamentRepository;
+        this.matchRepository = matchRepository;
+        this.byeResolver = byeResolver;
     }
 
-    routeTeam(winningTeam, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
-    routeTeam(losingTeam, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
+    @Override
+    public void progress(Match match, TournamentTeam winningTeam, TournamentTeam losingTeam) {
+        losingTeam.setLosses(losingTeam.getLosses() + 1);
+        losingTeam.setEliminated(losingTeam.getLosses() >= LOSSES_TO_ELIMINATE);
 
-    saveDestinationMatches(match);
-    resolveAndPersistByes(match);
-    if (match.getWinnerNextMatch() == null && match.getLoserNextMatch() == null) {
-      completeTournament(match.getRound().getTournament());
-    }
-  }
+        if (isFirstFinal(match)) {
+            progressFirstFinal(match, winningTeam, losingTeam);
+            resolveAndPersistByes(match);
+            return;
+        }
 
-  void revert(Match match, TournamentTeam oldWinner, TournamentTeam oldLoser) {
-    if (oldLoser != null) {
-      oldLoser.setLosses(Math.max(0, oldLoser.getLosses() - 1));
-      if (oldLoser.getLosses() < LOSSES_TO_ELIMINATE) {
-        oldLoser.setEliminated(false);
-      }
-    }
+        routeTeam(winningTeam, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
+        routeTeam(losingTeam, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
 
-    if (isFirstFinal(match)) {
-      revertFirstFinal(match, oldWinner, oldLoser);
-      revertAndPersistByes(match);
-      return;
+        saveDestinationMatches(match);
+        resolveAndPersistByes(match);
+        if (match.getWinnerNextMatch() == null && match.getLoserNextMatch() == null) {
+            completeTournament(match.getRound().getTournament());
+        }
     }
 
-    removeTeamFromSlot(oldWinner, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
-    removeTeamFromSlot(oldLoser, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
-    saveDestinationMatches(match);
-    revertAndPersistByes(match);
+    void revert(Match match, TournamentTeam oldWinner, TournamentTeam oldLoser) {
+        if (oldLoser != null) {
+            oldLoser.setLosses(Math.max(0, oldLoser.getLosses() - 1));
+            if (oldLoser.getLosses() < LOSSES_TO_ELIMINATE) {
+                oldLoser.setEliminated(false);
+            }
+        }
 
-    if (match.getWinnerNextMatch() == null && match.getLoserNextMatch() == null) {
-      reopenTournamentIfCompleted(match.getRound().getTournament());
-    }
-  }
+        if (isFirstFinal(match)) {
+            revertFirstFinal(match, oldWinner, oldLoser);
+            revertAndPersistByes(match);
+            return;
+        }
 
-  private void progressFirstFinal(
-      Match match, TournamentTeam winningTeam, TournamentTeam losingTeam) {
-    if (losingTeam.isEliminated()) {
-      completeTournament(match.getRound().getTournament());
-      return;
-    }
+        removeTeamFromSlot(oldWinner, match.getWinnerNextMatch(), match.getWinnerNextMatchPosition());
+        removeTeamFromSlot(oldLoser, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
+        saveDestinationMatches(match);
+        revertAndPersistByes(match);
 
-    Match resetFinal = match.getWinnerNextMatch();
-    routeTeam(winningTeam, resetFinal, match.getWinnerNextMatchPosition());
-    routeTeam(losingTeam, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
-    resetFinal.getRound().setBestOf(match.getRound().getBestOf());
-    matchRepository.save(resetFinal);
-  }
-
-  private boolean isFirstFinal(Match match) {
-    return match.getRound().getBracketType() == BracketType.FINAL
-        && match.getWinnerNextMatch() != null
-        && match.getWinnerNextMatch().getRound().getBracketType() == BracketType.GRAND_FINAL;
-  }
-
-  private void revertFirstFinal(Match match, TournamentTeam oldWinner, TournamentTeam oldLoser) {
-    Match resetFinal = match.getWinnerNextMatch();
-    if (resetFinal == null) {
-      reopenTournamentIfCompleted(match.getRound().getTournament());
-      return;
+        if (match.getWinnerNextMatch() == null && match.getLoserNextMatch() == null) {
+            reopenTournamentIfCompleted(match.getRound().getTournament());
+        }
     }
 
-    if (resetFinal.getTeamOne() != null || resetFinal.getTeamTwo() != null) {
-      removeTeamFromSlot(oldWinner, resetFinal, match.getWinnerNextMatchPosition());
-      removeTeamFromSlot(oldLoser, resetFinal, match.getLoserNextMatchPosition());
-      matchRepository.save(resetFinal);
-      return;
+    private void progressFirstFinal(Match match, TournamentTeam winningTeam, TournamentTeam losingTeam) {
+        if (losingTeam.isEliminated()) {
+            completeTournament(match.getRound().getTournament());
+            return;
+        }
+
+        Match resetFinal = match.getWinnerNextMatch();
+        routeTeam(winningTeam, resetFinal, match.getWinnerNextMatchPosition());
+        routeTeam(losingTeam, match.getLoserNextMatch(), match.getLoserNextMatchPosition());
+        resetFinal.getRound().setBestOf(match.getRound().getBestOf());
+        matchRepository.save(resetFinal);
     }
 
-    reopenTournamentIfCompleted(match.getRound().getTournament());
-  }
-
-  private void resolveAndPersistByes(Match source) {
-    List<Match> changed = byeResolver.autoAdvanceResolvedByes(tournamentMatches(source));
-    changed.forEach(matchRepository::save);
-  }
-
-  private void revertAndPersistByes(Match source) {
-    List<Match> changed = byeResolver.revertUnresolvedByes(tournamentMatches(source), source);
-    changed.forEach(matchRepository::save);
-  }
-
-  private List<Match> tournamentMatches(Match source) {
-    UUID tournamentId = source.getRound().getTournament().getId();
-    return matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(
-        tournamentId);
-  }
-
-  private void routeTeam(TournamentTeam team, Match destination, Integer position) {
-    if (destination == null || position == null) {
-      return;
+    private boolean isFirstFinal(Match match) {
+        return match.getRound().getBracketType() == BracketType.FINAL
+                && match.getWinnerNextMatch() != null
+                && match.getWinnerNextMatch().getRound().getBracketType() == BracketType.GRAND_FINAL;
     }
-    if (position == 1) {
-      destination.setTeamOne(team);
-    } else if (position == 2) {
-      destination.setTeamTwo(team);
-    }
-  }
 
-  private void removeTeamFromSlot(TournamentTeam team, Match destination, Integer position) {
-    if (destination == null || team == null || position == null) {
-      return;
-    }
-    if (position == 1 && destination.getTeamOne() != null
-        && destination.getTeamOne().getId().equals(team.getId())) {
-      destination.setTeamOne(null);
-    } else if (position == 2 && destination.getTeamTwo() != null
-        && destination.getTeamTwo().getId().equals(team.getId())) {
-      destination.setTeamTwo(null);
-    }
-  }
+    private void revertFirstFinal(Match match, TournamentTeam oldWinner, TournamentTeam oldLoser) {
+        Match resetFinal = match.getWinnerNextMatch();
+        if (resetFinal == null) {
+            reopenTournamentIfCompleted(match.getRound().getTournament());
+            return;
+        }
 
-  private void saveDestinationMatches(Match source) {
-    Match winnerDestination = source.getWinnerNextMatch();
-    Match loserDestination = source.getLoserNextMatch();
-    if (winnerDestination != null) {
-      matchRepository.save(winnerDestination);
-    }
-    if (loserDestination != null && loserDestination != winnerDestination) {
-      matchRepository.save(loserDestination);
-    }
-  }
+        if (resetFinal.getTeamOne() != null || resetFinal.getTeamTwo() != null) {
+            removeTeamFromSlot(oldWinner, resetFinal, match.getWinnerNextMatchPosition());
+            removeTeamFromSlot(oldLoser, resetFinal, match.getLoserNextMatchPosition());
+            matchRepository.save(resetFinal);
+            return;
+        }
 
-  private void completeTournament(Tournament tournament) {
-    tournament.setStatus(TournamentStatus.COMPLETED);
-    tournamentRepository.save(tournament);
-  }
-
-  private void reopenTournamentIfCompleted(Tournament tournament) {
-    if (tournament.getStatus() == TournamentStatus.COMPLETED) {
-      tournament.setStatus(TournamentStatus.IN_PROGRESS);
-      tournamentRepository.save(tournament);
+        reopenTournamentIfCompleted(match.getRound().getTournament());
     }
-  }
+
+    private void resolveAndPersistByes(Match source) {
+        List<Match> changed = byeResolver.autoAdvanceResolvedByes(tournamentMatches(source));
+        changed.forEach(matchRepository::save);
+    }
+
+    private void revertAndPersistByes(Match source) {
+        List<Match> changed = byeResolver.revertUnresolvedByes(tournamentMatches(source), source);
+        changed.forEach(matchRepository::save);
+    }
+
+    private List<Match> tournamentMatches(Match source) {
+        UUID tournamentId = source.getRound().getTournament().getId();
+        return matchRepository.findByRound_Tournament_IdOrderByRound_RoundNumberAscMatchNumberAsc(tournamentId);
+    }
+
+    private void routeTeam(TournamentTeam team, Match destination, Integer position) {
+        if (destination == null || position == null) {
+            return;
+        }
+        if (position == 1) {
+            destination.setTeamOne(team);
+        } else if (position == 2) {
+            destination.setTeamTwo(team);
+        }
+    }
+
+    private void removeTeamFromSlot(TournamentTeam team, Match destination, Integer position) {
+        if (destination == null || team == null || position == null) {
+            return;
+        }
+        if (position == 1
+                && destination.getTeamOne() != null
+                && destination.getTeamOne().getId().equals(team.getId())) {
+            destination.setTeamOne(null);
+        } else if (position == 2
+                && destination.getTeamTwo() != null
+                && destination.getTeamTwo().getId().equals(team.getId())) {
+            destination.setTeamTwo(null);
+        }
+    }
+
+    private void saveDestinationMatches(Match source) {
+        Match winnerDestination = source.getWinnerNextMatch();
+        Match loserDestination = source.getLoserNextMatch();
+        if (winnerDestination != null) {
+            matchRepository.save(winnerDestination);
+        }
+        if (loserDestination != null && loserDestination != winnerDestination) {
+            matchRepository.save(loserDestination);
+        }
+    }
+
+    private void completeTournament(Tournament tournament) {
+        tournament.setStatus(TournamentStatus.COMPLETED);
+        tournamentRepository.save(tournament);
+    }
+
+    private void reopenTournamentIfCompleted(Tournament tournament) {
+        if (tournament.getStatus() == TournamentStatus.COMPLETED) {
+            tournament.setStatus(TournamentStatus.IN_PROGRESS);
+            tournamentRepository.save(tournament);
+        }
+    }
 }

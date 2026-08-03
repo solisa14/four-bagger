@@ -7,8 +7,8 @@ package com.github.solisa14.fourbagger.api.user;
  * with "ROLE_" prefix for role-based authorization checks.
  */
 public enum Role {
-  /** Standard user with basic access permissions. */
-  USER,
-  /** Administrative user with elevated privileges. */
-  ADMIN
+    /** Standard user with basic access permissions. */
+    USER,
+    /** Administrative user with elevated privileges. */
+    ADMIN
 }

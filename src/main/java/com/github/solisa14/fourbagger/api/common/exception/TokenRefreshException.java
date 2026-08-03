@@ -10,12 +10,12 @@ import org.springframework.http.HttpStatus;
  */
 public class TokenRefreshException extends BusinessException {
 
-  /**
-   * Constructs a new TokenRefreshException with the specified detail message.
-   *
-   * @param message the detail message (client-visible; must not contain secrets)
-   */
-  public TokenRefreshException(String message) {
-    super(message, HttpStatus.UNAUTHORIZED);
-  }
+    /**
+     * Constructs a new TokenRefreshException with the specified detail message.
+     *
+     * @param message the detail message (client-visible; must not contain secrets)
+     */
+    public TokenRefreshException(String message) {
+        super(message, HttpStatus.UNAUTHORIZED);
+    }
 }

@@ -9,4 +9,4 @@ import jakarta.validation.constraints.NotBlank;
  * @param playerTwoDisplayName second guest name on the team
  */
 public record ManualTeamRow(
-    @NotBlank String playerOneDisplayName, @NotBlank String playerTwoDisplayName) {}
+        @NotBlank String playerOneDisplayName, @NotBlank String playerTwoDisplayName) {}

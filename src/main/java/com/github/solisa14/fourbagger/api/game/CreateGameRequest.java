@@ -5,12 +5,9 @@ import java.util.UUID;
 
 /** Request payload for creating a new standalone game. */
 public record CreateGameRequest(
-    @NotNull UUID playerTwoId,
-    UUID playerOnePartnerId,
-    UUID playerTwoPartnerId,
-    GameType gameType) {
+        @NotNull UUID playerTwoId, UUID playerOnePartnerId, UUID playerTwoPartnerId, GameType gameType) {
 
-  public CreateGameRequest(UUID playerTwoId) {
-    this(playerTwoId, null, null, null);
-  }
+    public CreateGameRequest(UUID playerTwoId) {
+        this(playerTwoId, null, null, null);
+    }
 }
