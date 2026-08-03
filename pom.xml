@@ -12,7 +12,7 @@
     <artifactId>four-bagger-api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>four-bagger-api</name>
-    <description>four-bagger-api</description>
+    <description>Spring Boot API for organizing cornhole tournaments, generating seeded single- and double-elimination brackets, recording game results, and advancing winners.</description>
     <properties>
         <java.version>25</java.version>
     </properties>
