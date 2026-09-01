@@ -3,7 +3,6 @@ package com.github.solisa14.fourbagger.api.tournament;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
-import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +56,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void startMatch_whenValid_returnsOkWithMatchDetail() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         TournamentMatchDetailResponse detail = matchDetail(matchId);
@@ -78,7 +77,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void getMatch_whenFound_returnsOkWithMatchDetail() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         UUID teamOneId = UUID.randomUUID();
@@ -117,7 +116,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void submitResult_whenValid_returnsCreatedWithMatchDetail() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         TournamentMatchDetailResponse detail = matchDetail(matchId);
@@ -139,7 +138,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void submitResult_whenTeamOneScoreMissing_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         String body = "{\"teamTwoScore\":15}";
@@ -157,7 +156,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void submitResult_whenTeamTwoScoreMissing_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         String body = "{\"teamOneScore\":21}";
@@ -175,7 +174,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void submitResult_whenResultAlreadySubmitted_returnsConflict() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
 
@@ -195,7 +194,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void correctResultEndpoint_isNotMapped() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
 
@@ -212,7 +211,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void overrideMatchResult_whenValid_returnsOkWithMatchDetail() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         UUID winnerTeamId = UUID.randomUUID();
@@ -232,7 +231,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void auditEndpoint_isNotMapped() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
 

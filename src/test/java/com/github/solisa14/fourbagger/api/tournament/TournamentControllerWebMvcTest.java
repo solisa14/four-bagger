@@ -99,7 +99,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void createTournament_whenValidRequest_returnsCreated() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         Tournament tournament = registrationTournament(UUID.randomUUID(), principal);
         when(tournamentService.createTournament(any(CreateTournamentCommand.class)))
                 .thenReturn(tournament);
@@ -124,7 +124,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void createTournament_whenDoublesType_returnsCreatedWithDoubles() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         Tournament tournament = TestDataFactory.tournament(id, principal, "TestTournament", "ABC123", GameType.DOUBLES);
         when(tournamentService.createTournament(any(CreateTournamentCommand.class)))
@@ -145,7 +145,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void createTournament_whenNoGameType_defaultsToSingles() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         Tournament tournament = registrationTournament(UUID.randomUUID(), principal);
         when(tournamentService.createTournament(any(CreateTournamentCommand.class)))
                 .thenReturn(tournament);
@@ -162,7 +162,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void createTournament_whenTitleMissing_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
 
         mockMvc.perform(post("/api/v1/tournaments")
                         .with(user(principal))
@@ -173,7 +173,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void createTournament_whenParticipationModeMissing_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
 
         mockMvc.perform(post("/api/v1/tournaments")
                         .with(user(principal))
@@ -186,7 +186,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void getTournament_whenFound_returnsOk() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         Tournament tournament = registrationTournament(id, principal);
         when(tournamentService.getTournamentForUser(any(), any())).thenReturn(tournament);
@@ -210,7 +210,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void getTournament_whenOrganizerWithEligibleParticipants_returnsManagementCapabilities() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         Tournament tournament = registrationTournament(id, principal);
         for (int i = 0; i < 3; i++) {
@@ -236,7 +236,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void getTournament_whenParticipant_returnsLimitedCapabilities() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         User organizer = TestDataFactory.user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
         UUID id = UUID.randomUUID();
         Tournament tournament = registrationTournament(id, organizer);
@@ -260,7 +260,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void getTournament_whenNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         when(tournamentService.getTournamentForUser(any(), any())).thenThrow(new TournamentNotFoundException());
 
         mockMvc.perform(get("/api/v1/tournaments/{id}", UUID.randomUUID()).with(user(principal)))
@@ -270,7 +270,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void getTournament_whenUserCannotAccess_returnsForbidden() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         when(tournamentService.getTournamentForUser(any(), any())).thenThrow(new TournamentAccessDeniedException(id));
 
@@ -283,7 +283,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void getTournamentByJoinCode_whenFound_returnsOk() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         Tournament tournament = registrationTournament(id, principal);
         when(tournamentService.getTournamentByJoinCode("ABC123")).thenReturn(tournament);
@@ -299,7 +299,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void getTournamentByJoinCode_whenNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         when(tournamentService.getTournamentByJoinCode("BADCODE")).thenThrow(new TournamentNotFoundException());
 
         mockMvc.perform(get("/api/v1/tournaments/join-code/BADCODE").with(user(principal)))
@@ -309,11 +309,11 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void listMyTournaments_returnsGroupedActiveTournamentSummaries() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         Tournament hosting = registrationTournament(UUID.randomUUID(), principal);
         Tournament playing = Tournament.builder()
                 .id(UUID.randomUUID())
-                .organizer(TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER))
+                .organizer(TestDataFactory.authenticatedUser())
                 .title("Playing Cup")
                 .joinCode("PLAY01")
                 .participationMode(TournamentParticipationMode.SELF_JOIN)
@@ -340,7 +340,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void listCompletedTournaments_returnsCompletedTournamentSummaries() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         Tournament completed = Tournament.builder()
                 .id(UUID.randomUUID())
                 .organizer(principal)
@@ -368,7 +368,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void deleteTournament_whenFound_returnsNoContent() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doNothing().when(tournamentService).deleteTournament(eq(id), any());
 
@@ -378,7 +378,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void deleteTournament_whenNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new TournamentNotFoundException()).when(tournamentService).deleteTournament(eq(id), any());
 
@@ -391,7 +391,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void startTournament_whenBracketReady_returnsOkWithTournament() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doNothing().when(tournamentService).startTournament(eq(id), any());
         when(tournamentService.getTournament(id)).thenReturn(inProgressTournament(id, principal));
@@ -404,7 +404,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void startTournament_whenNotBracketReady_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new InvalidTournamentStateException("Tournament can only be started when bracket is ready"))
                 .when(tournamentService)
@@ -417,7 +417,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void startTournament_whenNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new TournamentNotFoundException()).when(tournamentService).startTournament(eq(id), any());
 
@@ -428,7 +428,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void startTournament_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new TournamentAccessDeniedException(id)).when(tournamentService).startTournament(eq(id), any());
 
@@ -441,7 +441,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void generateBracket_whenRegistration_returnsOkWithTournament() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doNothing().when(tournamentService).generateBracket(eq(id), any());
         when(tournamentService.getTournament(id)).thenReturn(bracketReadyTournament(id, principal));
@@ -454,7 +454,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void generateBracket_whenInvalidState_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new InvalidTournamentStateException(
                         "Cannot generate or reshuffle bracket unless tournament is in REGISTRATION or BRACKET_READY"))
@@ -467,7 +467,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void generateBracket_whenTooFewParticipants_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new InvalidTournamentStateException("At least 3 participants are required."))
                 .when(tournamentService)
@@ -480,7 +480,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void generateBracket_whenNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new TournamentNotFoundException()).when(tournamentService).generateBracket(eq(id), any());
 
@@ -491,7 +491,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void generateBracket_whenDoubles_returnsOkWithDoublesTournament() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         Tournament tournament = Tournament.builder()
                 .id(id)
@@ -514,7 +514,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void generateBracket_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new TournamentAccessDeniedException(id)).when(tournamentService).generateBracket(eq(id), any());
 
@@ -527,7 +527,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void joinTournament_whenValidCode_returnsOkWithTournament() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         Tournament tournament = registrationTournament(tournamentId, principal);
         TournamentParticipant participant = TournamentParticipant.builder()
@@ -549,7 +549,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void joinTournament_whenCodeNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         when(tournamentService.joinTournament(any(), any())).thenThrow(new TournamentNotFoundException());
 
         mockMvc.perform(post("/api/v1/tournaments/join")
@@ -562,7 +562,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void joinTournament_whenAlreadyJoined_returnsConflict() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         when(tournamentService.joinTournament(any(), any())).thenThrow(new DuplicateTournamentParticipantException());
 
         mockMvc.perform(post("/api/v1/tournaments/join")
@@ -575,7 +575,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void joinTournament_whenNotInRegistration_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         when(tournamentService.joinTournament(any(), any()))
                 .thenThrow(new InvalidTournamentStateException("Tournament is not open for registration"));
 
@@ -589,7 +589,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void joinTournament_whenJoinCodeBlank_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
 
         mockMvc.perform(post("/api/v1/tournaments/join")
                         .with(user(principal))
@@ -602,7 +602,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void removeParticipant_whenValid_returnsNoContent() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         doNothing().when(tournamentService).removeParticipant(eq(tournamentId), any(), eq(participantId));
@@ -616,7 +616,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void addGuestParticipant_whenValid_returnsCreated() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         TournamentParticipant guest = TournamentParticipant.builder()
@@ -640,7 +640,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void addGuestParticipant_whenBlankDisplayName_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
 
         mockMvc.perform(post("/api/v1/tournaments/{id}/participants", tournamentId)
@@ -652,7 +652,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void addGuestParticipant_whenNotOrganizer_returnsForbidden() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         doThrow(new TournamentAccessDeniedException(tournamentId))
                 .when(tournamentService)
@@ -667,7 +667,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void addGuestParticipant_whenDuplicateName_returnsConflict() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         doThrow(new DuplicateGuestDisplayNameException("Alex"))
                 .when(tournamentService)
@@ -682,7 +682,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void updateGuestParticipant_whenValid_returnsOk() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         TournamentParticipant guest = TournamentParticipant.builder()
@@ -704,7 +704,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void updateGuestParticipant_whenNotRegistration_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         doThrow(new InvalidTournamentStateException("Cannot update guests after registration"))
@@ -721,7 +721,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void removeParticipant_whenNotRegistration_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         doThrow(new InvalidTournamentStateException("Cannot remove participants after registration"))
@@ -736,7 +736,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void removeParticipant_whenParticipantNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         doThrow(new TournamentParticipantNotFoundException())
@@ -751,7 +751,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void removeParticipant_whenTournamentNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         doThrow(new TournamentNotFoundException())
@@ -766,7 +766,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void removeParticipant_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
         doThrow(new TournamentAccessDeniedException(tournamentId))
@@ -783,7 +783,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void leaveTournament_whenValid_returnsNoContent() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         doNothing().when(tournamentService).leaveTournament(eq(tournamentId), any());
 
@@ -794,7 +794,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void leaveTournament_whenRegistrationClosed_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         doThrow(new InvalidTournamentStateException("Cannot leave tournament after registration"))
                 .when(tournamentService)
@@ -808,7 +808,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void leaveTournament_whenParticipantNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         doThrow(new TournamentParticipantNotFoundException())
                 .when(tournamentService)
@@ -822,7 +822,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void leaveTournament_whenUserCannotAccess_returnsForbidden() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         doThrow(new TournamentAccessDeniedException(tournamentId))
                 .when(tournamentService)
@@ -838,7 +838,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void updateRoundSettings_whenValid_returnsOkWithTournament() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doNothing().when(tournamentService).updateRoundSettings(eq(id), any(), eq(1), eq(3));
         when(tournamentService.getTournament(id)).thenReturn(bracketReadyTournament(id, principal));
@@ -854,7 +854,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void updateRoundSettings_whenNotBracketReady_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new InvalidTournamentStateException(
                         "Round settings can only be changed when tournament is BRACKET_READY"))
@@ -872,7 +872,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void updateRoundSettings_whenInvalidBestOf_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new InvalidRoundConfigurationException("bestOf must be one of: 1, 3, 5, or 7"))
                 .when(tournamentService)
@@ -888,7 +888,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void updateRoundSettings_whenRoundNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new TournamentRoundNotFoundException())
                 .when(tournamentService)
@@ -904,7 +904,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void updateRoundSettings_whenTournamentNotFound_returnsNotFound() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new TournamentNotFoundException())
                 .when(tournamentService)
@@ -920,7 +920,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void updateRoundSettings_whenBestOfNotProvided_returnsBadRequest() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new InvalidRoundConfigurationException("bestOf must be provided"))
                 .when(tournamentService)
@@ -936,7 +936,7 @@ class TournamentControllerWebMvcTest {
 
     @Test
     void updateRoundSettings_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
-        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+        User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
         doThrow(new TournamentAccessDeniedException(id))
                 .when(tournamentService)

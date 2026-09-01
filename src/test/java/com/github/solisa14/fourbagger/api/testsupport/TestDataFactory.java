@@ -52,6 +52,10 @@ public final class TestDataFactory {
                 .build();
     }
 
+    public static User authenticatedUser() {
+        return user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
+    }
+
     public static RefreshToken refreshToken(User user, Instant expiryDate, String token) {
         return RefreshToken.builder()
                 .user(user)
