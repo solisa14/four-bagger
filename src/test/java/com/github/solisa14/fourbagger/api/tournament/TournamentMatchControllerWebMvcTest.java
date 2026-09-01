@@ -55,13 +55,9 @@ class TournamentMatchControllerWebMvcTest {
     @MockitoBean
     private com.github.solisa14.fourbagger.api.user.UserService userService;
 
-    private User authenticatedUser() {
-        return TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
-    }
-
     @Test
     void startMatch_whenValid_returnsOkWithMatchDetail() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         TournamentMatchDetailResponse detail = matchDetail(matchId);
@@ -82,7 +78,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void getMatch_whenFound_returnsOkWithMatchDetail() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         UUID teamOneId = UUID.randomUUID();
@@ -121,7 +117,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void submitResult_whenValid_returnsCreatedWithMatchDetail() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         TournamentMatchDetailResponse detail = matchDetail(matchId);
@@ -143,7 +139,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void submitResult_whenTeamOneScoreMissing_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         String body = "{\"teamTwoScore\":15}";
@@ -161,7 +157,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void submitResult_whenTeamTwoScoreMissing_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         String body = "{\"teamOneScore\":21}";
@@ -179,7 +175,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void submitResult_whenResultAlreadySubmitted_returnsConflict() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
 
@@ -199,7 +195,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void correctResultEndpoint_isNotMapped() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
 
@@ -216,7 +212,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void overrideMatchResult_whenValid_returnsOkWithMatchDetail() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
         UUID winnerTeamId = UUID.randomUUID();
@@ -236,7 +232,7 @@ class TournamentMatchControllerWebMvcTest {
 
     @Test
     void auditEndpoint_isNotMapped() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID tournamentId = UUID.randomUUID();
         UUID matchId = UUID.randomUUID();
 

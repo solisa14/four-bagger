@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
@@ -21,8 +20,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class AuthFlowIntegrationTest extends AbstractIntegrationTest {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;

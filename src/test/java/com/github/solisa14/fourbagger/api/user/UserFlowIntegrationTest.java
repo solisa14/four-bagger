@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.user;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.auth.LoginRequest;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
@@ -17,8 +16,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class UserFlowIntegrationTest extends AbstractIntegrationTest {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     void updatePassword_whenPasswordIsChanged_invalidatesOldCredentialsAndAllowsNewLogin() throws Exception {

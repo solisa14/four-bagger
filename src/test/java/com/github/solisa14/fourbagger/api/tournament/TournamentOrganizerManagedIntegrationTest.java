@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
 import org.assertj.core.api.Assertions;
@@ -23,8 +22,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * End-to-end coverage for organizer-managed guest roster management introduced in FB-11.
  */
 class TournamentOrganizerManagedIntegrationTest extends AbstractIntegrationTest {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private TournamentRepository tournamentRepository;

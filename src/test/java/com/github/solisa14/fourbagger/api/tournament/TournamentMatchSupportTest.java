@@ -2,7 +2,6 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
-import com.github.solisa14.fourbagger.api.user.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,7 +74,7 @@ class TournamentMatchSupportTest {
     private Tournament tournament() {
         return Tournament.builder()
                 .id(UUID.randomUUID())
-                .organizer(user("organizer"))
+                .organizer(TestDataFactory.user(UUID.randomUUID(), "organizer", "encoded", Role.USER))
                 .title("Tournament")
                 .status(TournamentStatus.IN_PROGRESS)
                 .joinCode("ABC123")
@@ -97,7 +96,7 @@ class TournamentMatchSupportTest {
                 .playerOne(TournamentParticipant.builder()
                         .id(UUID.randomUUID())
                         .tournament(tournament)
-                        .user(user("p1"))
+                        .user(TestDataFactory.user(UUID.randomUUID(), "p1", "encoded", Role.USER))
                         .build())
                 .seed(1)
                 .build();
@@ -107,7 +106,7 @@ class TournamentMatchSupportTest {
                 .playerOne(TournamentParticipant.builder()
                         .id(UUID.randomUUID())
                         .tournament(tournament)
-                        .user(user("p2"))
+                        .user(TestDataFactory.user(UUID.randomUUID(), "p2", "encoded", Role.USER))
                         .build())
                 .seed(2)
                 .build();
@@ -119,9 +118,5 @@ class TournamentMatchSupportTest {
                 .teamTwo(teamTwo)
                 .status(MatchStatus.PENDING)
                 .build();
-    }
-
-    private User user(String username) {
-        return TestDataFactory.user(UUID.randomUUID(), username, "encoded", Role.USER);
     }
 }

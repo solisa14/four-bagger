@@ -2,6 +2,7 @@ package com.github.solisa14.fourbagger.api.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.common.exception.GlobalExceptionHandler;
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.CreateUserCommand;
 import com.github.solisa14.fourbagger.api.user.UserAlreadyExistsException;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class AuthenticationControllerWebMvcTest {
 
     @Test
     void register_whenUsernameTooShort_returnsBadRequest() throws Exception {
-        RegisterUserRequest request = new RegisterUserRequest("abc", "Password1!", "Test", "User");
+        RegisterUserRequest request = TestDataFactory.registerUserRequest("abc", "Password1!");
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType("application/json")
@@ -62,7 +63,7 @@ class AuthenticationControllerWebMvcTest {
 
     @Test
     void register_whenDataIntegrityViolationBubblesUp_returnsConflict() throws Exception {
-        RegisterUserRequest request = new RegisterUserRequest("validuser", "Password1!", "Test", "User");
+        RegisterUserRequest request = TestDataFactory.registerUserRequest("validuser", "Password1!");
         when(authenticationService.registerUser(any(CreateUserCommand.class)))
                 .thenThrow(new DataIntegrityViolationException("uk_users_username"));
 
@@ -75,7 +76,7 @@ class AuthenticationControllerWebMvcTest {
 
     @Test
     void register_whenUsernameAlreadyExists_returnsConflict() throws Exception {
-        RegisterUserRequest request = new RegisterUserRequest("validuser", "Password1!", "Test", "User");
+        RegisterUserRequest request = TestDataFactory.registerUserRequest("validuser", "Password1!");
         when(authenticationService.registerUser(any(CreateUserCommand.class)))
                 .thenThrow(new UserAlreadyExistsException(request.username()));
 
@@ -89,7 +90,7 @@ class AuthenticationControllerWebMvcTest {
 
     @Test
     void register_whenUnexpectedExceptionBubblesUp_returnsInternalServerErrorWithGenericMessage() throws Exception {
-        RegisterUserRequest request = new RegisterUserRequest("validuser", "Password1!", "Test", "User");
+        RegisterUserRequest request = TestDataFactory.registerUserRequest("validuser", "Password1!");
         when(authenticationService.registerUser(any(CreateUserCommand.class)))
                 .thenThrow(new IllegalStateException(
                         "generic placeholder message instead of detailed message to client to encapsulate"

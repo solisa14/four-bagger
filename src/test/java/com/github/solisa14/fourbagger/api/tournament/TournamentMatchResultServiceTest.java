@@ -300,7 +300,7 @@ class TournamentMatchResultServiceTest {
     private Tournament tournament() {
         return Tournament.builder()
                 .id(UUID.randomUUID())
-                .organizer(user("organizer"))
+                .organizer(TestDataFactory.user(UUID.randomUUID(), "organizer", "encoded", Role.USER))
                 .title("Tournament")
                 .status(TournamentStatus.IN_PROGRESS)
                 .joinCode("ABC123")
@@ -343,11 +343,7 @@ class TournamentMatchResultServiceTest {
         return TournamentParticipant.builder()
                 .id(UUID.randomUUID())
                 .tournament(tournament)
-                .user(user(suffix))
+                .user(TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER))
                 .build();
-    }
-
-    private User user(String suffix) {
-        return TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER);
     }
 }

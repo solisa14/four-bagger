@@ -27,8 +27,8 @@ class GameMapperTest {
 
     @Test
     void toCreateCommand_whenNoOptionalValues_appliesSinglesDefaults() {
-        User currentUser = user("creator");
-        User playerTwo = user("opponent");
+        User currentUser = TestDataFactory.user(UUID.randomUUID(), "creator", "encoded", Role.USER);
+        User playerTwo = TestDataFactory.user(UUID.randomUUID(), "opponent", "encoded", Role.USER);
         CreateGameRequest request = new CreateGameRequest(playerTwo.getId());
         when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
 
@@ -43,10 +43,10 @@ class GameMapperTest {
 
     @Test
     void toCreateCommand_whenPartnersProvidedAndTypeMissing_infersDoubles() {
-        User currentUser = user("creator");
-        User playerTwo = user("opponent");
-        User playerOnePartner = user("team1b");
-        User playerTwoPartner = user("team2b");
+        User currentUser = TestDataFactory.user(UUID.randomUUID(), "creator", "encoded", Role.USER);
+        User playerTwo = TestDataFactory.user(UUID.randomUUID(), "opponent", "encoded", Role.USER);
+        User playerOnePartner = TestDataFactory.user(UUID.randomUUID(), "team1b", "encoded", Role.USER);
+        User playerTwoPartner = TestDataFactory.user(UUID.randomUUID(), "team2b", "encoded", Role.USER);
         CreateGameRequest request =
                 new CreateGameRequest(playerTwo.getId(), playerOnePartner.getId(), playerTwoPartner.getId(), null);
         when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
@@ -62,8 +62,8 @@ class GameMapperTest {
 
     @Test
     void toCreateCommand_whenDoublesAndPartnerMissing_throwsInvalidGameConfigurationException() {
-        User currentUser = user("creator");
-        User playerTwo = user("opponent");
+        User currentUser = TestDataFactory.user(UUID.randomUUID(), "creator", "encoded", Role.USER);
+        User playerTwo = TestDataFactory.user(UUID.randomUUID(), "opponent", "encoded", Role.USER);
         CreateGameRequest request = new CreateGameRequest(playerTwo.getId(), null, null, GameType.DOUBLES);
         when(userService.getUser(playerTwo.getId())).thenReturn(playerTwo);
 
@@ -73,8 +73,8 @@ class GameMapperTest {
 
     @Test
     void toGameResponse_whenGameCompleted_includesSubmittedByAndCompletedAt() {
-        User playerOne = user("p1");
-        User playerTwo = user("p2");
+        User playerOne = TestDataFactory.user(UUID.randomUUID(), "p1", "encoded", Role.USER);
+        User playerTwo = TestDataFactory.user(UUID.randomUUID(), "p2", "encoded", Role.USER);
         java.time.Instant completedAt = java.time.Instant.parse("2026-06-12T12:00:00Z");
         Game game = Game.builder()
                 .id(UUID.randomUUID())
@@ -100,8 +100,8 @@ class GameMapperTest {
 
     @Test
     void toGameSummaryResponse_excludesSubmittedBy() {
-        User playerOne = user("p1");
-        User playerTwo = user("p2");
+        User playerOne = TestDataFactory.user(UUID.randomUUID(), "p1", "encoded", Role.USER);
+        User playerTwo = TestDataFactory.user(UUID.randomUUID(), "p2", "encoded", Role.USER);
         Game game = Game.builder()
                 .id(UUID.randomUUID())
                 .playerOne(playerOne)
@@ -115,9 +115,5 @@ class GameMapperTest {
         assertThat(response.id()).isEqualTo(game.getId());
         assertThat(response.playerOne().id()).isEqualTo(playerOne.getId());
         assertThat(response.status()).isEqualTo(GameStatus.PENDING);
-    }
-
-    private User user(String suffix) {
-        return TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER);
     }
 }

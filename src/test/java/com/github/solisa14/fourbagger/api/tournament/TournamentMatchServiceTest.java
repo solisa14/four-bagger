@@ -72,7 +72,10 @@ class TournamentMatchServiceTest {
                 .when(authorizationService)
                 .authorizeMatchMutation(any(), eq(tournament), eq(match));
 
-        assertThatThrownBy(() -> tournamentMatchService.startMatch(tournament.getId(), match.getId(), user("outsider")))
+        assertThatThrownBy(() -> tournamentMatchService.startMatch(
+                        tournament.getId(),
+                        match.getId(),
+                        TestDataFactory.user(UUID.randomUUID(), "outsider", "encoded", Role.USER)))
                 .isInstanceOf(TournamentAccessDeniedException.class);
     }
 
@@ -261,7 +264,7 @@ class TournamentMatchServiceTest {
     private Tournament tournament(TournamentStatus status) {
         return Tournament.builder()
                 .id(UUID.randomUUID())
-                .organizer(user("organizer"))
+                .organizer(TestDataFactory.user(UUID.randomUUID(), "organizer", "encoded", Role.USER))
                 .title("Tournament")
                 .status(status)
                 .joinCode("ABC123")
@@ -306,11 +309,7 @@ class TournamentMatchServiceTest {
         return TournamentParticipant.builder()
                 .id(UUID.randomUUID())
                 .tournament(tournament)
-                .user(user(suffix))
+                .user(TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER))
                 .build();
-    }
-
-    private User user(String suffix) {
-        return TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER);
     }
 }

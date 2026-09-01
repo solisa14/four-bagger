@@ -1,6 +1,7 @@
 package com.github.solisa14.fourbagger.api.user;
 
 import com.github.solisa14.fourbagger.api.testsupport.AbstractDataJpaTest;
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +25,7 @@ class UserRepositoryTest extends AbstractDataJpaTest {
 
     @Test
     void findUserByUsername_whenUserExists_returnsUser() {
-        User user = createUser("user1");
+        User user = TestDataFactory.user(null, "user1", "encoded", Role.USER);
         userRepository.saveAndFlush(user);
 
         assertThat(userRepository.findUserByUsername("user1")).contains(user);
@@ -32,21 +33,11 @@ class UserRepositoryTest extends AbstractDataJpaTest {
 
     @Test
     void save_whenUsernameAlreadyExists_throwsDataIntegrityViolationException() {
-        User user1 = createUser("duplicate");
-        User user2 = createUser("duplicate");
+        User user1 = TestDataFactory.user(null, "duplicate", "encoded", Role.USER);
+        User user2 = TestDataFactory.user(null, "duplicate", "encoded", Role.USER);
         userRepository.saveAndFlush(user1);
 
         assertThatThrownBy(() -> userRepository.saveAndFlush(user2))
                 .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    private User createUser(String username) {
-        return User.builder()
-                .username(username)
-                .password("encoded")
-                .firstName("Test")
-                .lastName("User")
-                .role(Role.USER)
-                .build();
     }
 }

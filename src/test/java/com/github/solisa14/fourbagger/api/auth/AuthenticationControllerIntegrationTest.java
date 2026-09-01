@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.auth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
@@ -17,8 +16,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class AuthenticationControllerIntegrationTest extends AbstractIntegrationTest {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     void login_whenCredentialsAreValid_setsAuthCookies() throws Exception {

@@ -47,7 +47,7 @@ class UserServiceTest {
     @Test
     void createUser_whenRequestIsValid_savesUserWithEncodedPasswordAndRole() {
         CreateUserCommand command = new CreateUserCommand("user1", "Password1!", "Test", "User");
-        when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.<User>empty());
+        when(userRepository.findUserByUsername(command.username())).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0, User.class);
             user.setId(UUID.randomUUID());

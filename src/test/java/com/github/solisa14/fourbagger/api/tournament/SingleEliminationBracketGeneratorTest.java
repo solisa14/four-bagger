@@ -2,7 +2,6 @@ package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
-import com.github.solisa14.fourbagger.api.user.User;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -238,16 +237,12 @@ class SingleEliminationBracketGeneratorTest {
     private Tournament tournament() {
         return Tournament.builder()
                 .id(UUID.randomUUID())
-                .organizer(user("organizer"))
+                .organizer(TestDataFactory.user(UUID.randomUUID(), "organizer", "encoded", Role.USER))
                 .title("Test")
                 .status(TournamentStatus.BRACKET_READY)
                 .joinCode("ABC123")
                 .participationMode(TournamentParticipationMode.SELF_JOIN)
                 .build();
-    }
-
-    private User user(String suffix) {
-        return TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER);
     }
 
     private List<TournamentRound> winnersRounds(Tournament tournament) {

@@ -28,10 +28,10 @@ class RefreshTokenStartupCleanupIntegrationTest extends AbstractIntegrationTest 
     @Test
     void applicationStartup_repeatedlyRemovesOnlyExpiredRefreshTokens() {
         String suffix = UUID.randomUUID().toString();
-        User expiredUser = userRepository.saveAndFlush(
-                TestDataFactory.user(null, "expired-" + suffix, "encoded", Role.USER));
-        User activeUser = userRepository.saveAndFlush(
-                TestDataFactory.user(null, "active-" + suffix, "encoded", Role.USER));
+        User expiredUser =
+                userRepository.saveAndFlush(TestDataFactory.user(null, "expired-" + suffix, "encoded", Role.USER));
+        User activeUser =
+                userRepository.saveAndFlush(TestDataFactory.user(null, "active-" + suffix, "encoded", Role.USER));
         refreshTokenRepository.saveAndFlush(
                 TestDataFactory.refreshToken(expiredUser, Instant.now().minusSeconds(60), "expired-" + suffix));
         refreshTokenRepository.saveAndFlush(
@@ -52,5 +52,4 @@ class RefreshTokenStartupCleanupIntegrationTest extends AbstractIntegrationTest 
             // Startup behavior is the seam under test.
         }
     }
-
 }

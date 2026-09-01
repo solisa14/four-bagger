@@ -1,6 +1,7 @@
 package com.github.solisa14.fourbagger.api.auth;
 
 import com.github.solisa14.fourbagger.api.testsupport.AbstractDataJpaTest;
+import com.github.solisa14.fourbagger.api.testsupport.TestDataFactory;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
@@ -22,18 +23,18 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
 
     @Test
     void findByTokenHash_whenTokenExists_returnsToken() {
-        User user = userRepository.saveAndFlush(createUser("user1"));
+        User user = userRepository.saveAndFlush(TestDataFactory.user(null, "user1", "encoded", Role.USER));
         RefreshToken token = refreshTokenRepository.saveAndFlush(
-                createToken(user, "hash-1", Instant.now().plusSeconds(60)));
+                TestDataFactory.refreshToken(user, Instant.now().plusSeconds(60), "hash-1"));
 
         assertThat(refreshTokenRepository.findByTokenHash("hash-1")).contains(token);
     }
 
     @Test
     void deleteByTokenHash_whenTokenExists_removesToken() {
-        User user = userRepository.saveAndFlush(createUser("user2"));
+        User user = userRepository.saveAndFlush(TestDataFactory.user(null, "user2", "encoded", Role.USER));
         refreshTokenRepository.saveAndFlush(
-                createToken(user, "hash-2", Instant.now().plusSeconds(60)));
+                TestDataFactory.refreshToken(user, Instant.now().plusSeconds(60), "hash-2"));
 
         refreshTokenRepository.deleteByTokenHash("hash-2");
 
@@ -42,9 +43,9 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
 
     @Test
     void deleteByExpiryDateLessThan_whenTokensAreExpired_removesExpiredTokens() {
-        User user = userRepository.saveAndFlush(createUser("user4"));
+        User user = userRepository.saveAndFlush(TestDataFactory.user(null, "user4", "encoded", Role.USER));
         refreshTokenRepository.saveAndFlush(
-                createToken(user, "hash-4", Instant.now().minusSeconds(60)));
+                TestDataFactory.refreshToken(user, Instant.now().minusSeconds(60), "hash-4"));
 
         refreshTokenRepository.deleteByExpiryDateLessThan(Instant.now());
 
@@ -53,30 +54,12 @@ class RefreshTokenRepositoryTest extends AbstractDataJpaTest {
 
     @Test
     void save_whenUserAlreadyHasActiveSession_throwsDataIntegrityViolationException() {
-        User user = userRepository.saveAndFlush(createUser("user5"));
+        User user = userRepository.saveAndFlush(TestDataFactory.user(null, "user5", "encoded", Role.USER));
         refreshTokenRepository.saveAndFlush(
-                createToken(user, "hash-5", Instant.now().plusSeconds(60)));
+                TestDataFactory.refreshToken(user, Instant.now().plusSeconds(60), "hash-5"));
 
         assertThatThrownBy(() -> refreshTokenRepository.saveAndFlush(
-                        createToken(user, "hash-6", Instant.now().plusSeconds(120))))
+                        TestDataFactory.refreshToken(user, Instant.now().plusSeconds(120), "hash-6")))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
-    }
-
-    private User createUser(String username) {
-        return User.builder()
-                .username(username)
-                .password("encoded")
-                .firstName("Test")
-                .lastName("User")
-                .role(Role.USER)
-                .build();
-    }
-
-    private RefreshToken createToken(User user, String tokenHash, Instant expiry) {
-        return RefreshToken.builder()
-                .user(user)
-                .tokenHash(tokenHash)
-                .expiryDate(expiry)
-                .build();
     }
 }

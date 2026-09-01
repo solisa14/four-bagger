@@ -228,7 +228,7 @@ class TournamentMatchOverrideServiceTest {
     private Tournament tournament(TournamentStatus status) {
         return Tournament.builder()
                 .id(UUID.randomUUID())
-                .organizer(user("organizer"))
+                .organizer(TestDataFactory.user(UUID.randomUUID(), "organizer", "encoded", Role.USER))
                 .title("Tournament")
                 .status(status)
                 .joinCode("ABC123")
@@ -286,11 +286,7 @@ class TournamentMatchOverrideServiceTest {
         return TournamentParticipant.builder()
                 .id(UUID.randomUUID())
                 .tournament(tournament)
-                .user(user(suffix))
+                .user(TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER))
                 .build();
-    }
-
-    private User user(String suffix) {
-        return TestDataFactory.user(UUID.randomUUID(), suffix, "encoded", Role.USER);
     }
 }

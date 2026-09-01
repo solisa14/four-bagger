@@ -44,13 +44,9 @@ class GameControllerWebMvcTest {
     @MockitoBean
     private com.github.solisa14.fourbagger.api.user.UserService userService;
 
-    private User authenticatedUser() {
-        return TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
-    }
-
     @Test
     void createGame_whenPlayerTwoIdMissing_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         String body = "{}";
 
         mockMvc.perform(post("/api/v1/games")
@@ -62,7 +58,7 @@ class GameControllerWebMvcTest {
 
     @Test
     void submitResult_whenWinnerUserIdMissing_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID gameId = UUID.randomUUID();
         String body = "{\"playerOneScore\":21,\"playerTwoScore\":15}";
 
@@ -75,7 +71,7 @@ class GameControllerWebMvcTest {
 
     @Test
     void submitResult_whenPlayerOneScoreMissing_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID gameId = UUID.randomUUID();
         String body = "{\"winnerUserId\":\"" + principal.getId() + "\",\"playerTwoScore\":15}";
 
@@ -88,7 +84,7 @@ class GameControllerWebMvcTest {
 
     @Test
     void submitResult_whenPlayerTwoScoreMissing_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID gameId = UUID.randomUUID();
         String body = "{\"winnerUserId\":\"" + principal.getId() + "\",\"playerOneScore\":21}";
 
@@ -101,7 +97,7 @@ class GameControllerWebMvcTest {
 
     @Test
     void submitResult_whenScoreIsNegative_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID gameId = UUID.randomUUID();
         String body = objectMapper.writeValueAsString(new SubmitGameResultRequest(UUID.randomUUID(), -1, 15));
 
@@ -114,7 +110,7 @@ class GameControllerWebMvcTest {
 
     @Test
     void getGame_whenGameNotFound_returnsNotFound() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID gameId = UUID.randomUUID();
         when(gameService.getGameForUser(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId)))
                 .thenThrow(new GameNotFoundException(gameId));
@@ -126,7 +122,7 @@ class GameControllerWebMvcTest {
 
     @Test
     void submitResult_whenGameNotInProgress_returnsBadRequest() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID gameId = UUID.randomUUID();
         when(gameService.submitResult(
                         org.mockito.ArgumentMatchers.nullable(User.class),
@@ -146,7 +142,7 @@ class GameControllerWebMvcTest {
 
     @Test
     void submitResult_whenResultAlreadySubmitted_returnsConflict() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID gameId = UUID.randomUUID();
         when(gameService.submitResult(
                         org.mockito.ArgumentMatchers.nullable(User.class),
@@ -166,7 +162,7 @@ class GameControllerWebMvcTest {
 
     @Test
     void cancelGame_whenUserCannotModifyGame_returnsForbidden() throws Exception {
-        User principal = authenticatedUser();
+        User principal = TestDataFactory.user(UUID.randomUUID(), "testuser", "encoded", Role.USER);
         UUID gameId = UUID.randomUUID();
         when(gameService.cancelGame(org.mockito.ArgumentMatchers.nullable(User.class), eq(gameId)))
                 .thenThrow(new GameAccessDeniedException());

@@ -11,8 +11,12 @@ class HealthControllerIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void health_whenUnauthenticated_returnsOk() throws Exception {
-        mockMvc.perform(get("/health")).andExpect(status().isOk()).andExpect(content().string(""));
-        mockMvc.perform(get("/api/v1/health")).andExpect(status().isOk()).andExpect(content().string(""));
+        mockMvc.perform(get("/health"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(""));
+        mockMvc.perform(get("/api/v1/health"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(""));
     }
 
     @Test

@@ -1,6 +1,5 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.testsupport.AbstractIntegrationTest;
 import com.github.solisa14.fourbagger.api.testsupport.TestCookieHelper;
@@ -24,8 +23,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * submissions.
  */
 class TournamentGameProgressionIntegrationTest extends AbstractIntegrationTest {
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     private TournamentService tournamentService;

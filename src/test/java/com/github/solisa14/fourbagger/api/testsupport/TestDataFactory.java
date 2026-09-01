@@ -9,7 +9,6 @@ import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.tournament.*;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.UpdatePasswordRequest;
-import com.github.solisa14.fourbagger.api.user.UpdateProfileRequest;
 import com.github.solisa14.fourbagger.api.user.User;
 
 import java.time.Instant;
@@ -36,10 +35,6 @@ public final class TestDataFactory {
 
     public static LoginRequest loginRequest(String username, String password) {
         return new LoginRequest(username, password);
-    }
-
-    public static UpdateProfileRequest updateProfileRequest() {
-        return new UpdateProfileRequest(DEFAULT_FIRST_NAME, DEFAULT_LAST_NAME);
     }
 
     public static UpdatePasswordRequest updatePasswordRequest(String currentPassword) {
