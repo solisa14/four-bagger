@@ -4,6 +4,8 @@ import com.github.solisa14.fourbagger.api.common.exception.TokenRefreshException
 import com.github.solisa14.fourbagger.api.user.User;
 import com.github.solisa14.fourbagger.api.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -125,10 +127,9 @@ public class RefreshTokenService {
         refreshTokenRepository.deleteByTokenHash(hashToken(token));
     }
 
-    /**
-     * Purges all expired refresh tokens from the database. Runs automatically at midnight every day.
-     */
+    /** Purges all expired refresh tokens after startup and at midnight every day. */
     @Transactional
+    @EventListener(ApplicationReadyEvent.class)
     @Scheduled(cron = "0 0 0 * * *") // Run daily at midnight
     public void purgeExpiredTokens() {
         refreshTokenRepository.deleteByExpiryDateLessThan(Instant.now());

@@ -18,7 +18,7 @@ public class HealthController {
      *
      * @return empty 200 response
      */
-    @GetMapping("/health")
+    @GetMapping({"/health", "/api/v1/health"})
     public ResponseEntity<Void> health() {
         return ResponseEntity.ok().build();
     }
