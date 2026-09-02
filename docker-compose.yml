@@ -22,7 +22,7 @@ services:
       DEV_DB_URL: jdbc:postgresql://db:5432/fourbagger
       DEV_DB_USERNAME: postgres
       DEV_DB_PASSWORD: postgres
-      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:8080
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5174,http://localhost:8080
     ports:
       - "8080:8080"
     depends_on:
