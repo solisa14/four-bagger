@@ -57,65 +57,65 @@ jobs:
 
   # Publishes an immutable SHA-tagged image to ECR. Does not deploy to ECS.
   # Uses the production environment so OIDC can assume the deploy role (may require approval).
-  publish:
-    name: Publish image to ECR
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      contents: read
-      id-token: write
+  # publish:
+  #   name: Publish image to ECR
+  #   needs: test
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #   permissions:
+  #     contents: read
+  #     id-token: write
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
-        with:
-          role-to-assume: ${{ vars.AWS_PRODUCTION_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+  #       with:
+  #         role-to-assume: ${{ vars.AWS_PRODUCTION_ROLE_ARN }}
+  #         aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64 # v2.1.6
+  #     - name: Login to Amazon ECR
+  #       id: login-ecr
+  #       uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64 # v2.1.6
 
-      - name: Build and push image
-        id: build-push
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          set -euo pipefail
+  #     - name: Build and push image
+  #       id: build-push
+  #       env:
+  #         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+  #         ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  #         IMAGE_TAG: ${{ github.sha }}
+  #       run: |
+  #         set -euo pipefail
 
-          if [ -z "${ECR_REPOSITORY}" ]; then
-            echo "Repository variable ECR_REPOSITORY is required" >&2
-            exit 1
-          fi
+  #         if [ -z "${ECR_REPOSITORY}" ]; then
+  #           echo "Repository variable ECR_REPOSITORY is required" >&2
+  #           exit 1
+  #         fi
 
-          image_uri="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
-          docker build --pull --tag "$image_uri" .
-          docker push "$image_uri"
+  #         image_uri="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+  #         docker build --pull --tag "$image_uri" .
+  #         docker push "$image_uri"
 
-          digest="$(docker image inspect "$image_uri" --format '{{index .RepoDigests 0}}')"
-          {
-            echo "image_uri=${image_uri}"
-            echo "image_digest=${digest}"
-          } >> "$GITHUB_OUTPUT"
+  #         digest="$(docker image inspect "$image_uri" --format '{{index .RepoDigests 0}}')"
+  #         {
+  #           echo "image_uri=${image_uri}"
+  #           echo "image_digest=${digest}"
+  #         } >> "$GITHUB_OUTPUT"
 
-      - name: Write job summary
-        env:
-          IMAGE_URI: ${{ steps.build-push.outputs.image_uri }}
-          IMAGE_DIGEST: ${{ steps.build-push.outputs.image_digest }}
-        run: |
-          {
-            echo "## Published image"
-            echo ""
-            echo "- Tag: \`${{ github.sha }}\`"
-            echo "- URI: \`${IMAGE_URI}\`"
-            echo "- Digest: \`${IMAGE_DIGEST}\`"
-            echo ""
-            echo "This job does **not** deploy. Promote a SHA with the deploy workflow when ready."
-          } >> "$GITHUB_STEP_SUMMARY"
+  #     - name: Write job summary
+  #       env:
+  #         IMAGE_URI: ${{ steps.build-push.outputs.image_uri }}
+  #         IMAGE_DIGEST: ${{ steps.build-push.outputs.image_digest }}
+  #       run: |
+  #         {
+  #           echo "## Published image"
+  #           echo ""
+  #           echo "- Tag: \`${{ github.sha }}\`"
+  #           echo "- URI: \`${IMAGE_URI}\`"
+  #           echo "- Digest: \`${IMAGE_DIGEST}\`"
+  #           echo ""
+  #           echo "This job does **not** deploy. Promote a SHA with the deploy workflow when ready."
+  #         } >> "$GITHUB_STEP_SUMMARY"
