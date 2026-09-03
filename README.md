@@ -16,16 +16,15 @@ manually draw brackets and assign teams.
 I built Four Bagger to make that setup more streamlined while preserving the same playing experience we were already
 used to. The most technically challenging part was modeling the tournament domain and its state transitions.
 
-This repository contains the Spring Boot API. The React frontend is maintained separately as the deployed demonstration
-client for the application.
+This repository contains the Spring Boot API. The React frontend is maintained separately as the deployed frontend for
+the application.
 
 ## Technical highlights
 
 - Stateful single- and double-elimination tournament progression with seeded brackets, byes, and format-specific routing
 - HTTP-only cookie-based JWT authentication with rotating, one-way-hashed refresh tokens
 - PostgreSQL-backed full-workflow integration tests using Spring Boot and Testcontainers
-- GitHub Actions builds and validates a non-root container, publishes full-commit-SHA images to Amazon ECR, and supports
-  manual promotion to AWS ECS Express
+- Containerized Spring Boot deployment on Google Cloud Run with Neon PostgreSQL, validated through GitHub Actions
 
 ## Tournament workflows
 
@@ -134,8 +133,8 @@ exceptions, and health checks.
 | Rate limiting          | Bucket4j and Caffeine                                                           |
 | Testing                | JUnit, Mockito, Spring MVC tests, Spring Boot integration tests, Testcontainers |
 | Build and packaging    | Maven Wrapper, multi-stage Docker image                                         |
-| Delivery               | GitHub Actions, Amazon ECR, AWS ECS Express                                     |
-| Demo client (separate) | React/TypeScript/Vite frontend deployed through Vercel                          |
+| CI and API hosting     | GitHub Actions, Google Cloud Run, Neon PostgreSQL                               |
+| Frontend (separate)    | React/TypeScript/Vite frontend deployed through Vercel                          |
 
 ## Run locally
 
@@ -226,11 +225,14 @@ mvn -B -ntp clean verify
 
 ## Deployment
 
-The backend is deployed through AWS ECS Express.
+The production deployment uses the following topology:
 
-The separately maintained React frontend is deployed on Vercel and proxies `/api` requests to the deployed API; the live
-demonstration link is above.
+```text
+Browser → Vercel frontend and /api proxy → Google Cloud Run API → Neon PostgreSQL
+```
 
-GitHub Actions builds and tests the application and validates a non-root production Docker image. Successful pushes to
-`master` publish immutable full-commit-SHA images to Amazon ECR; a manual workflow promotes a selected SHA to AWS ECS
-Express and waits for service stability.
+Cloud Run hosts the containerized Spring Boot API and supports scaling to zero. During a cold start, the frontend lets
+the visitor know that the API is starting. GitHub Actions builds and tests the application and validates the non-root
+production Docker image.
+
+Four Bagger was migrated from AWS ECS Express and Amazon RDS to its current Cloud Run and Neon architecture.
