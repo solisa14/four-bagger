@@ -1,7 +1,6 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
 import com.github.solisa14.fourbagger.api.user.User;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +19,6 @@ public class TournamentMatchResultService {
     private final FinalScoreValidator finalScoreValidator;
     private final TournamentProgressionService progressionService;
 
-    @Autowired
     TournamentMatchResultService(
             TournamentMatchSupport matchSupport,
             TournamentGameResultRepository resultRepository,
@@ -32,23 +30,6 @@ public class TournamentMatchResultService {
         this.authorizationService = authorizationService;
         this.finalScoreValidator = finalScoreValidator;
         this.progressionService = progressionService;
-    }
-
-    public TournamentMatchResultService(
-            TournamentRepository tournamentRepository,
-            MatchRepository matchRepository,
-            TournamentGameResultRepository resultRepository,
-            TournamentMatchAuthorizationService authorizationService,
-            FinalScoreValidator finalScoreValidator,
-            TournamentProgressionService progressionService,
-            TournamentMapper tournamentMapper) {
-        this(
-                new TournamentMatchSupport(
-                        tournamentRepository, matchRepository, resultRepository, tournamentMapper, progressionService),
-                resultRepository,
-                authorizationService,
-                finalScoreValidator,
-                progressionService);
     }
 
     @Transactional
