@@ -16,11 +16,6 @@ import java.util.stream.IntStream;
 @Component
 public class SingleEliminationBracketGenerator implements TournamentBracketGenerator {
 
-    @Override
-    public TournamentFormat format() {
-        return TournamentFormat.SINGLE_ELIMINATION;
-    }
-
     /**
      * Plans the entire bracket layout for a tournament given a list of seeded teams. Calculates the
      * number of required rounds, creates the matches, seeds the first round, assigns byes to top

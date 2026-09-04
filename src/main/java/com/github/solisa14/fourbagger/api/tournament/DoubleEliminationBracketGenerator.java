@@ -20,11 +20,6 @@ public class DoubleEliminationBracketGenerator implements TournamentBracketGener
     }
 
     @Override
-    public TournamentFormat format() {
-        return TournamentFormat.DOUBLE_ELIMINATION;
-    }
-
-    @Override
     public void planBracket(Tournament tournament, List<TournamentTeam> seededTeams) {
         if (seededTeams.size() < MINIMUM_TEAM_COUNT) {
             throw new InvalidTournamentStateException("Double-elimination tournaments require at least 4 teams");

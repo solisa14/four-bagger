@@ -14,8 +14,15 @@ class DoubleEliminationBracketGeneratorTest {
             new DoubleEliminationBracketGenerator(new DoubleEliminationByeResolver());
 
     @Test
-    void format_returnsDoubleElimination() {
-        assertThat(generator.format()).isEqualTo(TournamentFormat.DOUBLE_ELIMINATION);
+    void planBracket_viaService_selectsDoubleElimination() {
+        Tournament tournament = tournament();
+        TournamentBracketService service =
+                new TournamentBracketService(new SingleEliminationBracketGenerator(), generator);
+
+        service.planBracket(tournament, addTeams(tournament, 4));
+
+        assertThat(tournament.getRounds()).extracting(TournamentRound::getBracketType)
+                .contains(BracketType.LOSERS, BracketType.FINAL, BracketType.GRAND_FINAL);
     }
 
     @Test
