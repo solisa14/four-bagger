@@ -8,6 +8,8 @@ import com.github.solisa14.fourbagger.api.user.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -30,14 +32,11 @@ class GameServiceTest {
     @Mock
     private GameRepository gameRepository;
 
-    @Mock
-    private GameCreationService gameCreationService;
-
     private GameService gameService;
 
     @BeforeEach
     void setUp() {
-        gameService = new GameService(gameRepository, gameCreationService, finalScoreValidator);
+        gameService = new GameService(gameRepository, finalScoreValidator);
     }
 
     private User playerOne() {
@@ -64,19 +63,31 @@ class GameServiceTest {
 
     // --- createGame ---
 
-    @Test
-    void createGame_withCommand_delegatesToCreationService() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void createGame_withCommand_savesPendingGame(boolean doubles) {
         User p1 = playerOne();
         User p2 = playerTwo();
-        CreateGameCommand command = new CreateGameCommand(GameParticipants.singles(p1, p2), null, p1);
-        Game created =
-                Game.builder().id(UUID.randomUUID()).playerOne(p1).playerTwo(p2).build();
-        when(gameCreationService.createPendingGame(command)).thenReturn(created);
+        User p1Partner = doubles ? otherUser() : null;
+        User p2Partner = doubles ? otherUser() : null;
+        GameParticipants participants = doubles
+                ? GameParticipants.doubles(p1, p1Partner, p2, p2Partner)
+                : GameParticipants.singles(p1, p2);
+        UUID tournamentMatchId = doubles ? UUID.randomUUID() : null;
+        CreateGameCommand command = new CreateGameCommand(participants, tournamentMatchId, p1);
+        when(gameRepository.save(any(Game.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Game result = gameService.createGame(command);
 
-        assertThat(result).isEqualTo(created);
-        verify(gameCreationService).createPendingGame(command);
+        assertThat(result.getPlayerOne()).isSameAs(p1);
+        assertThat(result.getPlayerTwo()).isSameAs(p2);
+        assertThat(result.getPlayerOnePartner()).isSameAs(p1Partner);
+        assertThat(result.getPlayerTwoPartner()).isSameAs(p2Partner);
+        assertThat(result.getGameType()).isEqualTo(doubles ? GameType.DOUBLES : GameType.SINGLES);
+        assertThat(result.getStatus()).isEqualTo(GameStatus.PENDING);
+        assertThat(result.getCreatedBy()).isSameAs(p1);
+        assertThat(result.getTournamentMatchId()).isEqualTo(tournamentMatchId);
+        verify(gameRepository).save(result);
     }
 
     // --- startGame ---

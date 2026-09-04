@@ -17,20 +17,28 @@ import java.util.UUID;
 public class GameService {
 
     private final GameRepository gameRepository;
-    private final GameCreationService gameCreationService;
     private final FinalScoreValidator finalScoreValidator;
 
-    public GameService(
-            GameRepository gameRepository,
-            GameCreationService gameCreationService,
-            FinalScoreValidator finalScoreValidator) {
+    public GameService(GameRepository gameRepository, FinalScoreValidator finalScoreValidator) {
         this.gameRepository = gameRepository;
-        this.gameCreationService = gameCreationService;
         this.finalScoreValidator = finalScoreValidator;
     }
 
+    @Transactional
     public Game createGame(CreateGameCommand command) {
-        return gameCreationService.createPendingGame(command);
+        GameParticipants participants = command.participants();
+        Game game = Game.builder()
+                .playerOne(participants.teamOne().player())
+                .playerOnePartner(participants.teamOne().partner())
+                .playerTwo(participants.teamTwo().player())
+                .playerTwoPartner(participants.teamTwo().partner())
+                .gameType(participants.gameType())
+                .status(GameStatus.PENDING)
+                .createdBy(command.createdBy())
+                .tournamentMatchId(command.tournamentMatchId())
+                .build();
+
+        return gameRepository.save(game);
     }
 
     @Transactional
