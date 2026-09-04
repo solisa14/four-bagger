@@ -224,7 +224,7 @@ public class TournamentService {
      */
     public void deleteTournament(UUID id, User currentUser) {
         Tournament tournament = tournamentRepository.findById(id).orElseThrow(TournamentNotFoundException::new);
-        authorizeOrganizer(currentUser, tournament);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
         tournamentGameResultRepository.deleteByTournamentId(id);
         // Teams FK to participants; clear match routing/teams before cascade-removing participants.
         clearBracketGraph(tournament);
@@ -252,12 +252,6 @@ public class TournamentService {
 
         tournament.getRounds().forEach(round -> round.getMatches().clear());
         tournamentRepository.flush();
-    }
-
-    private void authorizeOrganizer(User currentUser, Tournament tournament) {
-        if (!tournament.getOrganizer().getId().equals(currentUser.getId())) {
-            throw new TournamentAccessDeniedException(tournament.getId());
-        }
     }
 
     private void initializeTournamentDetails(Tournament tournament) {
@@ -309,7 +303,7 @@ public class TournamentService {
     public void generateBracket(UUID tournamentId, User currentUser) {
         Tournament tournament =
                 tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-        authorizeOrganizer(currentUser, tournament);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
 
         if (tournament.getStatus() != TournamentStatus.REGISTRATION
                 && tournament.getStatus() != TournamentStatus.BRACKET_READY) {
@@ -386,7 +380,7 @@ public class TournamentService {
     public void updateRoundSettings(UUID tournamentId, User currentUser, int roundNumber, Integer bestOf) {
         Tournament tournament =
                 tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-        authorizeOrganizer(currentUser, tournament);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
 
         if (tournament.getStatus() != TournamentStatus.BRACKET_READY) {
             throw new InvalidTournamentStateException(
@@ -426,7 +420,7 @@ public class TournamentService {
     public void startTournament(UUID tournamentId, User currentUser) {
         Tournament tournament =
                 tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-        authorizeOrganizer(currentUser, tournament);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
 
         if (tournament.getStatus() != TournamentStatus.BRACKET_READY) {
             throw new InvalidTournamentStateException("Tournament can only be started when bracket is ready");
@@ -460,7 +454,7 @@ public class TournamentService {
     public TournamentParticipant addGuestParticipant(UUID tournamentId, User currentUser, String displayName) {
         Tournament tournament =
                 tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-        authorizeOrganizer(currentUser, tournament);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
 
         if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
             throw new InvalidTournamentStateException("Cannot add guests after registration");
@@ -496,7 +490,7 @@ public class TournamentService {
             UUID tournamentId, User currentUser, UUID participantId, String displayName) {
         Tournament tournament =
                 tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-        authorizeOrganizer(currentUser, tournament);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
 
         if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
             throw new InvalidTournamentStateException("Cannot update guests after registration");
@@ -521,7 +515,7 @@ public class TournamentService {
     public void removeParticipant(UUID tournamentId, User currentUser, UUID participantId) {
         Tournament tournament =
                 tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-        authorizeOrganizer(currentUser, tournament);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
 
         if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
             throw new InvalidTournamentStateException("Cannot remove participants after registration");
@@ -580,7 +574,7 @@ public class TournamentService {
     public void setDoublesPairingMode(UUID tournamentId, User currentUser, DoublesPairingMode doublesPairingMode) {
         Tournament tournament =
                 tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-        authorizeOrganizer(currentUser, tournament);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
 
         if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
             throw new InvalidTournamentStateException("Cannot change doubles pairing mode after registration");
@@ -618,7 +612,7 @@ public class TournamentService {
     public void replaceManualTeams(UUID tournamentId, User currentUser, List<ManualTeamRow> teams) {
         Tournament tournament =
                 tournamentRepository.findById(tournamentId).orElseThrow(TournamentNotFoundException::new);
-        authorizeOrganizer(currentUser, tournament);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
 
         if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
             throw new InvalidTournamentStateException("Cannot update manual teams after registration");
