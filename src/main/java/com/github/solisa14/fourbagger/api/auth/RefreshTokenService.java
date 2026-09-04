@@ -15,7 +15,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
-import java.util.Optional;
 import java.util.UUID;
 
 /** Service for managing refresh tokens, including creation, rotation, and deletion. */
@@ -37,16 +36,6 @@ public class RefreshTokenService {
     public RefreshTokenService(RefreshTokenRepository refreshTokenRepository, UserRepository userRepository) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.userRepository = userRepository;
-    }
-
-    /**
-     * Finds a refresh token by its raw token string.
-     *
-     * @param token the raw refresh token
-     * @return an Optional containing the refresh token if found
-     */
-    public Optional<RefreshToken> findByToken(String token) {
-        return refreshTokenRepository.findByTokenHash(hashToken(token));
     }
 
     /**
