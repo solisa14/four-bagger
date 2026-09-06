@@ -7,6 +7,8 @@ import com.github.solisa14.fourbagger.api.user.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -1412,5 +1414,41 @@ class TournamentServiceTest {
         assertThatThrownBy(() -> tournamentService.generateBracket(tournament.getId(), tournament.getOrganizer()))
                 .isInstanceOf(InvalidTournamentStateException.class)
                 .hasMessageContaining("exactly one");
+    }
+
+    @Test
+    void sharingLifecycle_isIdempotentAndRotatesAfterDisable() {
+        Tournament tournament = tournamentWithParticipants(TournamentStatus.IN_PROGRESS, 0);
+        User organizer = tournament.getOrganizer();
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+        UUID firstShareId = tournamentService.enableSharing(tournament.getId(), organizer);
+        assertThat(tournamentService.enableSharing(tournament.getId(), organizer)).isEqualTo(firstShareId);
+
+        tournament.setStatus(TournamentStatus.COMPLETED);
+        assertThat(tournamentService.enableSharing(tournament.getId(), organizer)).isEqualTo(firstShareId);
+        tournamentService.disableSharing(tournament.getId(), organizer);
+        tournamentService.disableSharing(tournament.getId(), organizer);
+
+        assertThat(tournamentService.enableSharing(tournament.getId(), organizer)).isNotEqualTo(firstShareId);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = TournamentStatus.class, names = {"REGISTRATION", "BRACKET_READY"})
+    void enableSharing_whenTournamentIsNotEligible_throwsInvalidTournamentStateException(TournamentStatus status) {
+        Tournament tournament = tournamentWithParticipants(status, 0);
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+        assertThatThrownBy(() -> tournamentService.enableSharing(tournament.getId(), tournament.getOrganizer()))
+                .isInstanceOf(InvalidTournamentStateException.class);
+    }
+
+    @Test
+    void enableSharing_whenUserIsNotOrganizer_throwsTournamentAccessDeniedException() {
+        Tournament tournament = tournamentWithParticipants(TournamentStatus.COMPLETED, 0);
+        when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
+
+        assertThatThrownBy(() -> tournamentService.enableSharing(tournament.getId(), player()))
+                .isInstanceOf(TournamentAccessDeniedException.class);
     }
 }

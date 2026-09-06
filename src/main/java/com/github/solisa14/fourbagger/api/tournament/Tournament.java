@@ -69,6 +69,9 @@ public class Tournament {
     @Column(unique = true)
     private String joinCode;
 
+    @Column(name = "share_id", unique = true)
+    private UUID shareId;
+
     @OneToMany(mappedBy = "tournament", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TournamentParticipant> participants = new ArrayList<>();

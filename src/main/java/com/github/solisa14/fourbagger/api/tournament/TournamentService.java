@@ -654,6 +654,31 @@ public class TournamentService {
         tournamentRepository.save(tournament);
     }
 
+    public UUID enableSharing(UUID tournamentId, User currentUser) {
+        Tournament tournament = tournamentRepository.findById(tournamentId)
+                .orElseThrow(TournamentNotFoundException::new);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
+        if (tournament.getStatus() != TournamentStatus.IN_PROGRESS
+                && tournament.getStatus() != TournamentStatus.COMPLETED) {
+            throw new InvalidTournamentStateException("Tournament must be IN_PROGRESS or COMPLETED to enable sharing");
+        }
+        if (tournament.getShareId() == null) {
+            tournament.setShareId(UUID.randomUUID());
+            tournamentRepository.save(tournament);
+        }
+        return tournament.getShareId();
+    }
+
+    public void disableSharing(UUID tournamentId, User currentUser) {
+        Tournament tournament = tournamentRepository.findById(tournamentId)
+                .orElseThrow(TournamentNotFoundException::new);
+        authorizationService.authorizeOrganizer(currentUser, tournament);
+        if (tournament.getShareId() != null) {
+            tournament.setShareId(null);
+            tournamentRepository.save(tournament);
+        }
+    }
+
     private void validateManualTeamRows(List<ManualTeamRow> teams) {
         Set<String> seen = new HashSet<>();
         for (ManualTeamRow row : teams) {

@@ -22,6 +22,8 @@ public interface TournamentRepository extends JpaRepository<Tournament, UUID> {
      */
     Optional<Tournament> findByJoinCode(String joinCode);
 
+    Optional<Tournament> findByShareId(UUID shareId);
+
     /**
      * Retrieves the tournament detail access graph without joining the separate bracket collections.
      *

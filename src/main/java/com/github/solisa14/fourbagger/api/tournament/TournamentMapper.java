@@ -62,7 +62,9 @@ public class TournamentMapper {
                 toParticipantResponses(tournament, currentViewer),
                 toTeamResponses(tournament),
                 toBracketEligibilityResponse(eligibility),
-                toViewerCapabilitiesResponse(tournament, isOrganizer, isParticipant, eligibility.eligible()));
+                toViewerCapabilitiesResponse(tournament, isOrganizer, isParticipant, eligibility.eligible()),
+                tournament.getShareId() != null,
+                isOrganizer ? tournament.getShareId() : null);
     }
 
     public TournamentListResponse toTournamentListResponse(ActiveTournaments tournaments) {

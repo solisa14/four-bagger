@@ -20,4 +20,6 @@ public record TournamentDetailResponse(
         List<TournamentParticipantResponse> participants,
         List<TournamentTeamResponse> teams,
         TournamentBracketEligibilityResponse bracketEligibility,
-        TournamentViewerCapabilitiesResponse viewerCapabilities) {}
+        TournamentViewerCapabilitiesResponse viewerCapabilities,
+        boolean sharingEnabled,
+        UUID shareId) {}

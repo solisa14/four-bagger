@@ -259,4 +259,16 @@ class TournamentController {
         return ResponseEntity.ok(tournamentMapper.toTournamentDetailResponse(
                 tournamentService.getTournamentForUser(id, currentUser), currentUser));
     }
+
+    @PostMapping("/{id}/sharing")
+    ResponseEntity<TournamentSharingResponse> enableSharing(
+            @AuthenticationPrincipal User currentUser, @PathVariable UUID id) {
+        return ResponseEntity.ok(new TournamentSharingResponse(tournamentService.enableSharing(id, currentUser)));
+    }
+
+    @DeleteMapping("/{id}/sharing")
+    ResponseEntity<Void> disableSharing(@AuthenticationPrincipal User currentUser, @PathVariable UUID id) {
+        tournamentService.disableSharing(id, currentUser);
+        return ResponseEntity.noContent().build();
+    }
 }

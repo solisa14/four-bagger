@@ -949,4 +949,21 @@ class TournamentControllerWebMvcTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("You are not allowed to access tournament"));
     }
+
+    @Test
+    void sharingEndpoints_returnShareIdAndNoContent() throws Exception {
+        User principal = TestDataFactory.authenticatedUser();
+        UUID tournamentId = UUID.randomUUID();
+        UUID shareId = UUID.randomUUID();
+        when(tournamentService.enableSharing(eq(tournamentId), any())).thenReturn(shareId);
+
+        mockMvc.perform(post("/api/v1/tournaments/{id}/sharing", tournamentId).with(user(principal)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shareId").value(shareId.toString()));
+
+        mockMvc.perform(delete("/api/v1/tournaments/{id}/sharing", tournamentId).with(user(principal)))
+                .andExpect(status().isNoContent());
+
+        verify(tournamentService).disableSharing(eq(tournamentId), any());
+    }
 }

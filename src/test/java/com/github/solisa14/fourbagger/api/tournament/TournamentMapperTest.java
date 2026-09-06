@@ -276,6 +276,25 @@ class TournamentMapperTest {
         assertThat(response.viewerCapabilities().canGenerateBracket()).isFalse();
     }
 
+    @Test
+    void toTournamentDetailResponse_exposesSharingStateButOnlyOrganizerGetsShareId() {
+        Tournament tournament = registrationTournament();
+        User organizer = user(UUID.randomUUID(), "organizer", "encoded", Role.USER);
+        User participant = user(UUID.randomUUID(), "participant", "encoded", Role.USER);
+        UUID shareId = UUID.randomUUID();
+        tournament.setOrganizer(organizer);
+        tournament.setShareId(shareId);
+        tournament.getParticipants().add(participant(tournament, participant, UUID.randomUUID()));
+
+        TournamentDetailResponse organizerResponse = mapper.toTournamentDetailResponse(tournament, organizer);
+        TournamentDetailResponse participantResponse = mapper.toTournamentDetailResponse(tournament, participant);
+
+        assertThat(organizerResponse.sharingEnabled()).isTrue();
+        assertThat(organizerResponse.shareId()).isEqualTo(shareId);
+        assertThat(participantResponse.sharingEnabled()).isTrue();
+        assertThat(participantResponse.shareId()).isNull();
+    }
+
     private Tournament registrationTournament() {
         return Tournament.builder()
                 .id(UUID.randomUUID())
