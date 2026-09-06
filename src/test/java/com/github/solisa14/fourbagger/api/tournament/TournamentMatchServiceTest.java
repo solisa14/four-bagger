@@ -68,7 +68,7 @@ class TournamentMatchServiceTest {
         Match match = match(tournament, false);
         when(tournamentRepository.findById(tournament.getId())).thenReturn(Optional.of(tournament));
         when(matchRepository.findForResponseById(match.getId())).thenReturn(Optional.of(match));
-        doThrow(new TournamentAccessDeniedException(tournament.getId()))
+        doThrow(new TournamentAccessDeniedException())
                 .when(authorizationService)
                 .authorizeMatchMutation(any(), eq(tournament), eq(match));
 

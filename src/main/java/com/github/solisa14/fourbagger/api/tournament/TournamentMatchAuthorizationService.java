@@ -11,19 +11,19 @@ public class TournamentMatchAuthorizationService {
 
     public void authorizeTournamentAccess(User currentUser, Tournament tournament) {
         if (!canAccessTournament(currentUser, tournament)) {
-            throw new TournamentAccessDeniedException(tournament.getId());
+            throw new TournamentAccessDeniedException();
         }
     }
 
     public void authorizeMatchMutation(User currentUser, Tournament tournament, Match match) {
         if (!canMutateMatch(currentUser, tournament, match)) {
-            throw new TournamentAccessDeniedException(tournament.getId());
+            throw new TournamentAccessDeniedException();
         }
     }
 
     public void authorizeOrganizer(User currentUser, Tournament tournament) {
         if (!isOrganizer(currentUser, tournament)) {
-            throw new TournamentAccessDeniedException(tournament.getId());
+            throw new TournamentAccessDeniedException();
         }
     }
 

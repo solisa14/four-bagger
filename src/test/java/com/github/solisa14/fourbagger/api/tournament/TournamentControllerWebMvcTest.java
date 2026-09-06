@@ -272,11 +272,11 @@ class TournamentControllerWebMvcTest {
     void getTournament_whenUserCannotAccess_returnsForbidden() throws Exception {
         User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
-        when(tournamentService.getTournamentForUser(any(), any())).thenThrow(new TournamentAccessDeniedException(id));
+        when(tournamentService.getTournamentForUser(any(), any())).thenThrow(new TournamentAccessDeniedException());
 
         mockMvc.perform(get("/api/v1/tournaments/{id}", id).with(user(principal)))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + id));
+                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament"));
     }
 
     // ── Get Tournament By Join Code ──────────────────────────────────
@@ -430,11 +430,11 @@ class TournamentControllerWebMvcTest {
     void startTournament_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
         User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
-        doThrow(new TournamentAccessDeniedException(id)).when(tournamentService).startTournament(eq(id), any());
+        doThrow(new TournamentAccessDeniedException()).when(tournamentService).startTournament(eq(id), any());
 
         mockMvc.perform(post("/api/v1/tournaments/{id}/start", id).with(user(principal)))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + id));
+                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament"));
     }
 
     // ── Generate Bracket ──────────────────────────────────────────
@@ -516,11 +516,11 @@ class TournamentControllerWebMvcTest {
     void generateBracket_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
         User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
-        doThrow(new TournamentAccessDeniedException(id)).when(tournamentService).generateBracket(eq(id), any());
+        doThrow(new TournamentAccessDeniedException()).when(tournamentService).generateBracket(eq(id), any());
 
         mockMvc.perform(post("/api/v1/tournaments/{id}/bracket", id).with(user(principal)))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + id));
+                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament"));
     }
 
     // ── Join Tournament ───────────────────────────────────────────
@@ -654,7 +654,7 @@ class TournamentControllerWebMvcTest {
     void addGuestParticipant_whenNotOrganizer_returnsForbidden() throws Exception {
         User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
-        doThrow(new TournamentAccessDeniedException(tournamentId))
+        doThrow(new TournamentAccessDeniedException())
                 .when(tournamentService)
                 .addGuestParticipant(eq(tournamentId), any(), eq("Alex"));
 
@@ -769,14 +769,14 @@ class TournamentControllerWebMvcTest {
         User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
         UUID participantId = UUID.randomUUID();
-        doThrow(new TournamentAccessDeniedException(tournamentId))
+        doThrow(new TournamentAccessDeniedException())
                 .when(tournamentService)
                 .removeParticipant(eq(tournamentId), any(), eq(participantId));
 
         mockMvc.perform(delete("/api/v1/tournaments/{id}/participants/{participantId}", tournamentId, participantId)
                         .with(user(principal)))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + tournamentId));
+                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament"));
     }
 
     // ── Leave Tournament ──────────────────────────────────────────
@@ -824,14 +824,14 @@ class TournamentControllerWebMvcTest {
     void leaveTournament_whenUserCannotAccess_returnsForbidden() throws Exception {
         User principal = TestDataFactory.authenticatedUser();
         UUID tournamentId = UUID.randomUUID();
-        doThrow(new TournamentAccessDeniedException(tournamentId))
+        doThrow(new TournamentAccessDeniedException())
                 .when(tournamentService)
                 .leaveTournament(eq(tournamentId), any());
 
         mockMvc.perform(delete("/api/v1/tournaments/{id}/participants/me", tournamentId)
                         .with(user(principal)))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + tournamentId));
+                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament"));
     }
 
     // ── Update Round Settings ─────────────────────────────────────
@@ -938,7 +938,7 @@ class TournamentControllerWebMvcTest {
     void updateRoundSettings_whenUserIsNotOrganizer_returnsForbidden() throws Exception {
         User principal = TestDataFactory.authenticatedUser();
         UUID id = UUID.randomUUID();
-        doThrow(new TournamentAccessDeniedException(id))
+        doThrow(new TournamentAccessDeniedException())
                 .when(tournamentService)
                 .updateRoundSettings(eq(id), any(), eq(1), eq(3));
 
@@ -947,6 +947,6 @@ class TournamentControllerWebMvcTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpdateRoundSettingsRequest(3))))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament: " + id));
+                .andExpect(jsonPath("$.message").value("You are not allowed to access tournament"));
     }
 }
