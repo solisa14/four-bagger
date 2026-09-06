@@ -149,6 +149,17 @@ public class TournamentService {
     }
 
     @Transactional(readOnly = true)
+    public Tournament getSharedTournament(UUID shareId) {
+        Tournament tournament = tournamentRepository.findByShareId(shareId).orElseThrow(TournamentNotFoundException::new);
+        if (tournament.getStatus() != TournamentStatus.IN_PROGRESS
+                && tournament.getStatus() != TournamentStatus.COMPLETED) {
+            throw new TournamentNotFoundException();
+        }
+        initializeTournamentDetails(tournament);
+        return tournament;
+    }
+
+    @Transactional(readOnly = true)
     public ActiveTournaments listActiveTournamentsForUser(User currentUser) {
         List<Tournament> hosting = tournamentRepository.findByOrganizer_IdAndStatusInOrderByUpdatedAtDesc(
                 currentUser.getId(), ACTIVE_STATUSES);

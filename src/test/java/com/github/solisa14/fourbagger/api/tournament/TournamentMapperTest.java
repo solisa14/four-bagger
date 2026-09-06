@@ -1,9 +1,12 @@
 package com.github.solisa14.fourbagger.api.tournament;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.solisa14.fourbagger.api.game.GameType;
 import com.github.solisa14.fourbagger.api.user.Role;
 import com.github.solisa14.fourbagger.api.user.User;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.time.Instant;
 import java.util.List;
@@ -15,6 +18,56 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TournamentMapperTest {
 
     private final TournamentMapper mapper = new TournamentMapper(new TournamentBracketEligibilityPolicy());
+
+    @ParameterizedTest
+    @EnumSource(TournamentFormat.class)
+    void toSharedTournamentResponse_mapsBracketWithoutPrivateFields(TournamentFormat format) throws Exception {
+        Tournament tournament = tournament();
+        tournament.setFormat(format);
+        tournament.setStatus(TournamentStatus.COMPLETED);
+        TournamentTeam teamOne = team(tournament, "one");
+        TournamentTeam teamTwo = team(tournament, "two");
+        teamOne.setSeed(1);
+        teamTwo.setSeed(2);
+        List<BracketType> bracketTypes = format == TournamentFormat.SINGLE_ELIMINATION
+                ? List.of(BracketType.WINNERS)
+                : List.of(BracketType.WINNERS, BracketType.LOSERS, BracketType.FINAL, BracketType.GRAND_FINAL);
+        for (BracketType bracketType : bracketTypes) {
+            TournamentRound round = round(tournament, bracketType);
+            Match match = match(round, teamOne, teamTwo);
+            match.setStatus(MatchStatus.COMPLETED);
+            match.setTeamOneWins(2);
+            match.setTeamTwoWins(1);
+            match.setWinner(teamOne);
+            round.getMatches().add(match);
+            tournament.getRounds().add(round);
+        }
+
+        SharedTournamentResponse response = mapper.toSharedTournamentResponse(tournament);
+        String json = new ObjectMapper().writeValueAsString(response);
+
+        assertThat(response.format()).isEqualTo(format);
+        assertThat(response.brackets().winners()).hasSize(1);
+        assertThat(response.brackets().losers()).hasSize(format == TournamentFormat.DOUBLE_ELIMINATION ? 1 : 0);
+        SharedTournamentResponse.Match mappedMatch = response.brackets().winners().getFirst().matches().getFirst();
+        assertThat(mappedMatch.teamOne().participantLabels()).containsExactly("one");
+        assertThat(mappedMatch.teamTwo().participantLabels()).containsExactly("two");
+        assertThat(mappedMatch.winner()).isEqualTo(mappedMatch.teamOne());
+        assertThat(mappedMatch.teamOneWins()).isEqualTo(2);
+        assertThat(mappedMatch.teamTwoWins()).isEqualTo(1);
+        assertThat(json)
+                .doesNotContain(
+                        tournament.getId().toString(),
+                        teamOne.getId().toString(),
+                        "\"id\"",
+                        "\"shareId\"",
+                        "\"joinCode\"",
+                        "\"username\"",
+                        "\"displayName\"",
+                        "\"winnerNextMatchId\"",
+                        "\"loserNextMatchId\"",
+                        "\"viewerCapabilities\"");
+    }
 
     @Test
     void toTeamSummary_whenGuestMembers_exposesDisplayNames() {

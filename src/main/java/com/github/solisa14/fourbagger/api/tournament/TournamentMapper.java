@@ -86,6 +86,69 @@ public class TournamentMapper {
                 tournament.getGameType());
     }
 
+    public SharedTournamentResponse toSharedTournamentResponse(Tournament tournament) {
+        return new SharedTournamentResponse(
+                tournament.getTitle(),
+                tournament.getStatus(),
+                tournament.getGameType(),
+                tournament.getFormat(),
+                new SharedTournamentResponse.Brackets(
+                        publicRounds(tournament.getRounds(), BracketType.WINNERS),
+                        publicRounds(tournament.getRounds(), BracketType.LOSERS),
+                        publicRounds(tournament.getRounds(), BracketType.FINAL),
+                        publicGrandFinalRounds(tournament.getRounds())));
+    }
+
+    private List<SharedTournamentResponse.Round> publicGrandFinalRounds(List<TournamentRound> rounds) {
+        return rounds.stream()
+                .filter(round -> round.getBracketType() == BracketType.GRAND_FINAL)
+                .filter(round -> round.getMatches().stream()
+                        .anyMatch(match -> match.getTeamOne() != null && match.getTeamTwo() != null))
+                .sorted(Comparator.comparingInt(TournamentRound::getRoundNumber))
+                .map(this::toPublicRound)
+                .toList();
+    }
+
+    private List<SharedTournamentResponse.Round> publicRounds(
+            List<TournamentRound> rounds, BracketType bracketType) {
+        return rounds.stream()
+                .filter(round -> round.getBracketType() == bracketType)
+                .sorted(Comparator.comparingInt(TournamentRound::getRoundNumber))
+                .map(this::toPublicRound)
+                .toList();
+    }
+
+    private SharedTournamentResponse.Round toPublicRound(TournamentRound round) {
+        return new SharedTournamentResponse.Round(
+                round.getBracketType(),
+                round.getRoundNumber(),
+                round.getBestOf(),
+                round.getMatches().stream().map(this::toPublicMatch).toList());
+    }
+
+    private SharedTournamentResponse.Match toPublicMatch(Match match) {
+        return new SharedTournamentResponse.Match(
+                match.getMatchNumber(),
+                match.getStatus(),
+                match.isBye(),
+                match.getTeamOne() != null ? toPublicTeam(match.getTeamOne()) : null,
+                match.getTeamTwo() != null ? toPublicTeam(match.getTeamTwo()) : null,
+                match.getTeamOneWins(),
+                match.getTeamTwoWins(),
+                match.getWinner() != null ? toPublicTeam(match.getWinner()) : null);
+    }
+
+    private SharedTournamentResponse.Team toPublicTeam(TournamentTeam team) {
+        TournamentParticipant playerTwo = team.getPlayerTwo();
+        return new SharedTournamentResponse.Team(
+                playerTwo == null
+                        ? List.of(team.getPlayerOne().identityLabel())
+                        : List.of(team.getPlayerOne().identityLabel(), playerTwo.identityLabel()),
+                team.getSeed(),
+                team.getLosses(),
+                team.isEliminated());
+    }
+
     public TournamentParticipantResponse toParticipantResponse(TournamentParticipant participant, User currentViewer) {
         UUID currentViewerId = currentViewer != null ? currentViewer.getId() : null;
         return new TournamentParticipantResponse(
