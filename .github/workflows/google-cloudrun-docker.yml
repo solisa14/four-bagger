@@ -1,0 +1,75 @@
+name: Build and Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  PROJECT_ID: four-bagger-507500
+  REGION: us-west1
+  REPOSITORY: four-bagger
+  SERVICE: four-bagger-api
+  WORKLOAD_IDENTITY_PROVIDER: projects/687693954155/locations/global/workloadIdentityPools/github-actions/providers/my-repo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configure Docker authentication
+        run: |-
+          gcloud auth configure-docker \
+            "${{ env.REGION }}-docker.pkg.dev" \
+            --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push container
+        run: |-
+          docker buildx build \
+            --platform linux/amd64 \
+            --provenance=false \
+            --tag "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}" \
+            --push \
+            .
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          service: ${{ env.SERVICE }}
+          region: ${{ env.REGION }}
+          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
+
+      - name: Show deployment URL
+        run: echo "${{ steps.deploy.outputs.url }}"
+
+      - name: Smoke test
+        run: |-
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
+            --retry-all-errors \
+            "${{ steps.deploy.outputs.url }}/health"
